@@ -68,7 +68,7 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
         _ensure_column(df, "second", ["second", "Second"], 0)
         _ensure_column(df, "Technique", ["Technique", "pass.technique.name"], "Unknown")
         _ensure_column(df, "Delivery height", ["Delivery height", "pass.height.name"], "Unknown")
-        _ensure_column(df, "Delivery outcome", ["Delivery outcome", "pass.outcome.name", "SP_outcome"], "Unknown")
+        _ensure_column(df, "Delivery outcome", ["SP_outcome", "Delivery outcome", "pass.outcome.name"], "Unknown")
         _ensure_column(df, "Shot outcome", ["Shot outcome", "shot.outcome.name"], "No shot")
         _ensure_column(df, "Shooter", ["Shooter"], "Unknown")
         _ensure_column(df, "Taker", ["Taker"], "Unknown")
