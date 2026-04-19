@@ -42,12 +42,19 @@ def load_sp_data(label: str) -> pd.DataFrame:
         "Freekicks": "From Free Kick",
         "Throw ins": "From Throw In",
     }
-
     sp_type = mapping.get(label)
     if sp_type:
         return raw[raw["SP_Type"].astype(str).str.strip().eq(sp_type)].copy()
-
     return pd.DataFrame()
+
+def _ensure_column(df: pd.DataFrame, target: str, candidates: list[str], default=np.nan):
+    if target in df.columns:
+        return
+    for cand in candidates:
+        if cand in df.columns:
+            df[target] = df[cand]
+            return
+    df[target] = default
 
 def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
     df = df.copy()
@@ -55,190 +62,122 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
         return df
 
     if label == "Corners":
-        if "Technique" not in df.columns and "inswing_outswing" in df.columns:
-            df["Technique"] = df["inswing_outswing"].fillna("Unknown")
-        elif "Technique" not in df.columns:
-            df["Technique"] = "Unknown"
+        _ensure_column(df, "Team", ["Team", "pass_team_name", "shot_team_name"], "Unknown")
+        _ensure_column(df, "Match", ["Match"], "Unknown")
+        _ensure_column(df, "minute", ["minute", "Minute"], 0)
+        _ensure_column(df, "second", ["second", "Second"], 0)
+        _ensure_column(df, "Technique", ["Technique", "pass.technique.name"], "Unknown")
+        _ensure_column(df, "Delivery height", ["Delivery height", "pass.height.name"], "Unknown")
+        _ensure_column(df, "Delivery outcome", ["Delivery outcome", "pass.outcome.name", "SP_outcome"], "Unknown")
+        _ensure_column(df, "Shot outcome", ["Shot outcome", "shot.outcome.name"], "No shot")
+        _ensure_column(df, "Shooter", ["Shooter"], "Unknown")
+        _ensure_column(df, "Taker", ["Taker"], "Unknown")
+        _ensure_column(df, "League", ["League"], "Allsvenskan")
+        _ensure_column(df, "shot_x", ["shot_x", "shot_location_x"], np.nan)
+        _ensure_column(df, "shot_y", ["shot_y", "shot_location_y"], np.nan)
+        _ensure_column(df, "delivery_end_x", ["delivery_end_x", "pass_end_location_x", "end_x"], np.nan)
+        _ensure_column(df, "delivery_end_y", ["delivery_end_y", "pass_end_location_y", "end_y"], np.nan)
+        _ensure_column(df, "xg", ["xg", "shot.statsbomb_xg", "shot_statsbomb_xg"], 0.0)
 
-        if "Delivery height" not in df.columns and "delivery_type" in df.columns:
-            df["Delivery height"] = df["delivery_type"].fillna("Unknown")
-        elif "Delivery height" not in df.columns:
-            df["Delivery height"] = "Unknown"
+        for col in ["Team", "Match", "Technique", "Delivery height", "Delivery outcome", "Shot outcome", "Shooter", "Taker", "League"]:
+            fill = "Allsvenskan" if col == "League" else ("No shot" if col == "Shot outcome" else "Unknown")
+            df[col] = df[col].fillna(fill)
 
-        if "Delivery outcome" not in df.columns and "delivery_outcome" in df.columns:
-            df["Delivery outcome"] = df["delivery_outcome"].fillna("Unknown")
-        elif "Delivery outcome" not in df.columns:
-            df["Delivery outcome"] = "Unknown"
+        for col in ["minute", "second", "match_id", "shot_x", "shot_y", "delivery_end_x", "delivery_end_y", "xg"]:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors="coerce")
 
-        if "Shot outcome" not in df.columns and "shot.outcome.name" in df.columns:
-            df["Shot outcome"] = df["shot.outcome.name"].fillna("No shot")
-        elif "Shot outcome" not in df.columns:
-            df["Shot outcome"] = "No shot"
-
-        if "Shooter" not in df.columns:
-            df["Shooter"] = "Unknown"
-        else:
-            df["Shooter"] = df["Shooter"].fillna("Unknown")
-
-        if "Taker" not in df.columns:
-            df["Taker"] = "Unknown"
-        else:
-            df["Taker"] = df["Taker"].fillna("Unknown")
-
-        if "League" not in df.columns:
-            df["League"] = "Allsvenskan"
-        else:
-            df["League"] = df["League"].fillna("Allsvenskan")
-
-        if "Match" not in df.columns:
-            if "match_id" in df.columns:
-                df["Match"] = "Match " + df["match_id"].astype(str)
+        if "side" not in df.columns:
+            if "pass_location_y" in df.columns:
+                py = pd.to_numeric(df["pass_location_y"], errors="coerce")
+                df["side"] = np.where(py <= 40, "Left", "Right")
             else:
-                df["Match"] = "Unknown"
-
-        for numeric_col in ["minute", "second", "match_id", "match_rank", "xg", "shot_x", "shot_y", "delivery_end_x", "delivery_end_y"]:
-            if numeric_col in df.columns:
-                df[numeric_col] = pd.to_numeric(df[numeric_col], errors="coerce")
-
-        if "xg" not in df.columns:
-            for alt in ["shot.statsbomb_xg", "shot_statsbomb_xg"]:
-                if alt in df.columns:
-                    df["xg"] = pd.to_numeric(df[alt], errors="coerce")
-                    break
-            else:
-                df["xg"] = 0.0
-        df["xg"] = pd.to_numeric(df["xg"], errors="coerce").fillna(0.0)
-
-        if "shot_x" not in df.columns and "shot_location_x" in df.columns:
-            df["shot_x"] = pd.to_numeric(df["shot_location_x"], errors="coerce")
-        if "shot_y" not in df.columns and "shot_location_y" in df.columns:
-            df["shot_y"] = pd.to_numeric(df["shot_location_y"], errors="coerce")
-        if "shot_x" not in df.columns:
-            df["shot_x"] = np.nan
-        if "shot_y" not in df.columns:
-            df["shot_y"] = np.nan
-
-        if "delivery_end_x" not in df.columns:
-            if "end_x" in df.columns:
-                df["delivery_end_x"] = pd.to_numeric(df["end_x"], errors="coerce")
-            else:
-                df["delivery_end_x"] = np.nan
-        if "delivery_end_y" not in df.columns:
-            if "end_y" in df.columns:
-                df["delivery_end_y"] = pd.to_numeric(df["end_y"], errors="coerce")
-            else:
-                df["delivery_end_y"] = np.nan
+                df["side"] = "Unknown"
 
         if "is_shot" not in df.columns:
             df["is_shot"] = df[["shot_x", "shot_y"]].notna().all(axis=1)
         if "is_goal" not in df.columns:
             df["is_goal"] = df["Shot outcome"].astype(str).str.lower().eq("goal")
 
-        if "game_period" not in df.columns and "minute" in df.columns:
+        if "game_period" not in df.columns:
             minute = pd.to_numeric(df["minute"], errors="coerce").fillna(0)
             bins = [-1, 15, 30, 45, 60, 75, 200]
             labels = ["0-15", "16-30", "31-45", "46-60", "61-75", "76+"]
             df["game_period"] = pd.cut(minute, bins=bins, labels=labels).astype(str)
 
-        if "match_rank" not in df.columns and "match_id" in df.columns:
-            match_order = (
-                df[["match_id"]]
-                .dropna()
-                .drop_duplicates()
-                .sort_values("match_id", ascending=False)
-                .reset_index(drop=True)
-            )
-            match_order["match_rank"] = range(1, len(match_order) + 1)
-            df = df.merge(match_order, on="match_id", how="left")
-
+        if "match_rank" not in df.columns:
+            if "match_id" in df.columns:
+                match_order = (
+                    df[["match_id"]]
+                    .dropna()
+                    .drop_duplicates()
+                    .sort_values("match_id", ascending=False)
+                    .reset_index(drop=True)
+                )
+                match_order["match_rank"] = range(1, len(match_order) + 1)
+                df = df.merge(match_order, on="match_id", how="left")
+            else:
+                df["match_rank"] = 999
         return df
 
-    # SWE SP prep for Freekicks / Throw ins
-    rename_map = {
-        "team.name": "Team",
-        "pass.height.name": "Delivery height",
-        "shot.statsbomb_xg": "xg",
-        "shot.outcome.name": "Shot outcome",
-    }
-    for old, new in rename_map.items():
-        if old in df.columns and new not in df.columns:
-            df[new] = df[old]
+    _ensure_column(df, "Team", ["Team", "team.name"], "Unknown")
+    _ensure_column(df, "Match", ["Match"], "Unknown")
+    _ensure_column(df, "Technique", ["Technique", "type.name"], "Unknown")
+    _ensure_column(df, "Delivery height", ["Delivery height", "pass.height.name"], "Unknown")
+    _ensure_column(df, "Delivery outcome", ["Delivery outcome", "Metrics"], "Unknown")
+    _ensure_column(df, "Shot outcome", ["Shot outcome", "shot.outcome.name"], "No shot")
+    _ensure_column(df, "Taker", ["Taker"], "Unknown")
+    _ensure_column(df, "Shooter", ["Shooter"], "Unknown")
+    _ensure_column(df, "League", ["League"], "Allsvenskan")
+    _ensure_column(df, "xg", ["xg", "shot.statsbomb_xg"], 0.0)
 
-    if "Technique" not in df.columns:
-        df["Technique"] = "Unknown"
-    if "Delivery outcome" not in df.columns:
-        df["Delivery outcome"] = "Unknown"
-    if "League" not in df.columns:
-        df["League"] = "Allsvenskan"
-    if "Match" not in df.columns:
-        if "match_id" in df.columns:
-            df["Match"] = "Match " + df["match_id"].astype(str)
-        else:
-            df["Match"] = "Unknown"
-    if "Taker" not in df.columns:
-        df["Taker"] = "Unknown"
-    else:
-        df["Taker"] = df["Taker"].fillna("Unknown")
-    if "Shooter" not in df.columns:
-        df["Shooter"] = "Unknown"
-    else:
-        df["Shooter"] = df["Shooter"].fillna("Unknown")
-    if "Team" not in df.columns:
-        df["Team"] = "Unknown"
-    else:
-        df["Team"] = df["Team"].fillna("Unknown")
+    if "Match" in df.columns and df["Match"].isna().all() and "match_id" in df.columns:
+        df["Match"] = "Match " + df["match_id"].astype(str)
+
+    for col in ["Team", "Match", "Technique", "Delivery height", "Delivery outcome", "Shot outcome", "Taker", "Shooter", "League"]:
+        fill = "Allsvenskan" if col == "League" else ("No shot" if col == "Shot outcome" else "Unknown")
+        df[col] = df[col].fillna(fill)
 
     if "location.pass" in df.columns:
-        pass_xy = df["location.pass"].astype(str).str.replace("[\[\]]", "", regex=True).str.split(",", expand=True)
+        pass_xy = df["location.pass"].astype(str).str.replace(r"[\[\]]", "", regex=True).str.split(",", expand=True)
         if pass_xy.shape[1] >= 2:
             df["pass_x"] = pd.to_numeric(pass_xy[0].str.strip(), errors="coerce")
             df["pass_y"] = pd.to_numeric(pass_xy[1].str.strip(), errors="coerce")
 
     if "side" not in df.columns:
         if "pass_y" in df.columns:
-            df["side"] = np.where(df["pass_y"] <= 40, "Right", "Left")
+            df["side"] = np.where(df["pass_y"] <= 40, "Left", "Right")
         else:
             df["side"] = "Unknown"
 
     if "location.shot" in df.columns:
-        shot_xy = df["location.shot"].astype(str).str.replace("[\[\]]", "", regex=True).str.split(",", expand=True)
+        shot_xy = df["location.shot"].astype(str).str.replace(r"[\[\]]", "", regex=True).str.split(",", expand=True)
         if shot_xy.shape[1] >= 2:
             df["shot_x"] = pd.to_numeric(shot_xy[0].str.strip(), errors="coerce")
             df["shot_y"] = pd.to_numeric(shot_xy[1].str.strip(), errors="coerce")
-    if "shot_x" not in df.columns:
-        df["shot_x"] = np.nan
-    if "shot_y" not in df.columns:
-        df["shot_y"] = np.nan
 
-    if "delivery_end_x" not in df.columns:
-        df["delivery_end_x"] = df["shot_x"]
-    if "delivery_end_y" not in df.columns:
-        df["delivery_end_y"] = df["shot_y"]
+    _ensure_column(df, "shot_x", ["shot_x"], np.nan)
+    _ensure_column(df, "shot_y", ["shot_y"], np.nan)
+    _ensure_column(df, "delivery_end_x", ["delivery_end_x", "shot_x"], np.nan)
+    _ensure_column(df, "delivery_end_y", ["delivery_end_y", "shot_y"], np.nan)
 
     if "minute" not in df.columns:
         if "timestamp" in df.columns:
             parts = df["timestamp"].astype(str).str.split(":", expand=True)
-            if parts.shape[1] >= 2:
-                mins = pd.to_numeric(parts[0], errors="coerce")
-                df["minute"] = mins.fillna(0)
-            else:
-                df["minute"] = 0
+            df["minute"] = pd.to_numeric(parts[0], errors="coerce").fillna(0) if parts.shape[1] >= 1 else 0
         else:
             df["minute"] = 0
 
     if "second" not in df.columns:
         if "timestamp" in df.columns:
             parts = df["timestamp"].astype(str).str.split(":", expand=True)
-            if parts.shape[1] >= 3:
-                df["second"] = pd.to_numeric(parts[2], errors="coerce").fillna(0)
-            else:
-                df["second"] = 0
+            df["second"] = pd.to_numeric(parts[2], errors="coerce").fillna(0) if parts.shape[1] >= 3 else 0
         else:
             df["second"] = 0
 
-    if "xg" not in df.columns:
-        df["xg"] = 0.0
-    df["xg"] = pd.to_numeric(df["xg"], errors="coerce").fillna(0.0)
+    for col in ["minute", "second", "match_id", "shot_x", "shot_y", "delivery_end_x", "delivery_end_y", "xg"]:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
 
     if "is_shot" not in df.columns:
         df["is_shot"] = df["shot_x"].notna() & df["shot_y"].notna()
@@ -251,17 +190,19 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
         labels = ["0-15", "16-30", "31-45", "46-60", "61-75", "76+"]
         df["game_period"] = pd.cut(minute, bins=bins, labels=labels).astype(str)
 
-    if "match_rank" not in df.columns and "match_id" in df.columns:
-        order = (
-            df[["match_id"]]
-            .dropna()
-            .drop_duplicates()
-            .sort_values("match_id", ascending=False)
-            .reset_index(drop=True)
-        )
-        order["match_rank"] = range(1, len(order) + 1)
-        df = df.merge(order, on="match_id", how="left")
-
+    if "match_rank" not in df.columns:
+        if "match_id" in df.columns:
+            order = (
+                df[["match_id"]]
+                .dropna()
+                .drop_duplicates()
+                .sort_values("match_id", ascending=False)
+                .reset_index(drop=True)
+            )
+            order["match_rank"] = range(1, len(order) + 1)
+            df = df.merge(order, on="match_id", how="left")
+        else:
+            df["match_rank"] = 999
     return df
 
 def vertical_coords_from_statsbomb(x: pd.Series, y: pd.Series) -> tuple[pd.Series, pd.Series]:
@@ -285,8 +226,6 @@ def add_half_vertical_pitch_layout(fig: go.Figure, title: str, pitch_color: str 
         dict(type="rect", x0=penalty_left, y0=102, x1=penalty_right, y1=120, line=dict(width=1.6, color="#1e293b")),
         dict(type="rect", x0=six_left, y0=114, x1=six_right, y1=120, line=dict(width=1.6, color="#1e293b")),
         dict(type="line", x0=36, y0=120, x1=44, y1=120, line=dict(width=3, color="#1e293b")),
-        dict(type="circle", x0=39.5, y0=107.5, x1=40.5, y1=108.5, line=dict(width=1, color="#1e293b"), fillcolor="#1e293b"),
-        dict(type="circle", x0=34, y0=102, x1=46, y1=114, line=dict(width=1.2, color="#1e293b")),
     ]
 
     fig.update_layout(
@@ -424,7 +363,7 @@ def delivery_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
     return add_half_vertical_pitch_layout(fig, title)
 
 def build_summary_tables(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    if df.empty:
+    if df.empty or "Team" not in df.columns:
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
     if set(["match_id", "possession", "Team"]).issubset(df.columns):
@@ -465,14 +404,14 @@ def build_summary_tables(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, 
         .size()
         .reset_index(name="Count")
         .sort_values("Count", ascending=False)
-    )
+    ) if set(["Technique", "Delivery height"]).issubset(df.columns) else pd.DataFrame()
 
     outcome_mix = (
         df.groupby(["Delivery outcome", "Shot outcome"], dropna=False)
         .size()
         .reset_index(name="Count")
         .sort_values("Count", ascending=False)
-    )
+    ) if set(["Delivery outcome", "Shot outcome"]).issubset(df.columns) else pd.DataFrame()
 
     return summary, technique_mix, outcome_mix
 
@@ -481,9 +420,9 @@ def kpi_row(df: pd.DataFrame) -> None:
         sequences = int(df[["match_id", "possession", "Team"]].drop_duplicates().shape[0])
     else:
         sequences = int(len(df))
-    shots = int(df["is_shot"].sum()) if not df.empty else 0
-    goals = int(df["is_goal"].sum()) if not df.empty else 0
-    total_xg = float(df["xg"].sum()) if not df.empty else 0.0
+    shots = int(df["is_shot"].sum()) if not df.empty and "is_shot" in df.columns else 0
+    goals = int(df["is_goal"].sum()) if not df.empty and "is_goal" in df.columns else 0
+    total_xg = float(df["xg"].sum()) if not df.empty and "xg" in df.columns else 0.0
     shot_rate = (shots / sequences * 100) if sequences else 0.0
     goal_rate = (goals / shots * 100) if shots else 0.0
     matches = int(df["match_id"].nunique()) if not df.empty and "match_id" in df.columns else (int(df["Match"].nunique()) if not df.empty and "Match" in df.columns else 0)
