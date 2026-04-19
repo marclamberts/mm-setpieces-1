@@ -205,6 +205,31 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
             df["match_rank"] = 999
     return df
 
+
+def _is_swe_sp_df(df: pd.DataFrame) -> bool:
+    return "SP_Type" in df.columns
+
+def unique_shot_events(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty or "shot_x" not in df.columns or "shot_y" not in df.columns:
+        return df.iloc[0:0].copy()
+    shots = df[df["shot_x"].notna() & df["shot_y"].notna()].copy()
+    if shots.empty:
+        return shots
+    if _is_swe_sp_df(shots):
+        keys = [c for c in ["match_id", "possession", "Team", "shot_x", "shot_y", "Shot outcome", "xg"] if c in shots.columns]
+        if keys:
+            shots = shots.drop_duplicates(subset=keys)
+    return shots
+
+def unique_start_events(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return df
+    if _is_swe_sp_df(df):
+        keys = [c for c in ["match_id", "possession", "Team", "pass_x", "pass_y", "Taker", "timestamp"] if c in df.columns]
+        if keys:
+            return df.drop_duplicates(subset=keys)
+    return df
+
 def vertical_coords_from_statsbomb(x: pd.Series, y: pd.Series) -> tuple[pd.Series, pd.Series]:
     return pd.to_numeric(y, errors="coerce"), pd.to_numeric(x, errors="coerce")
 
@@ -245,7 +270,7 @@ def shotmap_figure(df: pd.DataFrame, title: str) -> go.Figure:
         fig.add_annotation(text="No data available", x=40, y=90, showarrow=False, font=dict(size=18, color="#64748b"))
         return add_half_vertical_pitch_layout(fig, title)
 
-    shots = df[df["shot_x"].notna() & df["shot_y"].notna()].copy()
+    shots = unique_shot_events(df)
     shots = shots[pd.to_numeric(shots["shot_x"], errors="coerce") >= HALF_START]
 
     if shots.empty:
@@ -396,6 +421,7 @@ def starting_location_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
                 starts["pass_y"] = pd.to_numeric(pass_xy[1].str.strip(), errors="coerce")
 
     starts = starts[starts["pass_x"].notna() & starts["pass_y"].notna()].copy()
+    starts = unique_start_events(starts)
 
     if starts.empty:
         fig.add_annotation(text="No start locations for current filter", x=40, y=90, showarrow=False, font=dict(size=18, color="#64748b"))
@@ -448,52 +474,61 @@ def build_summary_tables(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, 
     if df.empty or "Team" not in df.columns:
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
+    shot_events = unique_shot_events(df)
     if set(["match_id", "possession", "Team"]).issubset(df.columns):
-        summary = (
-            df.groupby("Team", dropna=False)
-            .agg(
-                Matches=("match_id", "nunique"),
-                Set_Pieces=("possession", "nunique"),
-                Shots=("is_shot", "sum"),
-                Goals=("is_goal", "sum"),
-                Total_xG=("xg", "sum"),
-                Avg_xG=("xg", "mean"),
-            )
-            .reset_index()
-            .sort_values(["Total_xG", "Goals", "Shots"], ascending=False)
-        )
+        set_pieces = df[["match_id", "possession", "Team"]].drop_duplicates()
+        summary = set_pieces.groupby("Team", dropna=False).size().reset_index(name="Set_Pieces")
+        matches = df.groupby("Team", dropna=False)["match_id"].nunique().reset_index(name="Matches")
+        summary = summary.merge(matches, on="Team", how="left")
     else:
-        summary = (
-            df.groupby("Team", dropna=False)
+        summary = df.groupby("Team", dropna=False).size().reset_index(name="Set_Pieces")
+        if "Match" in df.columns:
+            matches = df.groupby("Team", dropna=False)["Match"].nunique().reset_index(name="Matches")
+            summary = summary.merge(matches, on="Team", how="left")
+        else:
+            summary["Matches"] = 0
+
+    if shot_events.empty:
+        shot_summary = summary[["Team"]].copy()
+        shot_summary["Shots"] = 0
+        shot_summary["Goals"] = 0
+        shot_summary["Total_xG"] = 0.0
+        shot_summary["Avg_xG"] = 0.0
+    else:
+        shot_summary = (
+            shot_events.groupby("Team", dropna=False)
             .agg(
-                Matches=("Match", "nunique") if "Match" in df.columns else ("Team", "size"),
-                Set_Pieces=("Team", "size"),
-                Shots=("is_shot", "sum"),
+                Shots=("shot_x", "size"),
                 Goals=("is_goal", "sum"),
                 Total_xG=("xg", "sum"),
                 Avg_xG=("xg", "mean"),
             )
             .reset_index()
-            .sort_values(["Total_xG", "Goals", "Shots"], ascending=False)
         )
 
+    summary = summary.merge(shot_summary, on="Team", how="left").fillna({"Shots":0, "Goals":0, "Total_xG":0.0, "Avg_xG":0.0})
+    summary["Shots"] = summary["Shots"].astype(int)
+    summary["Goals"] = summary["Goals"].astype(int)
     summary["Shot conversion %"] = np.where(summary["Shots"] > 0, (summary["Goals"] / summary["Shots"] * 100).round(1), 0)
-    summary["Avg_xG"] = summary["Avg_xG"].fillna(0).round(3)
-    summary["Total_xG"] = summary["Total_xG"].fillna(0).round(2)
+    summary["Avg_xG"] = pd.to_numeric(summary["Avg_xG"], errors="coerce").fillna(0).round(3)
+    summary["Total_xG"] = pd.to_numeric(summary["Total_xG"], errors="coerce").fillna(0).round(2)
+    summary = summary.sort_values(["Total_xG", "Goals", "Shots"], ascending=False)
 
+    base_for_mix = unique_start_events(df)
     technique_mix = (
-        df.groupby(["Technique", "Delivery height"], dropna=False)
+        base_for_mix.groupby(["Technique", "Delivery height"], dropna=False)
         .size()
         .reset_index(name="Count")
         .sort_values("Count", ascending=False)
-    ) if set(["Technique", "Delivery height"]).issubset(df.columns) else pd.DataFrame()
+    ) if set(["Technique", "Delivery height"]).issubset(base_for_mix.columns) else pd.DataFrame()
 
+    outcome_base = shot_events if not shot_events.empty else base_for_mix
     outcome_mix = (
-        df.groupby(["Delivery outcome", "Shot outcome"], dropna=False)
+        outcome_base.groupby(["Delivery outcome", "Shot outcome"], dropna=False)
         .size()
         .reset_index(name="Count")
         .sort_values("Count", ascending=False)
-    ) if set(["Delivery outcome", "Shot outcome"]).issubset(df.columns) else pd.DataFrame()
+    ) if set(["Delivery outcome", "Shot outcome"]).issubset(outcome_base.columns) else pd.DataFrame()
 
     return summary, technique_mix, outcome_mix
 
@@ -501,10 +536,11 @@ def kpi_row(df: pd.DataFrame) -> None:
     if not df.empty and set(["match_id", "possession", "Team"]).issubset(df.columns):
         sequences = int(df[["match_id", "possession", "Team"]].drop_duplicates().shape[0])
     else:
-        sequences = int(len(df))
-    shots = int(df["is_shot"].sum()) if not df.empty and "is_shot" in df.columns else 0
-    goals = int(df["is_goal"].sum()) if not df.empty and "is_goal" in df.columns else 0
-    total_xg = float(df["xg"].sum()) if not df.empty and "xg" in df.columns else 0.0
+        sequences = int(len(unique_start_events(df)))
+    shot_events = unique_shot_events(df)
+    shots = int(len(shot_events))
+    goals = int(shot_events["is_goal"].sum()) if not shot_events.empty and "is_goal" in shot_events.columns else 0
+    total_xg = float(shot_events["xg"].sum()) if not shot_events.empty and "xg" in shot_events.columns else 0.0
     shot_rate = (shots / sequences * 100) if sequences else 0.0
     goal_rate = (goals / shots * 100) if shots else 0.0
     matches = int(df["match_id"].nunique()) if not df.empty and "match_id" in df.columns else (int(df["Match"].nunique()) if not df.empty and "Match" in df.columns else 0)
@@ -527,12 +563,13 @@ def info_panel(df: pd.DataFrame) -> None:
         st.info("No rows match the current filters.")
         return
     notes = []
-    if "Technique" in df.columns:
-        vc = df["Technique"].fillna("Unknown").value_counts().head(1)
+    base = unique_start_events(df)
+    if "Technique" in base.columns:
+        vc = base["Technique"].fillna("Unknown").value_counts().head(1)
         if not vc.empty:
             notes.append(f"Top technique: {vc.index[0]} ({int(vc.iloc[0])})")
-    if "Taker" in df.columns:
-        vc = df["Taker"].fillna("Unknown").value_counts().head(1)
+    if "Taker" in base.columns:
+        vc = base["Taker"].fillna("Unknown").value_counts().head(1)
         if not vc.empty:
             notes.append(f"Top taker: {vc.index[0]} ({int(vc.iloc[0])})")
     if notes:
