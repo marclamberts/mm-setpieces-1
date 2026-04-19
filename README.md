@@ -6,17 +6,12 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-## Included
-- Landing page with light-theme professional styling
-- Corners page with:
-  - vertical half-pitch visuals
-  - StatsBomb 120x80 coordinate logic
-  - shotmap
-  - delivery map
-  - richer sidebar filters
-- Freekicks and Throw ins template pages
+## Data routing
+- Corners → `Allsvenskan - Corners 2025.xlsx`
+- Freekicks → `SWE SP.xlsx` filtered to `SP_Type = From Free Kick`
+- Throw ins → `SWE SP.xlsx` filtered to `SP_Type = From Throw In`
 
 ## Notes
-- The bundled corners workbook is `Allsvenskan - Corners 2025.xlsx`
-- `Last 10 games` is approximated from descending `match_id`
-- Freekicks and Throw ins will activate when their source workbooks are added and mapped in `utils.py`
+- All pages use `width="stretch"` instead of deprecated `use_container_width`
+- The pitch is a compact vertical half-pitch using StatsBomb 120×80 coordinates
+- SWE SP delivery maps use available shot end locations when explicit delivery end coordinates are missing

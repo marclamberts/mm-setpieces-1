@@ -1,11 +1,9 @@
 
 from __future__ import annotations
-
 import pandas as pd
 import streamlit as st
 
 from utils import (
-    SP_MAP,
     build_summary_tables,
     delivery_map_figure,
     info_panel,
@@ -15,10 +13,8 @@ from utils import (
     shotmap_figure,
 )
 
-
 def _safe_sorted(values: pd.Series) -> list[str]:
     return sorted([str(v) for v in values.dropna().astype(str).unique().tolist() if str(v).strip()])
-
 
 def _filter_page_data(df: pd.DataFrame, label: str) -> pd.DataFrame:
     st.sidebar.header(f"{label} filters")
@@ -39,7 +35,6 @@ def _filter_page_data(df: pd.DataFrame, label: str) -> pd.DataFrame:
     time_in_game = st.sidebar.selectbox("Time in the game", periods)
 
     st.sidebar.markdown("---")
-
     minute_min = 0
     minute_max = 95
     if "minute" in df.columns and not df["minute"].dropna().empty:
@@ -54,7 +49,6 @@ def _filter_page_data(df: pd.DataFrame, label: str) -> pd.DataFrame:
     only_shots = st.sidebar.checkbox(f"Only {label.lower()} ending with a shot", value=False)
 
     filtered = df.copy()
-
     if team != "All" and "Team" in filtered.columns:
         filtered = filtered[filtered["Team"] == team]
     if league != "All" and "League" in filtered.columns:
@@ -80,7 +74,6 @@ def _filter_page_data(df: pd.DataFrame, label: str) -> pd.DataFrame:
         filtered = filtered[filtered["is_shot"]]
 
     return filtered
-
 
 def render_page(label: str) -> None:
     st.set_page_config(page_title=f"Michael Mackin Set Piece | {label}", page_icon="⚽", layout="wide")
@@ -113,14 +106,14 @@ def render_page(label: str) -> None:
             <div class="page-card">
                 <div class="mini-title">Set piece analysis</div>
                 <div class="main-title">{label}</div>
-                <div class="copy">No source workbook is bundled for this page yet. Add the appropriate Excel file and map it in <code>utils.py</code>.</div>
+                <div class="copy">No source rows were found for this page in the bundled workbook(s).</div>
             </div>
             ''',
             unsafe_allow_html=True,
         )
         return
 
-    df = prepare_sp_dataframe(raw)
+    df = prepare_sp_dataframe(raw, label=label)
     filtered = _filter_page_data(df, label)
 
     st.markdown(
@@ -137,7 +130,9 @@ def render_page(label: str) -> None:
     )
 
     if label == "Corners":
-        st.caption("League defaults to Allsvenskan if missing. 'Last 10 games' is approximated via descending match_id because the workbook does not include explicit match dates.")
+        st.caption("Corners use Allsvenskan - Corners 2025.xlsx. 'Last 10 games' is approximated via descending match_id when dates are missing.")
+    else:
+        st.caption(f"{label} use SWE SP.xlsx filtered by SP_Type. Delivery maps use available shot end locations where explicit delivery end coordinates are not present.")
 
     kpi_row(filtered)
     info_panel(filtered)
@@ -160,11 +155,8 @@ def render_page(label: str) -> None:
         st.plotly_chart(delivery_map_figure(filtered, f"{label} delivery map · vertical half pitch"), width="stretch")
 
     st.markdown("### Event details")
-    display_cols = [
-        c for c in [
-            "Match", "Team", "Taker", "Shooter", "side", "minute", "second",
-            "Technique", "Delivery height", "Shot outcome", "xg", "Delivery outcome"
-        ]
-        if c in filtered.columns
-    ]
+    display_cols = [c for c in [
+        "Match", "Team", "SP_Type", "Taker", "Shooter", "side", "minute", "second",
+        "Technique", "Delivery height", "Shot outcome", "xg", "Delivery outcome", "timestamp"
+    ] if c in filtered.columns]
     st.dataframe(filtered[display_cols], width="stretch", hide_index=True)

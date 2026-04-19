@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -11,153 +10,125 @@ import streamlit as st
 PITCH_LENGTH = 120
 PITCH_WIDTH = 80
 HALF_START = 60
-
-SP_MAP = {
-    "Corners": "Allsvenskan - Corners 2025.xlsx",
-    "Freekicks": "Allsvenskan - Freekicks 2025.xlsx",
-    "Throw ins": "Allsvenskan - Throw ins 2025.xlsx",
-}
-
 BASE_DIR = Path(__file__).resolve().parent
 
-
 def _candidate_paths(filename: str) -> list[Path]:
-    return [
-        BASE_DIR / filename,
-        BASE_DIR.parent / filename,
-        Path(filename),
-    ]
+    return [BASE_DIR / filename, BASE_DIR.parent / filename, Path(filename)]
 
-
-def _read_excel_if_exists(filename: str) -> pd.DataFrame:
+def _read_excel_if_exists(filename: str, sheet_name=0) -> pd.DataFrame:
     for path in _candidate_paths(filename):
         if path.exists():
-            return pd.read_excel(path)
+            return pd.read_excel(path, sheet_name=sheet_name)
     return pd.DataFrame()
-
 
 @st.cache_data(show_spinner=False)
 def load_corner_data() -> pd.DataFrame:
-    return _read_excel_if_exists(SP_MAP["Corners"])
+    return _read_excel_if_exists("Allsvenskan - Corners 2025.xlsx").copy()
 
+@st.cache_data(show_spinner=False)
+def load_swe_sp_data() -> pd.DataFrame:
+    return _read_excel_if_exists("SWE SP.xlsx").copy()
 
 @st.cache_data(show_spinner=False)
 def load_sp_data(label: str) -> pd.DataFrame:
-    filename = SP_MAP.get(label)
-    if not filename:
+    if label == "Corners":
+        return load_corner_data().copy()
+
+    raw = load_swe_sp_data().copy()
+    if raw.empty or "SP_Type" not in raw.columns:
         return pd.DataFrame()
-    return _read_excel_if_exists(filename)
 
+    mapping = {
+        "Freekicks": "From Free Kick",
+        "Throw ins": "From Throw In",
+    }
 
-def _safe_col(df: pd.DataFrame, name: str, fallback=None):
-    if name in df.columns:
-        return df[name]
-    return fallback
+    sp_type = mapping.get(label)
+    if sp_type:
+        return raw[raw["SP_Type"].astype(str).str.strip().eq(sp_type)].copy()
 
+    return pd.DataFrame()
 
-def _safe_sorted(values: pd.Series | list | None) -> list[str]:
-    if values is None:
-        return []
-    ser = pd.Series(values)
-    return sorted([str(v) for v in ser.dropna().astype(str).unique().tolist() if str(v).strip()])
-
-
-def prepare_sp_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
     df = df.copy()
     if df.empty:
         return df
 
-    mappings = {
-        "Technique": [("inswing_outswing", "Unknown"), ("Technique", "Unknown")],
-        "Delivery height": [("delivery_type", "Unknown"), ("Delivery height", "Unknown")],
-        "Delivery outcome": [("delivery_outcome", "Unknown"), ("Delivery outcome", "Unknown")],
-        "Shot outcome": [("shot.outcome.name", "No shot"), ("Shot outcome", "No shot")],
-        "Shot body part": [("shot.body_part.name", "Unknown"), ("Shot body part", "Unknown")],
-        "Defensive setup": [("Defensive_setup", "Unknown"), ("Defensive setup", "Unknown")],
-        "Shooter": [("Shooter", "Unknown")],
-        "Taker": [("Taker", "Unknown")],
-        "League": [("League", "Allsvenskan")],
-        "Team": [("Team", "Unknown")],
-        "Match": [("Match", "Unknown")],
-    }
+    if label == "Corners":
+        if "Technique" not in df.columns and "inswing_outswing" in df.columns:
+            df["Technique"] = df["inswing_outswing"].fillna("Unknown")
+        elif "Technique" not in df.columns:
+            df["Technique"] = "Unknown"
 
-    for target, options in mappings.items():
-        if target in df.columns:
-            df[target] = df[target].fillna(options[0][1] if options else "Unknown")
-            continue
-        created = False
-        for source, default in options:
-            if source in df.columns:
-                df[target] = df[source].fillna(default)
-                created = True
-                break
-        if not created:
-            df[target] = options[0][1] if options else "Unknown"
+        if "Delivery height" not in df.columns and "delivery_type" in df.columns:
+            df["Delivery height"] = df["delivery_type"].fillna("Unknown")
+        elif "Delivery height" not in df.columns:
+            df["Delivery height"] = "Unknown"
 
-    for numeric_col in [
-        "minute", "second", "match_id", "match_rank", "xg",
-        "shot_x", "shot_y", "delivery_end_x", "delivery_end_y"
-    ]:
-        if numeric_col in df.columns:
-            df[numeric_col] = pd.to_numeric(df[numeric_col], errors="coerce")
+        if "Delivery outcome" not in df.columns and "delivery_outcome" in df.columns:
+            df["Delivery outcome"] = df["delivery_outcome"].fillna("Unknown")
+        elif "Delivery outcome" not in df.columns:
+            df["Delivery outcome"] = "Unknown"
 
-    if "xg" not in df.columns:
-        for alt in ["shot.statsbomb_xg", "shot_statsbomb_xg"]:
-            if alt in df.columns:
-                df["xg"] = pd.to_numeric(df[alt], errors="coerce")
-                break
+        if "Shot outcome" not in df.columns and "shot.outcome.name" in df.columns:
+            df["Shot outcome"] = df["shot.outcome.name"].fillna("No shot")
+        elif "Shot outcome" not in df.columns:
+            df["Shot outcome"] = "No shot"
+
+        if "Shooter" not in df.columns:
+            df["Shooter"] = "Unknown"
         else:
-            df["xg"] = 0.0
-    df["xg"] = pd.to_numeric(df["xg"], errors="coerce").fillna(0.0)
+            df["Shooter"] = df["Shooter"].fillna("Unknown")
 
-    if "shot_x" not in df.columns:
-        if "shot_location_x" in df.columns:
+        if "Taker" not in df.columns:
+            df["Taker"] = "Unknown"
+        else:
+            df["Taker"] = df["Taker"].fillna("Unknown")
+
+        if "League" not in df.columns:
+            df["League"] = "Allsvenskan"
+
+        for numeric_col in ["minute", "second", "match_id", "match_rank", "xg", "shot_x", "shot_y", "delivery_end_x", "delivery_end_y"]:
+            if numeric_col in df.columns:
+                df[numeric_col] = pd.to_numeric(df[numeric_col], errors="coerce")
+
+        if "xg" not in df.columns:
+            for alt in ["shot.statsbomb_xg", "shot_statsbomb_xg"]:
+                if alt in df.columns:
+                    df["xg"] = pd.to_numeric(df[alt], errors="coerce")
+                    break
+            else:
+                df["xg"] = 0.0
+        df["xg"] = pd.to_numeric(df["xg"], errors="coerce").fillna(0.0)
+
+        if "shot_x" not in df.columns and "shot_location_x" in df.columns:
             df["shot_x"] = pd.to_numeric(df["shot_location_x"], errors="coerce")
-        else:
-            df["shot_x"] = np.nan
-    if "shot_y" not in df.columns:
-        if "shot_location_y" in df.columns:
+        if "shot_y" not in df.columns and "shot_location_y" in df.columns:
             df["shot_y"] = pd.to_numeric(df["shot_location_y"], errors="coerce")
-        else:
-            df["shot_y"] = np.nan
 
-    if "delivery_end_x" not in df.columns:
-        for alt in ["end_x", "delivery_end_x"]:
-            if alt in df.columns:
-                df["delivery_end_x"] = pd.to_numeric(df[alt], errors="coerce")
-                break
-        else:
-            df["delivery_end_x"] = np.nan
+        if "delivery_end_x" not in df.columns:
+            for alt in ["end_x", "delivery_end_x"]:
+                if alt in df.columns:
+                    df["delivery_end_x"] = pd.to_numeric(df[alt], errors="coerce")
+                    break
+        if "delivery_end_y" not in df.columns:
+            for alt in ["end_y", "delivery_end_y"]:
+                if alt in df.columns:
+                    df["delivery_end_y"] = pd.to_numeric(df[alt], errors="coerce")
+                    break
 
-    if "delivery_end_y" not in df.columns:
-        for alt in ["end_y", "delivery_end_y"]:
-            if alt in df.columns:
-                df["delivery_end_y"] = pd.to_numeric(df[alt], errors="coerce")
-                break
-        else:
-            df["delivery_end_y"] = np.nan
+        if "is_shot" not in df.columns:
+            df["is_shot"] = df[["shot_x", "shot_y"]].notna().all(axis=1)
+        if "is_goal" not in df.columns:
+            df["is_goal"] = df["Shot outcome"].astype(str).str.lower().eq("goal")
 
-    if "side" not in df.columns:
-        if "y" in df.columns:
-            mid = PITCH_WIDTH / 2
-            df["side"] = np.where(pd.to_numeric(df["y"], errors="coerce") <= mid, "Left", "Right")
-        else:
-            df["side"] = "Unknown"
+        if "game_period" not in df.columns and "minute" in df.columns:
+            minute = pd.to_numeric(df["minute"], errors="coerce").fillna(0)
+            bins = [-1, 15, 30, 45, 60, 75, 200]
+            labels = ["0-15", "16-30", "31-45", "46-60", "61-75", "76+"]
+            df["game_period"] = pd.cut(minute, bins=bins, labels=labels).astype(str)
 
-    if "is_shot" not in df.columns:
-        df["is_shot"] = df[["shot_x", "shot_y"]].notna().all(axis=1)
-
-    if "is_goal" not in df.columns:
-        df["is_goal"] = df["Shot outcome"].astype(str).str.lower().eq("goal")
-
-    if "game_period" not in df.columns:
-        minute = pd.to_numeric(df.get("minute", pd.Series(dtype=float)), errors="coerce").fillna(0)
-        bins = [-1, 15, 30, 45, 60, 75, 200]
-        labels = ["0-15", "16-30", "31-45", "46-60", "61-75", "76+"]
-        df["game_period"] = pd.cut(minute, bins=bins, labels=labels).astype(str)
-
-    if "match_rank" not in df.columns:
-        if "match_id" in df.columns:
+        if "match_rank" not in df.columns and "match_id" in df.columns:
             match_order = (
                 df[["match_id"]]
                 .dropna()
@@ -167,19 +138,121 @@ def prepare_sp_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             )
             match_order["match_rank"] = range(1, len(match_order) + 1)
             df = df.merge(match_order, on="match_id", how="left")
+
+        return df
+
+    # SWE SP prep for Freekicks / Throw ins
+    rename_map = {
+        "team.name": "Team",
+        "pass.height.name": "Delivery height",
+        "shot.statsbomb_xg": "xg",
+        "shot.outcome.name": "Shot outcome",
+    }
+    for old, new in rename_map.items():
+        if old in df.columns and new not in df.columns:
+            df[new] = df[old]
+
+    if "Technique" not in df.columns:
+        df["Technique"] = "Unknown"
+    if "Delivery outcome" not in df.columns:
+        df["Delivery outcome"] = "Unknown"
+    if "League" not in df.columns:
+        df["League"] = "Allsvenskan"
+    if "Match" not in df.columns:
+        if "match_id" in df.columns:
+            df["Match"] = "Match " + df["match_id"].astype(str)
         else:
-            df["match_rank"] = 999
+            df["Match"] = "Unknown"
+    if "Taker" not in df.columns:
+        df["Taker"] = "Unknown"
+    if "Shooter" not in df.columns:
+        df["Shooter"] = "Unknown"
+
+    if "location.pass" in df.columns:
+        pass_xy = df["location.pass"].astype(str).str.replace("[\[\]]", "", regex=True).str.split(",", expand=True)
+        if pass_xy.shape[1] >= 2:
+            df["pass_x"] = pd.to_numeric(pass_xy[0].str.strip(), errors="coerce")
+            df["pass_y"] = pd.to_numeric(pass_xy[1].str.strip(), errors="coerce")
+
+    if "side" not in df.columns:
+        if "pass_y" in df.columns:
+            df["side"] = np.where(df["pass_y"] <= 40, "Right", "Left")
+        else:
+            df["side"] = "Unknown"
+
+    if "location.shot" in df.columns:
+        shot_xy = df["location.shot"].astype(str).str.replace("[\[\]]", "", regex=True).str.split(",", expand=True)
+        if shot_xy.shape[1] >= 2:
+            df["shot_x"] = pd.to_numeric(shot_xy[0].str.strip(), errors="coerce")
+            df["shot_y"] = pd.to_numeric(shot_xy[1].str.strip(), errors="coerce")
+    if "shot_x" not in df.columns:
+        df["shot_x"] = np.nan
+    if "shot_y" not in df.columns:
+        df["shot_y"] = np.nan
+
+    # SWE SP lacks reliable delivery end coordinates; use shot location when available
+    if "delivery_end_x" not in df.columns:
+        df["delivery_end_x"] = df["shot_x"]
+    if "delivery_end_y" not in df.columns:
+        df["delivery_end_y"] = df["shot_y"]
+
+    if "minute" not in df.columns:
+        if "timestamp" in df.columns:
+            parts = df["timestamp"].astype(str).str.split(":", expand=True)
+            if parts.shape[1] >= 2:
+                mins = pd.to_numeric(parts[0], errors="coerce")
+                df["minute"] = mins.fillna(0)
+            else:
+                df["minute"] = 0
+        else:
+            df["minute"] = 0
+
+    if "second" not in df.columns:
+        if "timestamp" in df.columns:
+            parts = df["timestamp"].astype(str).str.split(":", expand=True)
+            if parts.shape[1] >= 3:
+                df["second"] = pd.to_numeric(parts[2], errors="coerce").fillna(0)
+            else:
+                df["second"] = 0
+        else:
+            df["second"] = 0
+
+    if "xg" not in df.columns:
+        df["xg"] = 0.0
+    df["xg"] = pd.to_numeric(df["xg"], errors="coerce").fillna(0.0)
+
+    if "is_shot" not in df.columns:
+        df["is_shot"] = df["shot_x"].notna() & df["shot_y"].notna()
+    if "is_goal" not in df.columns:
+        df["is_goal"] = df["Shot outcome"].astype(str).str.lower().eq("goal")
+
+    if "game_period" not in df.columns:
+        minute = pd.to_numeric(df["minute"], errors="coerce").fillna(0)
+        bins = [-1, 15, 30, 45, 60, 75, 200]
+        labels = ["0-15", "16-30", "31-45", "46-60", "61-75", "76+"]
+        df["game_period"] = pd.cut(minute, bins=bins, labels=labels).astype(str)
+
+    if "match_rank" not in df.columns and "match_id" in df.columns:
+        order = (
+            df[["match_id"]]
+            .dropna()
+            .drop_duplicates()
+            .sort_values("match_id", ascending=False)
+            .reset_index(drop=True)
+        )
+        order["match_rank"] = range(1, len(order) + 1)
+        df = df.merge(order, on="match_id", how="left")
 
     return df
-
 
 def vertical_coords_from_statsbomb(x: pd.Series, y: pd.Series) -> tuple[pd.Series, pd.Series]:
     return pd.to_numeric(y, errors="coerce"), pd.to_numeric(x, errors="coerce")
 
-
 def corner_origin_xy(side: str) -> tuple[float, float]:
     return (0.0, 120.0) if str(side).lower() == "left" else (80.0, 120.0)
 
+def attacking_origin_xy(side: str) -> tuple[float, float]:
+    return corner_origin_xy(side)
 
 def add_half_vertical_pitch_layout(fig: go.Figure, title: str, pitch_color: str = "white", height: int = 620) -> go.Figure:
     fig.update_xaxes(range=[0, PITCH_WIDTH], visible=False)
@@ -196,7 +269,7 @@ def add_half_vertical_pitch_layout(fig: go.Figure, title: str, pitch_color: str 
         dict(type="rect", x0=penalty_left, y0=102, x1=penalty_right, y1=120, line=dict(width=1.6, color="#1e293b")),
         dict(type="rect", x0=six_left, y0=114, x1=six_right, y1=120, line=dict(width=1.6, color="#1e293b")),
         dict(type="line", x0=36, y0=120, x1=44, y1=120, line=dict(width=3, color="#1e293b")),
-        dict(type="circle", x0=39.5, y0=107.5, x1=40.5, y1=108.5, line=dict(width=1, color="#1e293b"), fillcolor="#1e293b"),
+        dict(type="circle", x0=39.5, y0=107.5, x1=40.5, y1=108.5, line=dict(width=1, color="#1e293b"), fillcolor="#1e293b")),
         dict(type="circle", x0=34, y0=102, x1=46, y1=114, line=dict(width=1.2, color="#1e293b")),
     ]
 
@@ -210,7 +283,6 @@ def add_half_vertical_pitch_layout(fig: go.Figure, title: str, pitch_color: str 
         legend_title_text="",
     )
     return fig
-
 
 def shotmap_figure(df: pd.DataFrame, title: str) -> go.Figure:
     fig = go.Figure()
@@ -260,7 +332,6 @@ def shotmap_figure(df: pd.DataFrame, title: str) -> go.Figure:
 
     return add_half_vertical_pitch_layout(fig, title)
 
-
 def delivery_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
     fig = go.Figure()
     if df.empty:
@@ -271,7 +342,7 @@ def delivery_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
     deliveries = deliveries[pd.to_numeric(deliveries["delivery_end_x"], errors="coerce") >= HALF_START]
 
     if deliveries.empty:
-        fig.add_annotation(text="No deliveries for current filter", x=40, y=90, showarrow=False, font=dict(size=18, color="#64748b"))
+        fig.add_annotation(text="No deliveries with end locations for current filter", x=40, y=90, showarrow=False, font=dict(size=18, color="#64748b"))
         return add_half_vertical_pitch_layout(fig, title)
 
     sample = deliveries.copy()
@@ -289,9 +360,8 @@ def delivery_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
 
     for tech, part in sample.groupby("Technique", dropna=False):
         color = color_map.get(str(tech), "#7c3aed")
-
         for _, row in part.iterrows():
-            start_x, start_y = corner_origin_xy(row.get("side", "Left"))
+            start_x, start_y = attacking_origin_xy(row.get("side", "Left"))
             fig.add_trace(
                 go.Scatter(
                     x=[start_x, row["vx_end"]],
@@ -315,7 +385,7 @@ def delivery_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
                     [
                         part["Taker"].fillna("Unknown"),
                         part["Delivery height"].fillna("Unknown"),
-                        part["Delivery outcome"].fillna("Unknown"),
+                        part["Shot outcome"].fillna("Unknown"),
                         part["Match"].fillna("Unknown"),
                     ],
                     axis=1,
@@ -329,7 +399,7 @@ def delivery_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
             x=[0, 80],
             y=[120, 120],
             mode="markers",
-            name="Corner spot",
+            name="Restart spot",
             marker=dict(size=11, color="#0f172a", symbol="circle-open", line=dict(width=2, color="#0f172a")),
             hoverinfo="skip",
         )
@@ -337,41 +407,27 @@ def delivery_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
 
     return add_half_vertical_pitch_layout(fig, title)
 
-
 def build_summary_tables(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     if df.empty:
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
-    group_col = "Team" if "Team" in df.columns else None
-    if group_col:
-        summary = (
-            df.groupby(group_col, dropna=False)
-            .agg(
-                Matches=("match_id", "nunique") if "match_id" in df.columns else ("Team", "size"),
-                Set_Pieces=("possession", "nunique") if "possession" in df.columns else ("Team", "size"),
-                Shots=("is_shot", "sum"),
-                Goals=("is_goal", "sum"),
-                Total_xG=("xg", "sum"),
-                Avg_xG=("xg", "mean"),
-            )
-            .reset_index()
-            .sort_values(["Total_xG", "Goals", "Shots"], ascending=False)
+    summary = (
+        df.groupby("Team", dropna=False)
+        .agg(
+            Matches=("match_id", "nunique") if "match_id" in df.columns else ("Team", "size"),
+            Set_Pieces=("possession", "nunique") if "possession" in df.columns else ("Team", "size"),
+            Shots=("is_shot", "sum"),
+            Goals=("is_goal", "sum"),
+            Total_xG=("xg", "sum"),
+            Avg_xG=("xg", "mean"),
         )
-    else:
-        summary = pd.DataFrame({
-            "Set_Pieces": [len(df)],
-            "Shots": [int(df["is_shot"].sum())],
-            "Goals": [int(df["is_goal"].sum())],
-            "Total_xG": [float(df["xg"].sum())],
-            "Avg_xG": [float(df["xg"].mean()) if len(df) else 0],
-        })
+        .reset_index()
+        .sort_values(["Total_xG", "Goals", "Shots"], ascending=False)
+    )
 
-    if "Shots" in summary.columns and "Goals" in summary.columns:
-        summary["Shot conversion %"] = np.where(summary["Shots"] > 0, (summary["Goals"] / summary["Shots"] * 100).round(1), 0)
-    if "Avg_xG" in summary.columns:
-        summary["Avg_xG"] = pd.to_numeric(summary["Avg_xG"], errors="coerce").fillna(0).round(3)
-    if "Total_xG" in summary.columns:
-        summary["Total_xG"] = pd.to_numeric(summary["Total_xG"], errors="coerce").fillna(0).round(2)
+    summary["Shot conversion %"] = np.where(summary["Shots"] > 0, (summary["Goals"] / summary["Shots"] * 100).round(1), 0)
+    summary["Avg_xG"] = summary["Avg_xG"].fillna(0).round(3)
+    summary["Total_xG"] = summary["Total_xG"].fillna(0).round(2)
 
     technique_mix = (
         df.groupby(["Technique", "Delivery height"], dropna=False)
@@ -389,17 +445,11 @@ def build_summary_tables(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, 
 
     return summary, technique_mix, outcome_mix
 
-
 def kpi_row(df: pd.DataFrame) -> None:
-    sequences = 0
-    if not df.empty:
-        if set(["match_id", "possession", "Team"]).issubset(df.columns):
-            sequences = int(df[["match_id", "possession", "Team"]].drop_duplicates().shape[0])
-        else:
-            sequences = int(len(df))
-    shots = int(df["is_shot"].sum()) if not df.empty and "is_shot" in df.columns else 0
-    goals = int(df["is_goal"].sum()) if not df.empty and "is_goal" in df.columns else 0
-    total_xg = float(df["xg"].sum()) if not df.empty and "xg" in df.columns else 0.0
+    sequences = int(df[["match_id", "possession", "Team"]].drop_duplicates().shape[0]) if not df.empty and set(["match_id", "possession", "Team"]).issubset(df.columns) else int(len(df))
+    shots = int(df["is_shot"].sum()) if not df.empty else 0
+    goals = int(df["is_goal"].sum()) if not df.empty else 0
+    total_xg = float(df["xg"].sum()) if not df.empty else 0.0
     shot_rate = (shots / sequences * 100) if sequences else 0.0
     goal_rate = (goals / shots * 100) if shots else 0.0
     matches = int(df["match_id"].nunique()) if not df.empty and "match_id" in df.columns else 0
@@ -417,19 +467,18 @@ def kpi_row(df: pd.DataFrame) -> None:
         col.metric(label, value)
     st.caption(f"Goal conversion from shots: {goal_rate:.1f}%")
 
-
 def info_panel(df: pd.DataFrame) -> None:
     if df.empty:
         st.info("No rows match the current filters.")
         return
-    counts = []
+    notes = []
     if "Technique" in df.columns:
-        top_technique = df["Technique"].fillna("Unknown").value_counts().head(1)
-        if not top_technique.empty:
-            counts.append(f"Most common technique: {top_technique.index[0]} ({int(top_technique.iloc[0])})")
+        vc = df["Technique"].fillna("Unknown").value_counts().head(1)
+        if not vc.empty:
+            notes.append(f"Top technique: {vc.index[0]} ({int(vc.iloc[0])})")
     if "Taker" in df.columns:
-        top_taker = df["Taker"].fillna("Unknown").value_counts().head(1)
-        if not top_taker.empty:
-            counts.append(f"Most frequent taker: {top_taker.index[0]} ({int(top_taker.iloc[0])})")
-    if counts:
-        st.caption(" · ".join(counts))
+        vc = df["Taker"].fillna("Unknown").value_counts().head(1)
+        if not vc.empty:
+            notes.append(f"Top taker: {vc.index[0]} ({int(vc.iloc[0])})")
+    if notes:
+        st.caption(" · ".join(notes))

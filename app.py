@@ -1,13 +1,8 @@
 
 from __future__ import annotations
-
 import streamlit as st
 
-st.set_page_config(
-    page_title="Michael Mackin Set Piece",
-    page_icon="⚽",
-    layout="wide",
-)
+st.set_page_config(page_title="Michael Mackin Set Piece", page_icon="⚽", layout="wide")
 
 st.markdown(
     '''
@@ -57,8 +52,7 @@ st.markdown(
         <div class="hero-title">Professional set-piece dashboard</div>
         <div class="hero-copy">
             Explore corners, freekicks, and throw-ins with delivery maps, shot maps, match filters,
-            player filters, and event-level detail. The dashboard is built for fast opposition review
-            and set-piece pattern analysis in a clean light-theme environment.
+            player filters, and event-level detail in a clean light-theme environment.
         </div>
     </div>
     ''',
@@ -72,8 +66,8 @@ with c1:
         '''
         <div class="nav-card">
             <div class="nav-title">Corners</div>
-            <div class="nav-copy">Half-pitch vertical shot map and delivery map using StatsBomb 120×80 coordinates, with richer filter controls.</div>
-            <div class="tiny">Attacking-half view · Team, side, taker, technique, minute, outcomes</div>
+            <div class="nav-copy">Dedicated corners workbook with richer delivery and shot coordinates, displayed on a compact vertical half-pitch.</div>
+            <div class="tiny">Source: Allsvenskan - Corners 2025.xlsx</div>
         </div>
         ''',
         unsafe_allow_html=True,
@@ -86,8 +80,8 @@ with c2:
         '''
         <div class="nav-card">
             <div class="nav-title">Freekicks</div>
-            <div class="nav-copy">Shared page framework ready for freekick datasets, including summary tables and plotting components.</div>
-            <div class="tiny">Generic template · Plug in data when ready</div>
+            <div class="nav-copy">Freekick events pulled from the shared SWE SP workbook with the same KPI, filters, and visual framework.</div>
+            <div class="tiny">Source: SWE SP.xlsx → SP_Type = From Free Kick</div>
         </div>
         ''',
         unsafe_allow_html=True,
@@ -100,8 +94,8 @@ with c3:
         '''
         <div class="nav-card">
             <div class="nav-title">Throw ins</div>
-            <div class="nav-copy">Shared page framework ready for throw-in workflows, with filters, KPIs, and event table layout.</div>
-            <div class="tiny">Generic template · Plug in data when ready</div>
+            <div class="nav-copy">Throw-in events pulled from the shared SWE SP workbook with the same KPI, filters, and visual framework.</div>
+            <div class="tiny">Source: SWE SP.xlsx → SP_Type = From Throw In</div>
         </div>
         ''',
         unsafe_allow_html=True,
@@ -109,4 +103,4 @@ with c3:
     if st.button("Open Throw ins"):
         st.switch_page("pages/3_Throw_ins.py")
 
-st.caption("Corners are wired to the bundled Allsvenskan 2025 corners workbook. Freekicks and Throw ins pages remain template-ready until their datasets are added.")
+st.caption("Data routing: Corners use Allsvenskan - Corners 2025.xlsx. Freekicks and Throw ins use SWE SP.xlsx filtered by SP_Type.")
