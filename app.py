@@ -115,3 +115,8 @@ with h1:
         st.switch_page("pages/4_HOPS.py")
 with h2:
     st.markdown("**HOPS** — duel rating summary page with team filter, top players, bottom players, and rating distribution.")
+
+
+st.markdown("---")
+if st.button("Open Delay Analysis"):
+    st.switch_page("pages/5_Delay.py")
