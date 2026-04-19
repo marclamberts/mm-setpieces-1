@@ -1,3 +1,2 @@
-
-from page_template import render_page
-render_page('Freekicks')
+import streamlit as st
+st.title("Coming soon")

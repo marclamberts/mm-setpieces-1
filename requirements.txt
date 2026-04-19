@@ -1,7 +1,5 @@
-streamlit>=1.33
-pandas>=2.2
-openpyxl>=3.1
-plotly>=5.20
-numpy>=1.26
+streamlit
+pandas
 matplotlib
 mplsoccer
+openpyxl
