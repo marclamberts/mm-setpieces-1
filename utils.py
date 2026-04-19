@@ -294,7 +294,10 @@ def delivery_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
         return add_half_vertical_pitch_layout(fig, title)
 
     deliveries = df[df["delivery_end_x"].notna() & df["delivery_end_y"].notna()].copy()
-    deliveries = deliveries[pd.to_numeric(deliveries["delivery_end_x"], errors="coerce") >= HALF_START]
+
+    # Corners use the dedicated half-pitch cutoff; SWE SP freekicks/throw-ins should show all deliveries.
+    if "SP_Type" not in deliveries.columns:
+        deliveries = deliveries[pd.to_numeric(deliveries["delivery_end_x"], errors="coerce") >= HALF_START]
 
     if deliveries.empty:
         fig.add_annotation(text="No deliveries with end locations for current filter", x=40, y=90, showarrow=False, font=dict(size=18, color="#64748b"))
