@@ -104,3 +104,14 @@ with c3:
         st.switch_page("pages/3_Throw_ins.py")
 
 st.caption("Data routing: Corners use Allsvenskan - Corners 2025.xlsx. Freekicks and Throw ins use SWE SP.xlsx filtered by SP_Type.")
+
+
+st.markdown("---")
+st.subheader("Additional analysis")
+
+h1, h2 = st.columns([1, 3])
+with h1:
+    if st.button("Open HOPS"):
+        st.switch_page("pages/4_HOPS.py")
+with h2:
+    st.markdown("**HOPS** — duel rating summary page with team filter, top players, bottom players, and rating distribution.")
