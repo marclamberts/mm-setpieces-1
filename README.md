@@ -1,18 +1,22 @@
-# Michael Mackin Set Piece - Streamlit App
+# Michael Mackin Set Piece App
 
 ## Run locally
-
 ```bash
 pip install -r requirements.txt
 streamlit run app.py
 ```
 
-## Included pages
-- Landing page: `app.py`
-- `Corners`
-- `Freekicks`
-- `Throw ins`
+## Included
+- Landing page with light-theme professional styling
+- Corners page with:
+  - vertical half-pitch visuals
+  - StatsBomb 120x80 coordinate logic
+  - shotmap
+  - delivery map
+  - richer sidebar filters
+- Freekicks and Throw ins template pages
 
-## Notes on the uploaded data
-- The source workbook does not contain a `League` column, so the app creates `Allsvenskan` as a default competition label.
-- The source workbook does not contain a match date, so `Last 10 games` is estimated from the 10 highest `match_id` values for each team.
+## Notes
+- The bundled corners workbook is `Allsvenskan - Corners 2025.xlsx`
+- `Last 10 games` is approximated from descending `match_id`
+- Freekicks and Throw ins will activate when their source workbooks are added and mapped in `utils.py`
