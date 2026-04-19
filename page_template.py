@@ -10,6 +10,7 @@ from utils import (
     kpi_row,
     load_sp_data,
     prepare_sp_dataframe,
+    filter_by_sp_type,
     shotmap_figure,
     starting_location_map_figure,
 )
@@ -115,7 +116,9 @@ def render_page(label: str) -> None:
         return
 
     df = prepare_sp_dataframe(raw, label=label)
+    df = filter_by_sp_type(df, label)
     filtered = _filter_page_data(df, label)
+    filtered = filter_by_sp_type(filtered, label)
 
     st.markdown(
         f'''
