@@ -336,16 +336,19 @@ def delivery_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
                 mode="markers",
                 name=str(tech),
                 marker=dict(size=10, color=color, opacity=0.84, line=dict(width=0.8, color="white")),
+                text=part["Delivery outcome"].fillna("Unknown"),
+                textposition="top center",
+                textfont=dict(size=9),
                 customdata=np.stack(
                     [
                         part["Taker"].fillna("Unknown"),
                         part["Delivery height"].fillna("Unknown"),
-                        part["Shot outcome"].fillna("Unknown"),
+                        part["Delivery outcome"].fillna("Unknown"),
                         part["Match"].fillna("Unknown"),
                     ],
                     axis=1,
                 ),
-                hovertemplate="<b>%{customdata[0]}</b><br>%{customdata[1]}<br>%{customdata[2]}<br>%{customdata[3]}<extra></extra>",
+                hovertemplate="<b>%{customdata[0]}</b><br>Height: %{customdata[1]}<br>SP outcome: %{customdata[2]}<br>%{customdata[3]}<extra></extra>",
             )
         )
 
