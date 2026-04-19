@@ -293,7 +293,17 @@ def delivery_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
         fig.add_annotation(text="No data available", x=40, y=90, showarrow=False, font=dict(size=18, color="#64748b"))
         return add_half_vertical_pitch_layout(fig, title)
 
-    deliveries = df[df["delivery_end_x"].notna() & df["delivery_end_y"].notna()].copy()
+    deliveries = df.copy()
+
+    # Explicit SP_Type filtering for SWE SP pages.
+    if "SP_Type" in deliveries.columns:
+        sp_values = deliveries["SP_Type"].astype(str).str.strip()
+        if sp_values.eq("From Free Kick").any() and not sp_values.eq("From Throw In").any():
+            deliveries = deliveries[sp_values.eq("From Free Kick")]
+        elif sp_values.eq("From Throw In").any() and not sp_values.eq("From Free Kick").any():
+            deliveries = deliveries[sp_values.eq("From Throw In")]
+
+    deliveries = deliveries[deliveries["delivery_end_x"].notna() & deliveries["delivery_end_y"].notna()].copy()
 
     # Corners use the dedicated half-pitch cutoff; SWE SP freekicks/throw-ins should show all deliveries.
     if "SP_Type" not in deliveries.columns:
