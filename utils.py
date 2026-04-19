@@ -87,6 +87,14 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
 
         if "League" not in df.columns:
             df["League"] = "Allsvenskan"
+        else:
+            df["League"] = df["League"].fillna("Allsvenskan")
+
+        if "Match" not in df.columns:
+            if "match_id" in df.columns:
+                df["Match"] = "Match " + df["match_id"].astype(str)
+            else:
+                df["Match"] = "Unknown"
 
         for numeric_col in ["minute", "second", "match_id", "match_rank", "xg", "shot_x", "shot_y", "delivery_end_x", "delivery_end_y"]:
             if numeric_col in df.columns:
@@ -105,17 +113,21 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
             df["shot_x"] = pd.to_numeric(df["shot_location_x"], errors="coerce")
         if "shot_y" not in df.columns and "shot_location_y" in df.columns:
             df["shot_y"] = pd.to_numeric(df["shot_location_y"], errors="coerce")
+        if "shot_x" not in df.columns:
+            df["shot_x"] = np.nan
+        if "shot_y" not in df.columns:
+            df["shot_y"] = np.nan
 
         if "delivery_end_x" not in df.columns:
-            for alt in ["end_x", "delivery_end_x"]:
-                if alt in df.columns:
-                    df["delivery_end_x"] = pd.to_numeric(df[alt], errors="coerce")
-                    break
+            if "end_x" in df.columns:
+                df["delivery_end_x"] = pd.to_numeric(df["end_x"], errors="coerce")
+            else:
+                df["delivery_end_x"] = np.nan
         if "delivery_end_y" not in df.columns:
-            for alt in ["end_y", "delivery_end_y"]:
-                if alt in df.columns:
-                    df["delivery_end_y"] = pd.to_numeric(df[alt], errors="coerce")
-                    break
+            if "end_y" in df.columns:
+                df["delivery_end_y"] = pd.to_numeric(df["end_y"], errors="coerce")
+            else:
+                df["delivery_end_y"] = np.nan
 
         if "is_shot" not in df.columns:
             df["is_shot"] = df[["shot_x", "shot_y"]].notna().all(axis=1)
@@ -165,8 +177,16 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
             df["Match"] = "Unknown"
     if "Taker" not in df.columns:
         df["Taker"] = "Unknown"
+    else:
+        df["Taker"] = df["Taker"].fillna("Unknown")
     if "Shooter" not in df.columns:
         df["Shooter"] = "Unknown"
+    else:
+        df["Shooter"] = df["Shooter"].fillna("Unknown")
+    if "Team" not in df.columns:
+        df["Team"] = "Unknown"
+    else:
+        df["Team"] = df["Team"].fillna("Unknown")
 
     if "location.pass" in df.columns:
         pass_xy = df["location.pass"].astype(str).str.replace("[\[\]]", "", regex=True).str.split(",", expand=True)
@@ -190,7 +210,6 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
     if "shot_y" not in df.columns:
         df["shot_y"] = np.nan
 
-    # SWE SP lacks reliable delivery end coordinates; use shot location when available
     if "delivery_end_x" not in df.columns:
         df["delivery_end_x"] = df["shot_x"]
     if "delivery_end_y" not in df.columns:
@@ -248,11 +267,8 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
 def vertical_coords_from_statsbomb(x: pd.Series, y: pd.Series) -> tuple[pd.Series, pd.Series]:
     return pd.to_numeric(y, errors="coerce"), pd.to_numeric(x, errors="coerce")
 
-def corner_origin_xy(side: str) -> tuple[float, float]:
+def restart_origin_xy(side: str) -> tuple[float, float]:
     return (0.0, 120.0) if str(side).lower() == "left" else (80.0, 120.0)
-
-def attacking_origin_xy(side: str) -> tuple[float, float]:
-    return corner_origin_xy(side)
 
 def add_half_vertical_pitch_layout(fig: go.Figure, title: str, pitch_color: str = "white", height: int = 620) -> go.Figure:
     fig.update_xaxes(range=[0, PITCH_WIDTH], visible=False)
@@ -269,7 +285,7 @@ def add_half_vertical_pitch_layout(fig: go.Figure, title: str, pitch_color: str 
         dict(type="rect", x0=penalty_left, y0=102, x1=penalty_right, y1=120, line=dict(width=1.6, color="#1e293b")),
         dict(type="rect", x0=six_left, y0=114, x1=six_right, y1=120, line=dict(width=1.6, color="#1e293b")),
         dict(type="line", x0=36, y0=120, x1=44, y1=120, line=dict(width=3, color="#1e293b")),
-        dict(type="circle", x0=39.5, y0=107.5, x1=40.5, y1=108.5, line=dict(width=1, color="#1e293b"), fillcolor="#1e293b")),
+        dict(type="circle", x0=39.5, y0=107.5, x1=40.5, y1=108.5, line=dict(width=1, color="#1e293b"), fillcolor="#1e293b"),
         dict(type="circle", x0=34, y0=102, x1=46, y1=114, line=dict(width=1.2, color="#1e293b")),
     ]
 
@@ -361,7 +377,7 @@ def delivery_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
     for tech, part in sample.groupby("Technique", dropna=False):
         color = color_map.get(str(tech), "#7c3aed")
         for _, row in part.iterrows():
-            start_x, start_y = attacking_origin_xy(row.get("side", "Left"))
+            start_x, start_y = restart_origin_xy(row.get("side", "Left"))
             fig.add_trace(
                 go.Scatter(
                     x=[start_x, row["vx_end"]],
@@ -411,19 +427,34 @@ def build_summary_tables(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, 
     if df.empty:
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
-    summary = (
-        df.groupby("Team", dropna=False)
-        .agg(
-            Matches=("match_id", "nunique") if "match_id" in df.columns else ("Team", "size"),
-            Set_Pieces=("possession", "nunique") if "possession" in df.columns else ("Team", "size"),
-            Shots=("is_shot", "sum"),
-            Goals=("is_goal", "sum"),
-            Total_xG=("xg", "sum"),
-            Avg_xG=("xg", "mean"),
+    if set(["match_id", "possession", "Team"]).issubset(df.columns):
+        summary = (
+            df.groupby("Team", dropna=False)
+            .agg(
+                Matches=("match_id", "nunique"),
+                Set_Pieces=("possession", "nunique"),
+                Shots=("is_shot", "sum"),
+                Goals=("is_goal", "sum"),
+                Total_xG=("xg", "sum"),
+                Avg_xG=("xg", "mean"),
+            )
+            .reset_index()
+            .sort_values(["Total_xG", "Goals", "Shots"], ascending=False)
         )
-        .reset_index()
-        .sort_values(["Total_xG", "Goals", "Shots"], ascending=False)
-    )
+    else:
+        summary = (
+            df.groupby("Team", dropna=False)
+            .agg(
+                Matches=("Match", "nunique") if "Match" in df.columns else ("Team", "size"),
+                Set_Pieces=("Team", "size"),
+                Shots=("is_shot", "sum"),
+                Goals=("is_goal", "sum"),
+                Total_xG=("xg", "sum"),
+                Avg_xG=("xg", "mean"),
+            )
+            .reset_index()
+            .sort_values(["Total_xG", "Goals", "Shots"], ascending=False)
+        )
 
     summary["Shot conversion %"] = np.where(summary["Shots"] > 0, (summary["Goals"] / summary["Shots"] * 100).round(1), 0)
     summary["Avg_xG"] = summary["Avg_xG"].fillna(0).round(3)
@@ -446,13 +477,16 @@ def build_summary_tables(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, 
     return summary, technique_mix, outcome_mix
 
 def kpi_row(df: pd.DataFrame) -> None:
-    sequences = int(df[["match_id", "possession", "Team"]].drop_duplicates().shape[0]) if not df.empty and set(["match_id", "possession", "Team"]).issubset(df.columns) else int(len(df))
+    if not df.empty and set(["match_id", "possession", "Team"]).issubset(df.columns):
+        sequences = int(df[["match_id", "possession", "Team"]].drop_duplicates().shape[0])
+    else:
+        sequences = int(len(df))
     shots = int(df["is_shot"].sum()) if not df.empty else 0
     goals = int(df["is_goal"].sum()) if not df.empty else 0
     total_xg = float(df["xg"].sum()) if not df.empty else 0.0
     shot_rate = (shots / sequences * 100) if sequences else 0.0
     goal_rate = (goals / shots * 100) if shots else 0.0
-    matches = int(df["match_id"].nunique()) if not df.empty and "match_id" in df.columns else 0
+    matches = int(df["match_id"].nunique()) if not df.empty and "match_id" in df.columns else (int(df["Match"].nunique()) if not df.empty and "Match" in df.columns else 0)
 
     cols = st.columns(6)
     metrics = [
