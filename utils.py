@@ -378,6 +378,72 @@ def delivery_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
 
     return add_half_vertical_pitch_layout(fig, title)
 
+
+def starting_location_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
+    fig = go.Figure()
+    if df.empty:
+        fig.add_annotation(text="No data available", x=40, y=90, showarrow=False, font=dict(size=18, color="#64748b"))
+        return add_half_vertical_pitch_layout(fig, title)
+
+    starts = df.copy()
+
+    # Use pass start locations from SWE SP
+    if "pass_x" not in starts.columns or "pass_y" not in starts.columns:
+        if "location.pass" in starts.columns:
+            pass_xy = starts["location.pass"].astype(str).str.replace(r"[\[\]]", "", regex=True).str.split(",", expand=True)
+            if pass_xy.shape[1] >= 2:
+                starts["pass_x"] = pd.to_numeric(pass_xy[0].str.strip(), errors="coerce")
+                starts["pass_y"] = pd.to_numeric(pass_xy[1].str.strip(), errors="coerce")
+
+    starts = starts[starts["pass_x"].notna() & starts["pass_y"].notna()].copy()
+
+    if starts.empty:
+        fig.add_annotation(text="No start locations for current filter", x=40, y=90, showarrow=False, font=dict(size=18, color="#64748b"))
+        return add_half_vertical_pitch_layout(fig, title)
+
+    starts["vx"], starts["vy"] = vertical_coords_from_statsbomb(starts["pass_x"], starts["pass_y"])
+
+    color_map = {
+        "From Free Kick": "#2563eb",
+        "From Throw In": "#f59e0b",
+    }
+
+    if "SP_Type" in starts.columns:
+        groups = starts.groupby("SP_Type", dropna=False)
+    else:
+        starts["SP_Type"] = "Start location"
+        groups = starts.groupby("SP_Type", dropna=False)
+
+    for sp_type, part in groups:
+        color = color_map.get(str(sp_type), "#7c3aed")
+        fig.add_trace(
+            go.Scatter(
+                x=part["vx"],
+                y=part["vy"],
+                mode="markers",
+                name=str(sp_type),
+                marker=dict(
+                    size=10,
+                    color=color,
+                    opacity=0.82,
+                    line=dict(width=0.8, color="white"),
+                ),
+                customdata=np.stack(
+                    [
+                        part["Team"].fillna("Unknown") if "Team" in part.columns else pd.Series(["Unknown"] * len(part)),
+                        part["Taker"].fillna("Unknown") if "Taker" in part.columns else pd.Series(["Unknown"] * len(part)),
+                        part["Match"].fillna("Unknown") if "Match" in part.columns else pd.Series(["Unknown"] * len(part)),
+                        part["minute"].fillna(0) if "minute" in part.columns else pd.Series([0] * len(part)),
+                    ],
+                    axis=1,
+                ),
+                hovertemplate="<b>%{customdata[0]}</b><br>Taker: %{customdata[1]}<br>%{customdata[2]}<br>Minute: %{customdata[3]}<extra></extra>",
+            )
+        )
+
+    return add_half_vertical_pitch_layout(fig, title)
+
+
 def build_summary_tables(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     if df.empty or "Team" not in df.columns:
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()

@@ -11,6 +11,7 @@ from utils import (
     load_sp_data,
     prepare_sp_dataframe,
     shotmap_figure,
+    starting_location_map_figure,
 )
 
 def _safe_sorted(values: pd.Series) -> list[str]:
@@ -152,7 +153,10 @@ def render_page(label: str) -> None:
     with left:
         st.plotly_chart(shotmap_figure(filtered, f"{label} shotmap · vertical half pitch"), width="stretch")
     with right:
-        st.plotly_chart(delivery_map_figure(filtered, f"{label} delivery map · vertical half pitch"), width="stretch")
+        if label == "Corners":
+            st.plotly_chart(delivery_map_figure(filtered, f"{label} delivery map · vertical half pitch"), width="stretch")
+        else:
+            st.plotly_chart(starting_location_map_figure(filtered, f"{label} starting location map · vertical half pitch"), width="stretch")
 
     st.markdown("### Event details")
     display_cols = [c for c in [
