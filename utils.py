@@ -474,31 +474,41 @@ def build_summary_tables(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, 
     if df.empty or "Team" not in df.columns:
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
-    # Sequence-based summaries for SWE SP pages; corners still work because possession may be absent.
+    # Treat possession as a unique shot sequence where available.
     if "possession" in df.columns:
         rows = []
         for team, part in df.groupby("Team", dropna=False):
-            sequences = int(part["possession"].nunique())
             matches = int(part["match_id"].nunique()) if "match_id" in part.columns else (int(part["Match"].nunique()) if "Match" in part.columns else 0)
+            shot_sequences = int(part["possession"].nunique())
 
-            shot_part = part[part["is_shot"]] if "is_shot" in part.columns else part.iloc[0:0]
-            goal_part = part[part["is_goal"]] if "is_goal" in part.columns else part.iloc[0:0]
+            if set(["possession", "shot_x", "shot_y"]).issubset(part.columns):
+                shots_df = part[part["shot_x"].notna()][["possession", "shot_x", "shot_y"]].drop_duplicates()
+                shots = int(len(shots_df))
+            elif "shot_x" in part.columns:
+                shots = int(part["shot_x"].notna().sum())
+            else:
+                shots = 0
 
-            shots = int(shot_part["possession"].nunique()) if not shot_part.empty else 0
-            goals = int(goal_part["possession"].nunique()) if not goal_part.empty else 0
+            if "is_goal" in part.columns and set(["possession", "shot_x", "shot_y"]).issubset(part.columns):
+                goals_df = part[part["is_goal"] & part["shot_x"].notna()][["possession", "shot_x", "shot_y"]].drop_duplicates()
+                goals = int(len(goals_df))
+            elif "is_goal" in part.columns:
+                goals = int(part["is_goal"].sum())
+            else:
+                goals = 0
 
             if set(["possession", "shot_x", "shot_y", "xg"]).issubset(part.columns):
                 xg_df = part[part["shot_x"].notna()][["possession", "shot_x", "shot_y", "xg"]].drop_duplicates()
                 total_xg = float(xg_df["xg"].sum()) if not xg_df.empty else 0.0
                 avg_xg = float(xg_df["xg"].mean()) if not xg_df.empty else 0.0
             else:
-                total_xg = 0.0
-                avg_xg = 0.0
+                total_xg = float(part["xg"].sum()) if "xg" in part.columns else 0.0
+                avg_xg = float(part["xg"].mean()) if "xg" in part.columns and len(part) else 0.0
 
             rows.append({
                 "Team": team,
                 "Matches": matches,
-                "Set_Pieces": sequences,
+                "Shot_sequences": shot_sequences,
                 "Shots": shots,
                 "Goals": goals,
                 "Total_xG": total_xg,
@@ -511,7 +521,7 @@ def build_summary_tables(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, 
             df.groupby("Team", dropna=False)
             .agg(
                 Matches=("match_id", "nunique") if "match_id" in df.columns else ("Match", "nunique") if "Match" in df.columns else ("Team", "size"),
-                Set_Pieces=("Team", "size"),
+                Shot_sequences=("Team", "size"),
                 Shots=("is_shot", "sum"),
                 Goals=("is_goal", "sum"),
                 Total_xG=("xg", "sum"),
@@ -521,7 +531,7 @@ def build_summary_tables(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, 
             .sort_values(["Total_xG", "Goals", "Shots"], ascending=False)
         )
 
-    summary["Shot conversion %"] = np.where(summary["Shots"] > 0, (summary["Goals"] / summary["Shots"] * 100).round(1), 0)
+    summary["Goal conversion %"] = np.where(summary["Shots"] > 0, (summary["Goals"] / summary["Shots"] * 100).round(1), 0)
     summary["Avg_xG"] = summary["Avg_xG"].fillna(0).round(3)
     summary["Total_xG"] = summary["Total_xG"].fillna(0).round(2)
 
@@ -544,29 +554,29 @@ def build_summary_tables(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, 
 def kpi_row(df: pd.DataFrame) -> None:
     if df.empty:
         cols = st.columns(6)
-        for col, label in zip(cols, ["Matches", "Set Pieces", "Shots", "Goals", "Shot rate", "Total xG"]):
+        for col, label in zip(cols, ["Matches", "Shot sequences", "Shots", "Goals", "Total xG", "xG/Shot"]):
             col.metric(label, 0)
         st.caption("Goal conversion from shots: 0.0%")
         return
 
-    # Use unique possession sequences for KPI calculations when available.
-    sequences = int(df["possession"].nunique()) if "possession" in df.columns else int(len(df))
+    matches = int(df["match_id"].nunique()) if "match_id" in df.columns else (int(df["Match"].nunique()) if "Match" in df.columns else 0)
+    shot_sequences = int(df["possession"].nunique()) if "possession" in df.columns else int(len(df))
 
     if set(["possession", "shot_x", "shot_y"]).issubset(df.columns):
         shots_df = df[df["shot_x"].notna()][["possession", "shot_x", "shot_y"]].drop_duplicates()
-        shots = int(shots_df["possession"].nunique()) if not shots_df.empty else 0
-    elif "is_shot" in df.columns and "possession" in df.columns:
-        shots = int(df[df["is_shot"]]["possession"].nunique())
+        shots = int(len(shots_df))
+    elif "shot_x" in df.columns:
+        shots = int(df["shot_x"].notna().sum())
     else:
-        shots = int(df["is_shot"].sum()) if "is_shot" in df.columns else 0
+        shots = 0
 
-    if set(["possession", "shot_x", "shot_y"]).issubset(df.columns) and "is_goal" in df.columns:
+    if "is_goal" in df.columns and set(["possession", "shot_x", "shot_y"]).issubset(df.columns):
         goals_df = df[df["is_goal"] & df["shot_x"].notna()][["possession", "shot_x", "shot_y"]].drop_duplicates()
-        goals = int(goals_df["possession"].nunique()) if not goals_df.empty else 0
-    elif "is_goal" in df.columns and "possession" in df.columns:
-        goals = int(df[df["is_goal"]]["possession"].nunique())
+        goals = int(len(goals_df))
+    elif "is_goal" in df.columns:
+        goals = int(df["is_goal"].sum())
     else:
-        goals = int(df["is_goal"].sum()) if "is_goal" in df.columns else 0
+        goals = 0
 
     if set(["possession", "shot_x", "shot_y", "xg"]).issubset(df.columns):
         xg_df = df[df["shot_x"].notna()][["possession", "shot_x", "shot_y", "xg"]].drop_duplicates()
@@ -574,18 +584,17 @@ def kpi_row(df: pd.DataFrame) -> None:
     else:
         total_xg = float(df["xg"].sum()) if "xg" in df.columns else 0.0
 
-    matches = int(df["match_id"].nunique()) if "match_id" in df.columns else (int(df["Match"].nunique()) if "Match" in df.columns else 0)
-    shot_rate = (shots / sequences * 100) if sequences else 0.0
+    xg_per_shot = (total_xg / shots) if shots else 0.0
     goal_rate = (goals / shots * 100) if shots else 0.0
 
     cols = st.columns(6)
     metrics = [
         ("Matches", matches),
-        ("Set Pieces", sequences),
+        ("Shot sequences", shot_sequences),
         ("Shots", shots),
         ("Goals", goals),
-        ("Shot rate", f"{shot_rate:.1f}%"),
         ("Total xG", f"{total_xg:.2f}"),
+        ("xG/Shot", f"{xg_per_shot:.3f}"),
     ]
     for col, (label, value) in zip(cols, metrics):
         col.metric(label, value)
