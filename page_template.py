@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from utils import SP_MAP, delivery_figure, info_panel, kpi_row, load_data, shotmap_figure, sidebar_filters, summary_tables
+from utils import SP_MAP, delivery_map_figure, info_panel, kpi_row, load_data, shotmap_figure, sidebar_filters, summary_tables
 
 
 def render_page(label: str) -> None:
@@ -30,7 +30,7 @@ def render_page(label: str) -> None:
     with chart_left:
         st.plotly_chart(shotmap_figure(filtered, f'{label} shotmap'), use_container_width=True)
     with chart_right:
-        st.plotly_chart(delivery_figure(filtered, f'{label} delivery map'), use_container_width=True)
+        st.plotly_chart(delivery_map_figure(filtered, f'{label} delivery map'), use_container_width=True)
 
     st.markdown('---')
     st.subheader('Raw events')
