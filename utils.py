@@ -30,6 +30,7 @@ def inject_app_style() -> None:
     st.markdown(
         f"""
         <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
             :root {{
                 --mm-black: {BLACK};
                 --mm-red: {RED};
@@ -37,153 +38,306 @@ def inject_app_style() -> None:
                 --mm-ink: {INK};
                 --mm-muted: {MUTED};
                 --mm-border: {BORDER};
+                --mm-surface: #ffffff;
+                --mm-surface-soft: #f8fafc;
+                --mm-page: #f3f5f8;
+                --mm-line: #e5e7eb;
+                --mm-blue: #1d4ed8;
+                --mm-green: #15803d;
+                --mm-amber: #b45309;
             }}
             .stApp {{
-                background:
-                    linear-gradient(180deg, rgba(255,255,255,0.88) 0%, rgba(243,246,251,0.94) 100%),
-                    radial-gradient(circle at 12% 0%, rgba(193,18,31,0.10), transparent 28%);
+                background: var(--mm-page);
                 color: var(--mm-black);
             }}
+            html, body, [class*="css"] {{
+                font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            }}
             .block-container {{
-                padding-top: 1.25rem;
-                padding-bottom: 2.5rem;
-                max-width: 1320px;
+                padding-top: 1rem;
+                padding-bottom: 3rem;
+                max-width: 1360px;
             }}
             h1, h2, h3, h4, h5, h6, p, label, span {{
                 color: var(--mm-black);
             }}
+            h1, h2, h3 {{
+                letter-spacing: 0;
+            }}
             div[data-testid="stSidebar"] {{
-                background: rgba(255,255,255,0.88);
-                border-right: 1px solid var(--mm-border);
+                background: #101820;
+                border-right: 1px solid rgba(255,255,255,0.08);
+            }}
+            div[data-testid="stSidebar"] * {{
+                color: rgba(255,255,255,0.88);
             }}
             div[data-testid="stSidebar"] h2,
             div[data-testid="stSidebar"] h3 {{
-                color: var(--mm-red-dark);
-                font-weight: 900;
+                color: #ffffff;
+                font-weight: 800;
+            }}
+            div[data-testid="stSidebar"] label,
+            div[data-testid="stSidebar"] p {{
+                color: rgba(255,255,255,0.78);
+                font-weight: 650;
+            }}
+            div[data-testid="stSidebar"] [data-baseweb="select"] > div,
+            div[data-testid="stSidebar"] [data-baseweb="input"] > div {{
+                background: rgba(255,255,255,0.08);
+                border-color: rgba(255,255,255,0.14);
+                border-radius: 8px;
+            }}
+            div[data-testid="stSidebar"] hr {{
+                border-color: rgba(255,255,255,0.12);
             }}
             .mm-hero {{
-                background: rgba(255,255,255,0.98);
-                border: 1px solid var(--mm-border);
-                border-top: 5px solid var(--mm-red);
+                background: var(--mm-surface);
+                border: 1px solid var(--mm-line);
                 border-radius: 8px;
-                padding: 1.7rem 1.8rem 1.55rem 1.8rem;
-                box-shadow: 0 18px 42px rgba(15, 23, 42, 0.07);
-                margin-bottom: 1rem;
+                padding: 1.45rem 1.55rem;
+                box-shadow: 0 10px 26px rgba(15, 23, 42, 0.055);
+                margin-bottom: 1.1rem;
+                position: relative;
+                overflow: hidden;
+            }}
+            .mm-hero::before {{
+                content: "";
+                position: absolute;
+                inset: 0 0 auto 0;
+                height: 4px;
+                background: linear-gradient(90deg, var(--mm-red) 0%, var(--mm-black) 52%, var(--mm-blue) 100%);
             }}
             .mm-eyebrow {{
                 color: var(--mm-red-dark);
-                font-size: .78rem;
-                font-weight: 900;
-                letter-spacing: .12em;
+                font-size: .73rem;
+                font-weight: 800;
+                letter-spacing: .08em;
                 text-transform: uppercase;
             }}
             .mm-title {{
                 color: var(--mm-black);
-                font-size: 2.35rem;
-                line-height: 1.05;
-                font-weight: 950;
-                margin: .28rem 0 .45rem 0;
+                font-size: clamp(1.8rem, 2.8vw, 2.65rem);
+                line-height: 1.02;
+                font-weight: 900;
+                margin: .24rem 0 .55rem 0;
             }}
             .mm-copy {{
                 color: var(--mm-muted);
-                font-size: 1rem;
-                line-height: 1.65;
-                max-width: 900px;
+                font-size: .98rem;
+                line-height: 1.58;
+                max-width: 980px;
+                font-weight: 500;
+            }}
+            .mm-feature-strip {{
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: .7rem;
+                margin: .2rem 0 1.2rem 0;
+            }}
+            .mm-feature-pill {{
+                background: var(--mm-surface);
+                border: 1px solid var(--mm-line);
+                border-radius: 8px;
+                padding: .78rem .85rem;
+                box-shadow: 0 8px 18px rgba(15, 23, 42, 0.03);
+            }}
+            .mm-feature-value {{
+                color: var(--mm-black);
+                font-size: .98rem;
+                font-weight: 850;
+                line-height: 1.2;
+            }}
+            .mm-feature-label {{
+                color: var(--mm-muted);
+                font-size: .72rem;
+                font-weight: 700;
+                margin-top: .2rem;
+                text-transform: uppercase;
+                letter-spacing: .06em;
             }}
             .mm-section {{
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
                 gap: 1rem;
-                border-left: 4px solid var(--mm-red);
-                padding: .2rem 0 .2rem .8rem;
-                margin: 1.35rem 0 .65rem 0;
+                border-bottom: 1px solid var(--mm-line);
+                padding: 1.1rem 0 .65rem 0;
+                margin: .65rem 0 .8rem 0;
             }}
             .mm-section-title {{
                 color: var(--mm-black);
-                font-size: 1.18rem;
-                font-weight: 900;
+                font-size: 1.05rem;
+                font-weight: 850;
                 margin: 0;
             }}
             .mm-section-note {{
                 color: var(--mm-muted);
-                font-size: .9rem;
+                font-size: .82rem;
+                font-weight: 600;
             }}
             .mm-nav-card {{
-                background: rgba(255,255,255,0.98);
-                border: 1px solid var(--mm-border);
+                background: var(--mm-surface);
+                border: 1px solid var(--mm-line);
                 border-radius: 8px;
-                padding: 1.2rem;
-                min-height: 190px;
-                box-shadow: 0 12px 28px rgba(15, 23, 42, 0.055);
+                padding: 1rem;
+                min-height: 176px;
+                box-shadow: 0 8px 20px rgba(15, 23, 42, 0.045);
+                transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+            }}
+            .mm-nav-card:hover {{
+                transform: translateY(-2px);
+                border-color: rgba(193,18,31,0.30);
+                box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
             }}
             .mm-nav-title {{
                 color: var(--mm-black);
-                font-size: 1.18rem;
-                font-weight: 900;
-                margin-bottom: .35rem;
+                font-size: 1.08rem;
+                font-weight: 850;
+                margin-bottom: .45rem;
+            }}
+            .mm-card-kicker {{
+                color: var(--mm-red-dark);
+                font-size: .72rem;
+                font-weight: 800;
+                letter-spacing: .07em;
+                text-transform: uppercase;
+                margin-bottom: .45rem;
             }}
             .mm-nav-copy {{
                 color: var(--mm-muted);
-                line-height: 1.55;
-                margin-bottom: 1rem;
+                line-height: 1.48;
+                margin-bottom: .95rem;
+                font-size: .9rem;
+                font-weight: 500;
             }}
             .mm-tiny {{
+                display: inline-flex;
+                align-items: center;
+                gap: .35rem;
                 color: var(--mm-red-dark);
-                font-size: .82rem;
-                font-weight: 800;
+                background: rgba(193,18,31,0.08);
+                border: 1px solid rgba(193,18,31,0.14);
+                border-radius: 999px;
+                padding: .26rem .55rem;
+                font-size: .72rem;
+                font-weight: 750;
+                max-width: 100%;
+                overflow-wrap: anywhere;
             }}
             .mm-insight-card {{
-                background: rgba(255,255,255,0.98);
-                border: 1px solid var(--mm-border);
-                border-left: 4px solid var(--mm-red);
+                background: var(--mm-surface);
+                border: 1px solid var(--mm-line);
                 border-radius: 8px;
                 padding: .9rem 1rem;
                 margin-bottom: .7rem;
-                min-height: 92px;
+                min-height: 86px;
                 color: var(--mm-ink);
                 line-height: 1.45;
-                font-weight: 650;
-                box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+                font-weight: 600;
+                box-shadow: 0 8px 18px rgba(15, 23, 42, 0.035);
+                position: relative;
+            }}
+            .mm-insight-card::before {{
+                content: "";
+                position: absolute;
+                left: 0;
+                top: .85rem;
+                bottom: .85rem;
+                width: 3px;
+                border-radius: 999px;
+                background: var(--mm-red);
             }}
             div.stButton > button {{
                 width: 100%;
                 border-radius: 7px;
-                border: 1px solid var(--mm-red);
-                background: var(--mm-red);
+                border: 1px solid #111827;
+                background: #111827;
                 color: #ffffff;
-                font-weight: 900;
-                padding: .68rem 1rem;
+                font-weight: 800;
+                padding: .62rem .9rem;
                 transition: all .15s ease;
             }}
             div.stButton > button:hover {{
-                border-color: var(--mm-red-dark);
-                background: var(--mm-red-dark);
+                border-color: var(--mm-red);
+                background: var(--mm-red);
                 color: #ffffff;
                 transform: translateY(-1px);
             }}
+            div[data-testid="stDownloadButton"] > button {{
+                border-radius: 7px;
+                background: var(--mm-red);
+                border-color: var(--mm-red);
+                color: #ffffff;
+                font-weight: 800;
+            }}
             div[data-testid="stMetric"] {{
-                background: rgba(255,255,255,0.98);
-                border: 1px solid var(--mm-border);
+                background: var(--mm-surface);
+                border: 1px solid var(--mm-line);
                 border-radius: 8px;
-                padding: .8rem .9rem;
-                box-shadow: 0 8px 22px rgba(15, 23, 42, 0.045);
+                padding: .82rem .92rem;
+                box-shadow: 0 8px 18px rgba(15, 23, 42, 0.035);
             }}
             div[data-testid="stMetricLabel"] p {{
-                color: var(--mm-red-dark);
-                font-weight: 850;
+                color: var(--mm-muted);
+                font-weight: 750;
+                font-size: .78rem;
             }}
             div[data-testid="stMetricValue"] {{
                 color: var(--mm-black);
-                font-weight: 950;
+                font-weight: 900;
+                font-size: 1.55rem;
             }}
             [data-testid="stDataFrameResizable"] {{
-                border: 1px solid var(--mm-border);
+                border: 1px solid var(--mm-line);
                 border-radius: 8px;
                 overflow: hidden;
+                box-shadow: 0 8px 18px rgba(15, 23, 42, 0.03);
+            }}
+            div[data-testid="stTabs"] button {{
+                border-radius: 7px 7px 0 0;
+                font-weight: 750;
+            }}
+            div[data-testid="stTabs"] [aria-selected="true"] {{
+                color: var(--mm-red-dark);
+            }}
+            div[data-testid="stPlotlyChart"],
+            div[data-testid="stImage"],
+            div[data-testid="stPyplot"] {{
+                background: var(--mm-surface);
+                border: 1px solid var(--mm-line);
+                border-radius: 8px;
+                padding: .65rem;
+                box-shadow: 0 8px 18px rgba(15, 23, 42, 0.035);
+            }}
+            [data-baseweb="select"] > div,
+            [data-baseweb="input"] > div,
+            textarea {{
+                border-radius: 8px;
+            }}
+            .stSlider [data-testid="stTickBar"] {{
+                opacity: .45;
             }}
             .stCaptionContainer, .stCaptionContainer p {{
                 color: var(--mm-muted);
+                font-weight: 550;
+            }}
+            @media (max-width: 900px) {{
+                .mm-feature-strip {{
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }}
+                .mm-section {{
+                    align-items: flex-start;
+                    flex-direction: column;
+                    gap: .25rem;
+                }}
+            }}
+            @media (max-width: 560px) {{
+                .mm-feature-strip {{
+                    grid-template-columns: 1fr;
+                }}
+                .mm-hero {{
+                    padding: 1.15rem;
+                }}
             }}
         </style>
         """,

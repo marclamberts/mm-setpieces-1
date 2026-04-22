@@ -124,75 +124,81 @@ def render_page(label: str) -> None:
     kpi_row(filtered)
     info_panel(filtered)
 
-    summary, technique_mix, outcome_mix = build_summary_tables(filtered)
+    overview_tab, visuals_tab, report_tab, data_tab = st.tabs(["Overview", "Visuals", "Report", "Data"])
 
-    section_header("General Information", "Team summary, delivery mix, and outcome mix")
-    c1, c2, c3 = st.columns([1.4, 1, 1])
-    with c1:
-        st.dataframe(summary, use_container_width=True, hide_index=True)
-    with c2:
-        st.dataframe(technique_mix, use_container_width=True, hide_index=True)
-    with c3:
-        st.dataframe(outcome_mix, use_container_width=True, hide_index=True)
+    with overview_tab:
+        summary, technique_mix, outcome_mix = build_summary_tables(filtered)
 
-    section_header("Insights", "Automatic coaching notes from the current filter")
-    insights = generate_set_piece_insights(filtered, label)
-    insight_cols = st.columns(2)
-    for idx, insight in enumerate(insights):
-        with insight_cols[idx % 2]:
-            st.markdown(f"<div class='mm-insight-card'>{insight}</div>", unsafe_allow_html=True)
+        section_header("General Information", "Team summary, delivery mix, and outcome mix")
+        c1, c2, c3 = st.columns([1.4, 1, 1])
+        with c1:
+            st.dataframe(summary, use_container_width=True, hide_index=True)
+        with c2:
+            st.dataframe(technique_mix, use_container_width=True, hide_index=True)
+        with c3:
+            st.dataframe(outcome_mix, use_container_width=True, hide_index=True)
 
-    section_header("Roles & Archetypes", "Taker roles, team profiles, and preparation cues")
-    roles, teams = st.tabs(["Taker roles", "Team archetypes"])
-    with roles:
-        role_table = build_role_archetypes(filtered, label)
-        if role_table.empty:
-            st.info("No taker roles available for the current filter.")
-        else:
-            st.dataframe(role_table, use_container_width=True, hide_index=True)
-    with teams:
-        team_table = build_team_archetypes(filtered)
-        if team_table.empty:
-            st.info("No team archetypes available for the current filter.")
-        else:
-            st.dataframe(team_table, use_container_width=True, hide_index=True)
+        section_header("Insights", "Automatic coaching notes from the current filter")
+        insights = generate_set_piece_insights(filtered, label)
+        insight_cols = st.columns(2)
+        for idx, insight in enumerate(insights):
+            with insight_cols[idx % 2]:
+                st.markdown(f"<div class='mm-insight-card'>{insight}</div>", unsafe_allow_html=True)
 
-    section_header("Pitch Maps", "Shot locations and delivery/start locations")
-    left, right = st.columns(2)
-    with left:
-        st.plotly_chart(polish_plotly_figure(shotmap_figure(filtered, f"{label} shotmap · vertical half pitch")), use_container_width=True)
-    with right:
-        if label == "Corners":
-            st.plotly_chart(polish_plotly_figure(delivery_map_figure(filtered, f"{label} delivery map · vertical half pitch")), use_container_width=True)
-        else:
-            st.plotly_chart(polish_plotly_figure(starting_location_map_figure(filtered, f"{label} starting location map · vertical half pitch")), use_container_width=True)
+        section_header("Roles & Archetypes", "Taker roles, team profiles, and preparation cues")
+        roles, teams = st.tabs(["Taker roles", "Team archetypes"])
+        with roles:
+            role_table = build_role_archetypes(filtered, label)
+            if role_table.empty:
+                st.info("No taker roles available for the current filter.")
+            else:
+                st.dataframe(role_table, use_container_width=True, hide_index=True)
+        with teams:
+            team_table = build_team_archetypes(filtered)
+            if team_table.empty:
+                st.info("No team archetypes available for the current filter.")
+            else:
+                st.dataframe(team_table, use_container_width=True, hide_index=True)
 
-    section_header("Matplotlib / mplsoccer Visuals", "Static report-ready pitch views")
-    mpl_left, mpl_right = st.columns(2)
-    with mpl_left:
-        st.pyplot(mplsoccer_delivery_figure(filtered, label), use_container_width=True)
-    with mpl_right:
-        st.pyplot(mplsoccer_shot_figure(filtered, label), use_container_width=True)
+    with visuals_tab:
+        section_header("Interactive Maps", "Shot locations and delivery/start locations")
+        left, right = st.columns(2)
+        with left:
+            st.plotly_chart(polish_plotly_figure(shotmap_figure(filtered, f"{label} shotmap · vertical half pitch")), use_container_width=True)
+        with right:
+            if label == "Corners":
+                st.plotly_chart(polish_plotly_figure(delivery_map_figure(filtered, f"{label} delivery map · vertical half pitch")), use_container_width=True)
+            else:
+                st.plotly_chart(polish_plotly_figure(starting_location_map_figure(filtered, f"{label} starting location map · vertical half pitch")), use_container_width=True)
 
-    section_header("Pre-Match Report", "Download a PDF briefing from the current filters")
-    report_left, report_right = st.columns([1, 1.2])
-    with report_left:
-        opponent = st.text_input("Opponent / report label", value="")
-        st.caption("The PDF uses the active sidebar filters, role classifications, archetypes, insights, and mplsoccer visuals.")
-    with report_right:
-        pdf_bytes = _cached_report_pdf(filtered, label, opponent.strip())
-        safe_name = (opponent.strip() or label).lower().replace(" ", "_").replace("/", "-")
-        st.download_button(
-            "Download pre-match PDF",
-            data=pdf_bytes,
-            file_name=f"{safe_name}_set_piece_report.pdf",
-            mime="application/pdf",
-            use_container_width=True,
-        )
+        section_header("Report Visuals", "Static matplotlib / mplsoccer pitch views")
+        mpl_left, mpl_right = st.columns(2)
+        with mpl_left:
+            st.pyplot(mplsoccer_delivery_figure(filtered, label), use_container_width=True)
+        with mpl_right:
+            st.pyplot(mplsoccer_shot_figure(filtered, label), use_container_width=True)
 
-    section_header("Event Details", f"{len(filtered):,} rows in the current filter")
-    display_cols = [c for c in [
-        "Match", "Team", "SP_Type", "Taker", "Shooter", "side", "minute", "second",
-        "Technique", "Delivery height", "Shot outcome", "xg", "Delivery outcome", "timestamp"
-    ] if c in filtered.columns]
-    st.dataframe(filtered[display_cols], use_container_width=True, hide_index=True)
+    with report_tab:
+        section_header("Pre-Match Report", "Download a PDF briefing from the current filters")
+        report_left, report_right = st.columns([1, 1.2])
+        with report_left:
+            opponent = st.text_input("Opponent / report label", value="")
+            st.caption("The PDF uses the active sidebar filters, role classifications, archetypes, insights, and mplsoccer visuals.")
+        with report_right:
+            pdf_bytes = _cached_report_pdf(filtered, label, opponent.strip())
+            safe_name = (opponent.strip() or label).lower().replace(" ", "_").replace("/", "-")
+            st.download_button(
+                "Download pre-match PDF",
+                data=pdf_bytes,
+                file_name=f"{safe_name}_set_piece_report.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+            )
+
+    with data_tab:
+        section_header("Event Details", f"{len(filtered):,} rows in the current filter")
+        display_cols = [c for c in [
+            "Match", "Team", "SP_Type", "Taker", "Shooter", "side", "minute", "second",
+            "Technique", "Delivery height", "Shot outcome", "xg", "Delivery outcome", "timestamp"
+        ] if c in filtered.columns]
+        st.dataframe(filtered[display_cols], use_container_width=True, hide_index=True)
