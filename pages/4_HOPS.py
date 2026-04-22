@@ -52,10 +52,10 @@ bottom_players = filtered.nsmallest(top_n, "Rating")[["Player", "Team", "Rating"
 left, right = st.columns(2)
 with left:
     section_header("Top Players", f"Best {len(top_players)} in filter")
-    st.dataframe(top_players, width="stretch", hide_index=True)
+    st.dataframe(top_players, use_container_width=True, hide_index=True)
 with right:
     section_header("Bottom Players", f"Lowest {len(bottom_players)} in filter")
-    st.dataframe(bottom_players, width="stretch", hide_index=True)
+    st.dataframe(bottom_players, use_container_width=True, hide_index=True)
 
 chart_left, chart_right = st.columns(2)
 
@@ -75,7 +75,7 @@ with chart_left:
         margin=dict(l=10, r=10, t=30, b=10),
         legend_title_text="",
     )
-    st.plotly_chart(polish_plotly_figure(fig), width="stretch")
+    st.plotly_chart(polish_plotly_figure(fig), use_container_width=True)
 
 with chart_right:
     section_header("Rating Distribution")
@@ -85,11 +85,11 @@ with chart_right:
         margin=dict(l=10, r=10, t=30, b=10),
         showlegend=False,
     )
-    st.plotly_chart(polish_plotly_figure(hist), width="stretch")
+    st.plotly_chart(polish_plotly_figure(hist), use_container_width=True)
 
 section_header("Full HOPS Table", f"{len(filtered):,} players")
 st.dataframe(
     filtered.sort_values("Rating", ascending=False)[["Player", "Team", "Rating"]],
-    width="stretch",
+    use_container_width=True,
     hide_index=True,
 )

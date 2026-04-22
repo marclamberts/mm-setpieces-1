@@ -104,7 +104,7 @@ else:
             bucket_summary["Goals"] = 0
 
         section_header("Delay Impact Summary", "Buckets compare volume, xG, and goals")
-        st.dataframe(bucket_summary, width="stretch", hide_index=True)
+        st.dataframe(bucket_summary, use_container_width=True, hide_index=True)
 
         col1, col2 = st.columns(2)
 
@@ -112,7 +112,7 @@ else:
             section_header("Delay Distribution")
             fig = px.histogram(df, x=delay_col, nbins=20, color_discrete_sequence=["#c1121f"])
             fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False)
-            st.plotly_chart(polish_plotly_figure(fig), width="stretch")
+            st.plotly_chart(polish_plotly_figure(fig), use_container_width=True)
 
         with col2:
             section_header("Delay vs xG")
@@ -126,7 +126,7 @@ else:
                 color_discrete_sequence=["#c1121f", "#0b0f14", "#2563eb", "#16a34a", "#f59e0b"],
             )
             scatter.update_layout(margin=dict(l=10, r=10, t=30, b=10), legend_title_text="")
-            st.plotly_chart(polish_plotly_figure(scatter), width="stretch")
+            st.plotly_chart(polish_plotly_figure(scatter), use_container_width=True)
 
         col3, col4 = st.columns(2)
 
@@ -134,19 +134,19 @@ else:
             section_header("Average xG by Delay")
             bar = px.bar(bucket_summary, x="Delay bucket", y="Avg_xG", color_discrete_sequence=["#c1121f"])
             bar.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False)
-            st.plotly_chart(polish_plotly_figure(bar), width="stretch")
+            st.plotly_chart(polish_plotly_figure(bar), use_container_width=True)
 
         with col4:
             if team_col:
                 section_header("Delay by Team")
                 box = px.box(df, x=team_col, y=delay_col, color_discrete_sequence=["#c1121f"])
                 box.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False)
-                st.plotly_chart(polish_plotly_figure(box), width="stretch")
+                st.plotly_chart(polish_plotly_figure(box), use_container_width=True)
             else:
                 section_header("Total xG by Delay")
                 bar2 = px.bar(bucket_summary, x="Delay bucket", y="Total_xG", color_discrete_sequence=["#c1121f"])
                 bar2.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False)
-                st.plotly_chart(polish_plotly_figure(bar2), width="stretch")
+                st.plotly_chart(polish_plotly_figure(bar2), use_container_width=True)
 
         if outcome_col:
             section_header("Outcome Mix by Delay")
@@ -164,7 +164,7 @@ else:
                 color_discrete_sequence=["#c1121f", "#0b0f14", "#2563eb", "#16a34a", "#f59e0b"],
             )
             outcome_fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), legend_title_text="")
-            st.plotly_chart(polish_plotly_figure(outcome_fig), width="stretch")
+            st.plotly_chart(polish_plotly_figure(outcome_fig), use_container_width=True)
 
     else:
         st.info("This file does not include both a delay column and an xG column, so advanced delay-vs-outcome charts could not be created.")
@@ -175,13 +175,13 @@ else:
                 section_header("Delay Distribution")
                 fig = px.histogram(df, x=delay_col, nbins=20, color_discrete_sequence=["#c1121f"])
                 fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False)
-                st.plotly_chart(polish_plotly_figure(fig), width="stretch")
+                st.plotly_chart(polish_plotly_figure(fig), use_container_width=True)
             with col2:
                 if team_col:
                     section_header("Delay by Team")
                     fig2 = px.box(df, x=team_col, y=delay_col, color_discrete_sequence=["#c1121f"])
                     fig2.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False)
-                    st.plotly_chart(polish_plotly_figure(fig2), width="stretch")
+                    st.plotly_chart(polish_plotly_figure(fig2), use_container_width=True)
 
     section_header("Raw Data", f"{len(df):,} rows in the current filter")
-    st.dataframe(df, width="stretch", hide_index=True)
+    st.dataframe(df, use_container_width=True, hide_index=True)

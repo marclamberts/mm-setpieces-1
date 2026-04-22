@@ -119,25 +119,25 @@ def render_page(label: str) -> None:
     section_header("General Information", "Team summary, delivery mix, and outcome mix")
     c1, c2, c3 = st.columns([1.4, 1, 1])
     with c1:
-        st.dataframe(summary, width="stretch", hide_index=True)
+        st.dataframe(summary, use_container_width=True, hide_index=True)
     with c2:
-        st.dataframe(technique_mix, width="stretch", hide_index=True)
+        st.dataframe(technique_mix, use_container_width=True, hide_index=True)
     with c3:
-        st.dataframe(outcome_mix, width="stretch", hide_index=True)
+        st.dataframe(outcome_mix, use_container_width=True, hide_index=True)
 
     section_header("Pitch Maps", "Shot locations and delivery/start locations")
     left, right = st.columns(2)
     with left:
-        st.plotly_chart(polish_plotly_figure(shotmap_figure(filtered, f"{label} shotmap · vertical half pitch")), width="stretch")
+        st.plotly_chart(polish_plotly_figure(shotmap_figure(filtered, f"{label} shotmap · vertical half pitch")), use_container_width=True)
     with right:
         if label == "Corners":
-            st.plotly_chart(polish_plotly_figure(delivery_map_figure(filtered, f"{label} delivery map · vertical half pitch")), width="stretch")
+            st.plotly_chart(polish_plotly_figure(delivery_map_figure(filtered, f"{label} delivery map · vertical half pitch")), use_container_width=True)
         else:
-            st.plotly_chart(polish_plotly_figure(starting_location_map_figure(filtered, f"{label} starting location map · vertical half pitch")), width="stretch")
+            st.plotly_chart(polish_plotly_figure(starting_location_map_figure(filtered, f"{label} starting location map · vertical half pitch")), use_container_width=True)
 
     section_header("Event Details", f"{len(filtered):,} rows in the current filter")
     display_cols = [c for c in [
         "Match", "Team", "SP_Type", "Taker", "Shooter", "side", "minute", "second",
         "Technique", "Delivery height", "Shot outcome", "xg", "Delivery outcome", "timestamp"
     ] if c in filtered.columns]
-    st.dataframe(filtered[display_cols], width="stretch", hide_index=True)
+    st.dataframe(filtered[display_cols], use_container_width=True, hide_index=True)
