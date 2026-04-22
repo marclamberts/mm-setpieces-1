@@ -4,28 +4,10 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-st.set_page_config(page_title="Michael Mackin Set Piece | HOPS", page_icon="⚽", layout="wide")
+from utils import hero_block, inject_app_style, polish_plotly_figure, section_header
 
-st.markdown(
-    '''
-    <style>
-        .stApp {background: linear-gradient(180deg, #f8fafc 0%, #f3f6fb 100%);}
-        .block-container {padding-top: 1.4rem; padding-bottom: 2rem;}
-        .page-card {
-            background: rgba(255,255,255,0.97);
-            border: 1px solid rgba(15,23,42,0.08);
-            border-radius: 24px;
-            padding: 1.4rem 1.45rem 1.15rem 1.45rem;
-            box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
-            margin-bottom: 1rem;
-        }
-        .mini-title {font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #64748b;}
-        .main-title {font-size: 2.25rem; font-weight: 800; color: #0f172a; margin: 0.2rem 0 0.35rem 0;}
-        .copy {color: #475569; line-height: 1.65;}
-    </style>
-    ''',
-    unsafe_allow_html=True,
-)
+st.set_page_config(page_title="Michael Mackin Set Piece | HOPS", page_icon="⚽", layout="wide")
+inject_app_style()
 
 @st.cache_data(show_spinner=False)
 def load_hops_data() -> pd.DataFrame:
@@ -38,17 +20,10 @@ def load_hops_data() -> pd.DataFrame:
 
 df = load_hops_data()
 
-st.markdown(
-    '''
-    <div class="page-card">
-        <div class="mini-title">Duel rating analysis</div>
-        <div class="main-title">HOPS</div>
-        <div class="copy">
-            Explore player duel HOPS ratings with team filters, ranking tables, and a distribution overview.
-        </div>
-    </div>
-    ''',
-    unsafe_allow_html=True,
+hero_block(
+    "Duel rating analysis",
+    "HOPS",
+    "Explore player duel HOPS ratings with team filters, leader tables, low-end risk checks, and a distribution overview.",
 )
 
 st.sidebar.header("HOPS filters")
@@ -76,16 +51,16 @@ bottom_players = filtered.nsmallest(top_n, "Rating")[["Player", "Team", "Rating"
 
 left, right = st.columns(2)
 with left:
-    st.markdown("### Top players")
+    section_header("Top Players", f"Best {len(top_players)} in filter")
     st.dataframe(top_players, width="stretch", hide_index=True)
 with right:
-    st.markdown("### Bottom players")
+    section_header("Bottom Players", f"Lowest {len(bottom_players)} in filter")
     st.dataframe(bottom_players, width="stretch", hide_index=True)
 
 chart_left, chart_right = st.columns(2)
 
 with chart_left:
-    st.markdown("### Top rating chart")
+    section_header("Top Rating Chart")
     chart_df = filtered.nlargest(min(15, len(filtered)), "Rating").sort_values("Rating")
     fig = px.bar(
         chart_df,
@@ -93,25 +68,26 @@ with chart_left:
         y="Player",
         color="Team",
         orientation="h",
+        color_discrete_sequence=["#c1121f", "#0b0f14", "#2563eb", "#16a34a", "#f59e0b"],
     )
     fig.update_layout(
         height=520,
         margin=dict(l=10, r=10, t=30, b=10),
         legend_title_text="",
     )
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(polish_plotly_figure(fig), width="stretch")
 
 with chart_right:
-    st.markdown("### Rating distribution")
-    hist = px.histogram(filtered, x="Rating", nbins=20)
+    section_header("Rating Distribution")
+    hist = px.histogram(filtered, x="Rating", nbins=20, color_discrete_sequence=["#c1121f"])
     hist.update_layout(
         height=520,
         margin=dict(l=10, r=10, t=30, b=10),
         showlegend=False,
     )
-    st.plotly_chart(hist, width="stretch")
+    st.plotly_chart(polish_plotly_figure(hist), width="stretch")
 
-st.markdown("### Full HOPS table")
+section_header("Full HOPS Table", f"{len(filtered):,} players")
 st.dataframe(
     filtered.sort_values("Rating", ascending=False)[["Player", "Team", "Rating"]],
     width="stretch",

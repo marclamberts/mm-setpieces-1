@@ -6,11 +6,15 @@ import streamlit as st
 from utils import (
     build_summary_tables,
     delivery_map_figure,
+    hero_block,
     info_panel,
+    inject_app_style,
     kpi_row,
     load_sp_data,
+    polish_plotly_figure,
     prepare_sp_dataframe,
     filter_by_sp_type,
+    section_header,
     shotmap_figure,
     starting_location_map_figure,
 )
@@ -79,39 +83,14 @@ def _filter_page_data(df: pd.DataFrame, label: str) -> pd.DataFrame:
 
 def render_page(label: str) -> None:
     st.set_page_config(page_title=f"Michael Mackin Set Piece | {label}", page_icon="⚽", layout="wide")
-
-    st.markdown(
-        '''
-        <style>
-            .stApp {background: linear-gradient(180deg, #f8fafc 0%, #f3f6fb 100%);}
-            .block-container {padding-top: 1.4rem; padding-bottom: 2rem;}
-            .page-card {
-                background: rgba(255,255,255,0.97);
-                border: 1px solid rgba(15,23,42,0.08);
-                border-radius: 24px;
-                padding: 1.4rem 1.45rem 1.15rem 1.45rem;
-                box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
-                margin-bottom: 1rem;
-            }
-            .mini-title {font-size: 0.82rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #64748b;}
-            .main-title {font-size: 2.25rem; font-weight: 800; color: #0f172a; margin: 0.2rem 0 0.35rem 0;}
-            .copy {color: #475569; line-height: 1.65;}
-        </style>
-        ''',
-        unsafe_allow_html=True,
-    )
+    inject_app_style()
 
     raw = load_sp_data(label)
     if raw.empty:
-        st.markdown(
-            f'''
-            <div class="page-card">
-                <div class="mini-title">Set piece analysis</div>
-                <div class="main-title">{label}</div>
-                <div class="copy">No source rows were found for this page in the bundled workbook(s).</div>
-            </div>
-            ''',
-            unsafe_allow_html=True,
+        hero_block(
+            "Set piece analysis",
+            label,
+            "No source rows were found for this page in the bundled workbook(s).",
         )
         return
 
@@ -120,17 +99,11 @@ def render_page(label: str) -> None:
     filtered = _filter_page_data(df, label)
     filtered = filter_by_sp_type(filtered, label)
 
-    st.markdown(
-        f'''
-        <div class="page-card">
-            <div class="mini-title">Set piece analysis</div>
-            <div class="main-title">{label}</div>
-            <div class="copy">
-                Filter and explore delivery profiles, outcomes, and resulting shots. The plots use a compact vertical half-pitch layout with StatsBomb 120×80 coordinates.
-            </div>
-        </div>
-        ''',
-        unsafe_allow_html=True,
+    hero_block(
+        "Set piece analysis",
+        label,
+        "Filter and explore delivery profiles, outcomes, and resulting shots. "
+        "The plots use a compact vertical half-pitch layout with StatsBomb 120x80 coordinates.",
     )
 
     if label == "Corners":
@@ -143,7 +116,7 @@ def render_page(label: str) -> None:
 
     summary, technique_mix, outcome_mix = build_summary_tables(filtered)
 
-    st.markdown("### General information")
+    section_header("General Information", "Team summary, delivery mix, and outcome mix")
     c1, c2, c3 = st.columns([1.4, 1, 1])
     with c1:
         st.dataframe(summary, width="stretch", hide_index=True)
@@ -152,16 +125,17 @@ def render_page(label: str) -> None:
     with c3:
         st.dataframe(outcome_mix, width="stretch", hide_index=True)
 
+    section_header("Pitch Maps", "Shot locations and delivery/start locations")
     left, right = st.columns(2)
     with left:
-        st.plotly_chart(shotmap_figure(filtered, f"{label} shotmap · vertical half pitch"), width="stretch")
+        st.plotly_chart(polish_plotly_figure(shotmap_figure(filtered, f"{label} shotmap · vertical half pitch")), width="stretch")
     with right:
         if label == "Corners":
-            st.plotly_chart(delivery_map_figure(filtered, f"{label} delivery map · vertical half pitch"), width="stretch")
+            st.plotly_chart(polish_plotly_figure(delivery_map_figure(filtered, f"{label} delivery map · vertical half pitch")), width="stretch")
         else:
-            st.plotly_chart(starting_location_map_figure(filtered, f"{label} starting location map · vertical half pitch"), width="stretch")
+            st.plotly_chart(polish_plotly_figure(starting_location_map_figure(filtered, f"{label} starting location map · vertical half pitch")), width="stretch")
 
-    st.markdown("### Event details")
+    section_header("Event Details", f"{len(filtered):,} rows in the current filter")
     display_cols = [c for c in [
         "Match", "Team", "SP_Type", "Taker", "Shooter", "side", "minute", "second",
         "Technique", "Delivery height", "Shot outcome", "xg", "Delivery outcome", "timestamp"

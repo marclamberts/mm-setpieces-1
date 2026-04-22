@@ -12,6 +12,204 @@ PITCH_WIDTH = 80
 HALF_START = 60
 BASE_DIR = Path(__file__).resolve().parent
 
+BLACK = "#0b0f14"
+RED = "#c1121f"
+RED_DARK = "#780000"
+INK = "#111827"
+MUTED = "#475569"
+BORDER = "rgba(17,24,39,0.12)"
+
+
+def inject_app_style() -> None:
+    st.markdown(
+        f"""
+        <style>
+            :root {{
+                --mm-black: {BLACK};
+                --mm-red: {RED};
+                --mm-red-dark: {RED_DARK};
+                --mm-ink: {INK};
+                --mm-muted: {MUTED};
+                --mm-border: {BORDER};
+            }}
+            .stApp {{
+                background:
+                    linear-gradient(180deg, rgba(255,255,255,0.88) 0%, rgba(243,246,251,0.94) 100%),
+                    radial-gradient(circle at 12% 0%, rgba(193,18,31,0.10), transparent 28%);
+                color: var(--mm-black);
+            }}
+            .block-container {{
+                padding-top: 1.25rem;
+                padding-bottom: 2.5rem;
+                max-width: 1320px;
+            }}
+            h1, h2, h3, h4, h5, h6, p, label, span {{
+                color: var(--mm-black);
+            }}
+            div[data-testid="stSidebar"] {{
+                background: rgba(255,255,255,0.88);
+                border-right: 1px solid var(--mm-border);
+            }}
+            div[data-testid="stSidebar"] h2,
+            div[data-testid="stSidebar"] h3 {{
+                color: var(--mm-red-dark);
+                font-weight: 900;
+            }}
+            .mm-hero {{
+                background: rgba(255,255,255,0.98);
+                border: 1px solid var(--mm-border);
+                border-top: 5px solid var(--mm-red);
+                border-radius: 8px;
+                padding: 1.7rem 1.8rem 1.55rem 1.8rem;
+                box-shadow: 0 18px 42px rgba(15, 23, 42, 0.07);
+                margin-bottom: 1rem;
+            }}
+            .mm-eyebrow {{
+                color: var(--mm-red-dark);
+                font-size: .78rem;
+                font-weight: 900;
+                letter-spacing: .12em;
+                text-transform: uppercase;
+            }}
+            .mm-title {{
+                color: var(--mm-black);
+                font-size: 2.35rem;
+                line-height: 1.05;
+                font-weight: 950;
+                margin: .28rem 0 .45rem 0;
+            }}
+            .mm-copy {{
+                color: var(--mm-muted);
+                font-size: 1rem;
+                line-height: 1.65;
+                max-width: 900px;
+            }}
+            .mm-section {{
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 1rem;
+                border-left: 4px solid var(--mm-red);
+                padding: .2rem 0 .2rem .8rem;
+                margin: 1.35rem 0 .65rem 0;
+            }}
+            .mm-section-title {{
+                color: var(--mm-black);
+                font-size: 1.18rem;
+                font-weight: 900;
+                margin: 0;
+            }}
+            .mm-section-note {{
+                color: var(--mm-muted);
+                font-size: .9rem;
+            }}
+            .mm-nav-card {{
+                background: rgba(255,255,255,0.98);
+                border: 1px solid var(--mm-border);
+                border-radius: 8px;
+                padding: 1.2rem;
+                min-height: 190px;
+                box-shadow: 0 12px 28px rgba(15, 23, 42, 0.055);
+            }}
+            .mm-nav-title {{
+                color: var(--mm-black);
+                font-size: 1.18rem;
+                font-weight: 900;
+                margin-bottom: .35rem;
+            }}
+            .mm-nav-copy {{
+                color: var(--mm-muted);
+                line-height: 1.55;
+                margin-bottom: 1rem;
+            }}
+            .mm-tiny {{
+                color: var(--mm-red-dark);
+                font-size: .82rem;
+                font-weight: 800;
+            }}
+            div.stButton > button {{
+                width: 100%;
+                border-radius: 7px;
+                border: 1px solid var(--mm-red);
+                background: var(--mm-red);
+                color: #ffffff;
+                font-weight: 900;
+                padding: .68rem 1rem;
+                transition: all .15s ease;
+            }}
+            div.stButton > button:hover {{
+                border-color: var(--mm-red-dark);
+                background: var(--mm-red-dark);
+                color: #ffffff;
+                transform: translateY(-1px);
+            }}
+            div[data-testid="stMetric"] {{
+                background: rgba(255,255,255,0.98);
+                border: 1px solid var(--mm-border);
+                border-radius: 8px;
+                padding: .8rem .9rem;
+                box-shadow: 0 8px 22px rgba(15, 23, 42, 0.045);
+            }}
+            div[data-testid="stMetricLabel"] p {{
+                color: var(--mm-red-dark);
+                font-weight: 850;
+            }}
+            div[data-testid="stMetricValue"] {{
+                color: var(--mm-black);
+                font-weight: 950;
+            }}
+            [data-testid="stDataFrameResizable"] {{
+                border: 1px solid var(--mm-border);
+                border-radius: 8px;
+                overflow: hidden;
+            }}
+            .stCaptionContainer, .stCaptionContainer p {{
+                color: var(--mm-muted);
+            }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def hero_block(eyebrow: str, title: str, copy: str) -> None:
+    st.markdown(
+        f"""
+        <div class="mm-hero">
+            <div class="mm-eyebrow">{eyebrow}</div>
+            <div class="mm-title">{title}</div>
+            <div class="mm-copy">{copy}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def section_header(title: str, note: str = "") -> None:
+    note_html = f'<div class="mm-section-note">{note}</div>' if note else ""
+    st.markdown(
+        f"""
+        <div class="mm-section">
+            <div class="mm-section-title">{title}</div>
+            {note_html}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def polish_plotly_figure(fig: go.Figure) -> go.Figure:
+    fig.update_layout(
+        font=dict(color=BLACK, family="Arial, sans-serif"),
+        title_font=dict(color=BLACK, size=18),
+        paper_bgcolor="rgba(255,255,255,0)",
+        plot_bgcolor="rgba(255,255,255,0.96)",
+        colorway=[RED, BLACK, "#2563eb", "#16a34a", "#f59e0b", "#7c3aed", "#64748b"],
+    )
+    fig.update_xaxes(showgrid=True, gridcolor="rgba(15,23,42,0.08)", zeroline=False)
+    fig.update_yaxes(showgrid=True, gridcolor="rgba(15,23,42,0.08)", zeroline=False)
+    return fig
+
 def _candidate_paths(filename: str) -> list[Path]:
     return [BASE_DIR / filename, BASE_DIR.parent / filename, Path(filename)]
 

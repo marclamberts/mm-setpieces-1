@@ -4,7 +4,10 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-st.set_page_config(page_title="Delay Analysis", layout="wide")
+from utils import hero_block, inject_app_style, polish_plotly_figure, section_header
+
+st.set_page_config(page_title="Michael Mackin Set Piece | Delay Analysis", page_icon="⚽", layout="wide")
+inject_app_style()
 
 @st.cache_data
 def load_delay():
@@ -22,7 +25,11 @@ def _find_column(df: pd.DataFrame, candidates: list[str]) -> str | None:
 
 df = load_delay()
 
-st.title("Corner Delay Analysis")
+hero_block(
+    "Corner timing analysis",
+    "Delay Analysis",
+    "Measure how long corners take before delivery and compare delay windows against xG, goals, outcomes, and team behaviour.",
+)
 
 if df.empty:
     st.warning("No data loaded")
@@ -96,19 +103,19 @@ else:
         else:
             bucket_summary["Goals"] = 0
 
-        st.markdown("### Delay impact summary")
+        section_header("Delay Impact Summary", "Buckets compare volume, xG, and goals")
         st.dataframe(bucket_summary, width="stretch", hide_index=True)
 
         col1, col2 = st.columns(2)
 
         with col1:
-            st.markdown("### Delay distribution")
-            fig = px.histogram(df, x=delay_col, nbins=20)
+            section_header("Delay Distribution")
+            fig = px.histogram(df, x=delay_col, nbins=20, color_discrete_sequence=["#c1121f"])
             fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False)
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(polish_plotly_figure(fig), width="stretch")
 
         with col2:
-            st.markdown("### Delay vs xG")
+            section_header("Delay vs xG")
             scatter = px.scatter(
                 df,
                 x=delay_col,
@@ -116,40 +123,48 @@ else:
                 color=team_col if team_col else None,
                 hover_data=[c for c in [team_col, outcome_col, match_col] if c],
                 trendline=None,
+                color_discrete_sequence=["#c1121f", "#0b0f14", "#2563eb", "#16a34a", "#f59e0b"],
             )
             scatter.update_layout(margin=dict(l=10, r=10, t=30, b=10), legend_title_text="")
-            st.plotly_chart(scatter, width="stretch")
+            st.plotly_chart(polish_plotly_figure(scatter), width="stretch")
 
         col3, col4 = st.columns(2)
 
         with col3:
-            st.markdown("### Average xG by delay bucket")
-            bar = px.bar(bucket_summary, x="Delay bucket", y="Avg_xG")
+            section_header("Average xG by Delay")
+            bar = px.bar(bucket_summary, x="Delay bucket", y="Avg_xG", color_discrete_sequence=["#c1121f"])
             bar.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False)
-            st.plotly_chart(bar, width="stretch")
+            st.plotly_chart(polish_plotly_figure(bar), width="stretch")
 
         with col4:
             if team_col:
-                st.markdown("### Delay by team")
-                box = px.box(df, x=team_col, y=delay_col)
+                section_header("Delay by Team")
+                box = px.box(df, x=team_col, y=delay_col, color_discrete_sequence=["#c1121f"])
                 box.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False)
-                st.plotly_chart(box, width="stretch")
+                st.plotly_chart(polish_plotly_figure(box), width="stretch")
             else:
-                st.markdown("### Total xG by delay bucket")
-                bar2 = px.bar(bucket_summary, x="Delay bucket", y="Total_xG")
+                section_header("Total xG by Delay")
+                bar2 = px.bar(bucket_summary, x="Delay bucket", y="Total_xG", color_discrete_sequence=["#c1121f"])
                 bar2.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False)
-                st.plotly_chart(bar2, width="stretch")
+                st.plotly_chart(polish_plotly_figure(bar2), width="stretch")
 
         if outcome_col:
-            st.markdown("### Outcome mix by delay bucket")
+            section_header("Outcome Mix by Delay")
             outcome_mix = (
                 df.groupby(["Delay bucket", outcome_col], dropna=False)
                 .size()
                 .reset_index(name="Count")
             )
-            outcome_fig = px.bar(outcome_mix, x="Delay bucket", y="Count", color=outcome_col, barmode="stack")
+            outcome_fig = px.bar(
+                outcome_mix,
+                x="Delay bucket",
+                y="Count",
+                color=outcome_col,
+                barmode="stack",
+                color_discrete_sequence=["#c1121f", "#0b0f14", "#2563eb", "#16a34a", "#f59e0b"],
+            )
             outcome_fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), legend_title_text="")
-            st.plotly_chart(outcome_fig, width="stretch")
+            st.plotly_chart(polish_plotly_figure(outcome_fig), width="stretch")
 
     else:
         st.info("This file does not include both a delay column and an xG column, so advanced delay-vs-outcome charts could not be created.")
@@ -157,16 +172,16 @@ else:
         if delay_col:
             col1, col2 = st.columns(2)
             with col1:
-                st.markdown("### Delay distribution")
-                fig = px.histogram(df, x=delay_col, nbins=20)
+                section_header("Delay Distribution")
+                fig = px.histogram(df, x=delay_col, nbins=20, color_discrete_sequence=["#c1121f"])
                 fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False)
-                st.plotly_chart(fig, width="stretch")
+                st.plotly_chart(polish_plotly_figure(fig), width="stretch")
             with col2:
                 if team_col:
-                    st.markdown("### Delay by team")
-                    fig2 = px.box(df, x=team_col, y=delay_col)
+                    section_header("Delay by Team")
+                    fig2 = px.box(df, x=team_col, y=delay_col, color_discrete_sequence=["#c1121f"])
                     fig2.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False)
-                    st.plotly_chart(fig2, width="stretch")
+                    st.plotly_chart(polish_plotly_figure(fig2), width="stretch")
 
-    st.markdown("### Raw data")
+    section_header("Raw Data", f"{len(df):,} rows in the current filter")
     st.dataframe(df, width="stretch", hide_index=True)
