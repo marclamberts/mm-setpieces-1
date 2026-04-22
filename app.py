@@ -10,29 +10,29 @@ inject_app_style()
 hero_block(
     "Michael Mackin · Set Piece Analysis",
     "Set-piece command centre",
-    "Explore corners, freekicks, throw-ins, duel ratings, and delay effects through one cleaner dashboard. "
-    "The app keeps the light palette, but now uses stronger black and red typography for a more professional match-analysis feel.",
+    "Explore corners, freekicks, throw-ins, duel ratings, and delay effects through a report-ready dashboard with roles, archetypes, "
+    "automatic insights, mplsoccer visuals, and pre-match PDF downloads.",
 )
 
 section_header("Core Workbooks", "Primary event analysis")
 cards = [
     (
         "Corners",
-        "Dedicated corners workbook with delivery maps, shot maps, match filters, player filters, and event-level detail.",
+        "Dedicated corners workbook with taker roles, delivery archetypes, insights, mplsoccer maps, PDF reports, and event-level detail.",
         "Allsvenskan - Corners 2025.xlsx",
         "pages/1_Corners.py",
         "Open Corners",
     ),
     (
         "Freekicks",
-        "Freekick events from the shared SWE SP workbook, filtered and visualised with the same KPI framework.",
+        "Freekick events from SWE SP with role profiling, dead-ball archetypes, shot-quality visuals, and report downloads.",
         "SWE SP.xlsx · From Free Kick",
         "pages/2_Freekicks.py",
         "Open Freekicks",
     ),
     (
         "Throw ins",
-        "Throw-in events from the shared SWE SP workbook with start locations, outcomes, and shot details.",
+        "Throw-in events from SWE SP with start locations, team archetypes, pressure-building cues, outcomes, and shot details.",
         "SWE SP.xlsx · From Throw In",
         "pages/3_Throw_ins.py",
         "Open Throw ins",

@@ -2,6 +2,10 @@
 from __future__ import annotations
 
 from pathlib import Path
+from io import BytesIO
+import os
+import tempfile
+import textwrap
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -18,6 +22,8 @@ RED_DARK = "#780000"
 INK = "#111827"
 MUTED = "#475569"
 BORDER = "rgba(17,24,39,0.12)"
+
+os.environ.setdefault("MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "mm-setpieces-mpl"))
 
 
 def inject_app_style() -> None:
@@ -126,6 +132,19 @@ def inject_app_style() -> None:
                 color: var(--mm-red-dark);
                 font-size: .82rem;
                 font-weight: 800;
+            }}
+            .mm-insight-card {{
+                background: rgba(255,255,255,0.98);
+                border: 1px solid var(--mm-border);
+                border-left: 4px solid var(--mm-red);
+                border-radius: 8px;
+                padding: .9rem 1rem;
+                margin-bottom: .7rem;
+                min-height: 92px;
+                color: var(--mm-ink);
+                line-height: 1.45;
+                font-weight: 650;
+                box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
             }}
             div.stButton > button {{
                 width: 100%;
@@ -836,3 +855,323 @@ def info_panel(df: pd.DataFrame) -> None:
             notes.append(f"Top taker: {vc.index[0]} ({int(vc.iloc[0])})")
     if notes:
         st.caption(" · ".join(notes))
+
+
+def delivery_zone_label(x: object, y: object) -> str:
+    end_x = pd.to_numeric(pd.Series([x]), errors="coerce").iloc[0]
+    end_y = pd.to_numeric(pd.Series([y]), errors="coerce").iloc[0]
+    if pd.isna(end_x) or pd.isna(end_y):
+        return "Unknown"
+    if end_x >= 114 and 30 <= end_y <= 50:
+        return "Six-yard corridor"
+    if end_x >= 114:
+        return "Near/far post lane"
+    if end_x >= 108 and 28 <= end_y <= 52:
+        return "Penalty spot"
+    if end_x >= 102 and 18 <= end_y <= 62:
+        return "Edge of box"
+    if end_x < 90:
+        return "Short / recycle"
+    return "Second ball zone"
+
+
+def add_delivery_zones(df: pd.DataFrame) -> pd.DataFrame:
+    enriched = df.copy()
+    if {"delivery_end_x", "delivery_end_y"}.issubset(enriched.columns):
+        enriched["Delivery zone"] = [
+            delivery_zone_label(x, y)
+            for x, y in zip(enriched["delivery_end_x"], enriched["delivery_end_y"])
+        ]
+    elif "Delivery zone" not in enriched.columns:
+        enriched["Delivery zone"] = "Unknown"
+    return enriched
+
+
+def build_role_archetypes(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
+    if df.empty or "Taker" not in df.columns:
+        return pd.DataFrame()
+
+    base = add_delivery_zones(unique_start_events(df))
+    rows = []
+    for taker, part in base.groupby("Taker", dropna=False):
+        taker_name = str(taker) if str(taker).strip() else "Unknown"
+        events = int(len(part))
+        if events == 0:
+            continue
+        shots = int(part["is_shot"].sum()) if "is_shot" in part.columns else 0
+        goals = int(part["is_goal"].sum()) if "is_goal" in part.columns else 0
+        total_xg = float(part["xg"].fillna(0).sum()) if "xg" in part.columns else 0.0
+        shot_rate = shots / events if events else 0.0
+        xg_per_event = total_xg / events if events else 0.0
+
+        top_technique = part["Technique"].fillna("Unknown").mode().iloc[0] if "Technique" in part.columns and not part["Technique"].dropna().empty else "Unknown"
+        top_height = part["Delivery height"].fillna("Unknown").mode().iloc[0] if "Delivery height" in part.columns and not part["Delivery height"].dropna().empty else "Unknown"
+        top_zone = part["Delivery zone"].fillna("Unknown").mode().iloc[0] if "Delivery zone" in part.columns and not part["Delivery zone"].dropna().empty else "Unknown"
+        team = part["Team"].fillna("Unknown").mode().iloc[0] if "Team" in part.columns and not part["Team"].dropna().empty else "Unknown"
+
+        if events >= max(8, base.groupby("Taker").size().quantile(0.75)):
+            role = "Primary taker"
+        elif shot_rate >= 0.35 or xg_per_event >= 0.04:
+            role = "Chance creator"
+        elif top_zone == "Short / recycle":
+            role = "Short option"
+        else:
+            role = "Rotation taker"
+
+        technique_l = str(top_technique).lower()
+        if "inswing" in technique_l:
+            archetype = f"Inswing {top_zone.lower()}"
+        elif "outswing" in technique_l:
+            archetype = f"Outswing {top_zone.lower()}"
+        elif top_zone == "Short / recycle":
+            archetype = "Short-play connector"
+        elif label == "Freekicks":
+            archetype = f"Dead-ball {top_height.lower()}"
+        else:
+            archetype = f"Mixed {top_zone.lower()}"
+
+        rows.append(
+            {
+                "Taker": taker_name,
+                "Team": team,
+                "Role": role,
+                "Archetype": archetype,
+                "Events": events,
+                "Shots": shots,
+                "Goals": goals,
+                "Shot rate": round(shot_rate * 100, 1),
+                "xG / event": round(xg_per_event, 3),
+                "Top technique": top_technique,
+                "Top zone": top_zone,
+            }
+        )
+
+    if not rows:
+        return pd.DataFrame()
+    return pd.DataFrame(rows).sort_values(["Events", "xG / event", "Shot rate"], ascending=False)
+
+
+def build_team_archetypes(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty or "Team" not in df.columns:
+        return pd.DataFrame()
+
+    base = add_delivery_zones(unique_start_events(df))
+    rows = []
+    for team, part in base.groupby("Team", dropna=False):
+        events = int(len(part))
+        if events == 0:
+            continue
+        shots = int(part["is_shot"].sum()) if "is_shot" in part.columns else 0
+        goals = int(part["is_goal"].sum()) if "is_goal" in part.columns else 0
+        total_xg = float(part["xg"].fillna(0).sum()) if "xg" in part.columns else 0.0
+        zone = part["Delivery zone"].fillna("Unknown").mode().iloc[0] if "Delivery zone" in part.columns and not part["Delivery zone"].dropna().empty else "Unknown"
+        height = part["Delivery height"].fillna("Unknown").mode().iloc[0] if "Delivery height" in part.columns and not part["Delivery height"].dropna().empty else "Unknown"
+        technique = part["Technique"].fillna("Unknown").mode().iloc[0] if "Technique" in part.columns and not part["Technique"].dropna().empty else "Unknown"
+
+        if shots / events >= 0.35:
+            profile = "Direct shot hunters"
+        elif zone == "Short / recycle":
+            profile = "Short and second-phase"
+        elif "High" in str(height):
+            profile = "Aerial box load"
+        else:
+            profile = "Mixed delivery side"
+
+        rows.append(
+            {
+                "Team": team,
+                "Archetype": profile,
+                "Events": events,
+                "Shots": shots,
+                "Goals": goals,
+                "Shot rate": round(shots / events * 100, 1),
+                "xG / event": round(total_xg / events, 3),
+                "Primary delivery": f"{technique} · {zone}",
+            }
+        )
+    return pd.DataFrame(rows).sort_values(["xG / event", "Shot rate", "Events"], ascending=False)
+
+
+def generate_set_piece_insights(df: pd.DataFrame, label: str = "") -> list[str]:
+    if df.empty:
+        return ["No rows match the current filter, so the report cannot generate a reliable read."]
+
+    base = add_delivery_zones(unique_start_events(df))
+    insights: list[str] = []
+    events = len(base)
+    shots = int(base["is_shot"].sum()) if "is_shot" in base.columns else 0
+    goals = int(base["is_goal"].sum()) if "is_goal" in base.columns else 0
+    total_xg = float(base["xg"].fillna(0).sum()) if "xg" in base.columns else 0.0
+    shot_rate = shots / events * 100 if events else 0
+    insights.append(f"{label or 'Set pieces'} produced {shots} shots from {events} events ({shot_rate:.1f}% shot rate), worth {total_xg:.2f} xG and {goals} goals.")
+
+    roles = build_role_archetypes(base, label)
+    if not roles.empty:
+        lead = roles.iloc[0]
+        insights.append(f"Main taker profile: {lead['Taker']} is a {str(lead['Role']).lower()} for {lead['Team']}, most often showing as {lead['Archetype']}.")
+        creator = roles.sort_values(["xG / event", "Shot rate", "Events"], ascending=False).iloc[0]
+        insights.append(f"Best creation signal: {creator['Taker']} leads the filtered takers on xG/event ({creator['xG / event']:.3f}) with a {creator['Shot rate']:.1f}% shot rate.")
+
+    teams = build_team_archetypes(base)
+    if not teams.empty:
+        top_team = teams.iloc[0]
+        insights.append(f"Team archetype to prepare for: {top_team['Team']} profile as {str(top_team['Archetype']).lower()}, built around {top_team['Primary delivery']}.")
+
+    if "Delivery zone" in base.columns:
+        zone_counts = base["Delivery zone"].value_counts()
+        if not zone_counts.empty:
+            zone = zone_counts.index[0]
+            share = zone_counts.iloc[0] / len(base) * 100
+            insights.append(f"Dominant target area is {zone.lower()} ({share:.1f}% of deliveries with a classified end zone).")
+
+    if "side" in base.columns:
+        side_counts = base["side"].value_counts()
+        if len(side_counts) > 0:
+            insights.append(f"Restart side bias: {side_counts.index[0]} side accounts for {side_counts.iloc[0] / len(base) * 100:.1f}% of the sample.")
+
+    return insights[:6]
+
+
+def mplsoccer_delivery_figure(df: pd.DataFrame, label: str = ""):
+    import matplotlib.pyplot as plt
+    from mplsoccer import Pitch
+
+    base = add_delivery_zones(unique_start_events(df))
+    fig, ax = plt.subplots(figsize=(8, 5.8), dpi=140)
+    pitch = Pitch(pitch_type="statsbomb", half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
+    pitch.draw(ax=ax)
+    ax.set_title(f"{label} delivery map", fontsize=14, fontweight="bold", color=BLACK, pad=10)
+
+    if base.empty or not {"delivery_end_x", "delivery_end_y"}.issubset(base.columns):
+        ax.text(90, 40, "No delivery end locations", ha="center", va="center", color=MUTED, fontsize=12)
+        return fig
+
+    plot_df = base.dropna(subset=["delivery_end_x", "delivery_end_y"]).copy()
+    if plot_df.empty:
+        ax.text(90, 40, "No delivery end locations", ha="center", va="center", color=MUTED, fontsize=12)
+        return fig
+
+    if len(plot_df) > 320:
+        plot_df = plot_df.sample(320, random_state=11)
+
+    colors = {
+        "Six-yard corridor": RED,
+        "Near/far post lane": "#2563eb",
+        "Penalty spot": "#16a34a",
+        "Edge of box": "#f59e0b",
+        "Short / recycle": "#7c3aed",
+        "Second ball zone": "#64748b",
+        "Unknown": "#94a3b8",
+    }
+
+    for zone, part in plot_df.groupby("Delivery zone", dropna=False):
+        color = colors.get(str(zone), "#64748b")
+        pitch.scatter(
+            part["delivery_end_x"],
+            part["delivery_end_y"],
+            s=np.clip(part["xg"].fillna(0).to_numpy() * 550 + 28 if "xg" in part.columns else 36, 28, 120),
+            color=color,
+            edgecolors="white",
+            linewidth=0.7,
+            alpha=0.82,
+            label=str(zone),
+            ax=ax,
+        )
+
+    ax.legend(loc="lower left", bbox_to_anchor=(0.01, 0.01), fontsize=7, frameon=True)
+    fig.tight_layout()
+    return fig
+
+
+def mplsoccer_shot_figure(df: pd.DataFrame, label: str = ""):
+    import matplotlib.pyplot as plt
+    from mplsoccer import Pitch
+
+    shots = unique_shot_events(df)
+    fig, ax = plt.subplots(figsize=(8, 5.8), dpi=140)
+    pitch = Pitch(pitch_type="statsbomb", half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
+    pitch.draw(ax=ax)
+    ax.set_title(f"{label} shot quality", fontsize=14, fontweight="bold", color=BLACK, pad=10)
+
+    if shots.empty or not {"shot_x", "shot_y"}.issubset(shots.columns):
+        ax.text(90, 40, "No shots in current filter", ha="center", va="center", color=MUTED, fontsize=12)
+        return fig
+
+    shots = shots.dropna(subset=["shot_x", "shot_y"]).copy()
+    shots = shots[pd.to_numeric(shots["shot_x"], errors="coerce") >= HALF_START]
+    if shots.empty:
+        ax.text(90, 40, "No shots in current filter", ha="center", va="center", color=MUTED, fontsize=12)
+        return fig
+
+    goals = shots["is_goal"] if "is_goal" in shots.columns else pd.Series(False, index=shots.index)
+    sizes = np.clip(shots["xg"].fillna(0).to_numpy() * 700 + 34 if "xg" in shots.columns else 42, 34, 145)
+    pitch.scatter(shots.loc[~goals, "shot_x"], shots.loc[~goals, "shot_y"], s=sizes[~goals], color="#2563eb", edgecolors="white", linewidth=0.8, alpha=0.78, label="Shot", ax=ax)
+    if goals.any():
+        pitch.scatter(shots.loc[goals, "shot_x"], shots.loc[goals, "shot_y"], s=sizes[goals], color="#16a34a", edgecolors=BLACK, linewidth=0.8, alpha=0.92, label="Goal", ax=ax)
+    ax.legend(loc="lower left", bbox_to_anchor=(0.01, 0.01), fontsize=8, frameon=True)
+    fig.tight_layout()
+    return fig
+
+
+def prematch_report_pdf_bytes(df: pd.DataFrame, label: str = "", opponent: str = "") -> bytes:
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_pdf import PdfPages
+
+    buffer = BytesIO()
+    insights = generate_set_piece_insights(df, label)
+    roles = build_role_archetypes(df, label).head(8)
+    teams = build_team_archetypes(df).head(8)
+
+    with PdfPages(buffer) as pdf:
+        fig = plt.figure(figsize=(8.27, 11.69), dpi=150)
+        ax = fig.add_axes([0, 0, 1, 1])
+        ax.axis("off")
+        title = f"{label} pre-match report"
+        if opponent:
+            title = f"{title}: {opponent}"
+        ax.text(0.07, 0.94, title, fontsize=22, fontweight="bold", color=BLACK)
+        ax.text(0.07, 0.905, "Roles, archetypes, delivery tendencies, and preparation notes", fontsize=10, color=MUTED)
+
+        y = 0.84
+        ax.text(0.07, y, "Key insights", fontsize=13, fontweight="bold", color=RED_DARK)
+        y -= 0.035
+        for insight in insights:
+            wrapped = textwrap.wrap(insight, width=92)
+            for i, line in enumerate(wrapped):
+                prefix = "- " if i == 0 else "  "
+                ax.text(0.08, y, prefix + line, fontsize=9.4, color=INK)
+                y -= 0.022
+            y -= 0.006
+
+        if not roles.empty:
+            y -= 0.02
+            ax.text(0.07, y, "Taker roles", fontsize=13, fontweight="bold", color=RED_DARK)
+            y -= 0.035
+            for _, row in roles.iterrows():
+                line = f"{row['Taker']} ({row['Team']}): {row['Role']} · {row['Archetype']} · {row['Events']} events · {row['xG / event']:.3f} xG/event"
+                ax.text(0.08, y, line[:118], fontsize=8.8, color=INK)
+                y -= 0.024
+
+        if not teams.empty and y > 0.18:
+            y -= 0.02
+            ax.text(0.07, y, "Team archetypes", fontsize=13, fontweight="bold", color=RED_DARK)
+            y -= 0.035
+            for _, row in teams.iterrows():
+                line = f"{row['Team']}: {row['Archetype']} · {row['Primary delivery']} · {row['Shot rate']:.1f}% shot rate"
+                ax.text(0.08, y, line[:118], fontsize=8.8, color=INK)
+                y -= 0.024
+                if y < 0.08:
+                    break
+        pdf.savefig(fig, bbox_inches="tight")
+        plt.close(fig)
+
+        fig = mplsoccer_delivery_figure(df, label)
+        pdf.savefig(fig, bbox_inches="tight")
+        plt.close(fig)
+
+        fig = mplsoccer_shot_figure(df, label)
+        pdf.savefig(fig, bbox_inches="tight")
+        plt.close(fig)
+
+    buffer.seek(0)
+    return buffer.getvalue()

@@ -5,12 +5,18 @@ import streamlit as st
 
 from utils import (
     build_summary_tables,
+    build_role_archetypes,
+    build_team_archetypes,
     delivery_map_figure,
+    generate_set_piece_insights,
     hero_block,
     info_panel,
     inject_app_style,
     kpi_row,
     load_sp_data,
+    mplsoccer_delivery_figure,
+    mplsoccer_shot_figure,
+    prematch_report_pdf_bytes,
     polish_plotly_figure,
     prepare_sp_dataframe,
     filter_by_sp_type,
@@ -21,6 +27,10 @@ from utils import (
 
 def _safe_sorted(values: pd.Series) -> list[str]:
     return sorted([str(v) for v in values.dropna().astype(str).unique().tolist() if str(v).strip()])
+
+@st.cache_data(show_spinner=False)
+def _cached_report_pdf(df: pd.DataFrame, label: str, opponent: str) -> bytes:
+    return prematch_report_pdf_bytes(df, label, opponent)
 
 def _filter_page_data(df: pd.DataFrame, label: str) -> pd.DataFrame:
     st.sidebar.header(f"{label} filters")
@@ -125,6 +135,28 @@ def render_page(label: str) -> None:
     with c3:
         st.dataframe(outcome_mix, use_container_width=True, hide_index=True)
 
+    section_header("Insights", "Automatic coaching notes from the current filter")
+    insights = generate_set_piece_insights(filtered, label)
+    insight_cols = st.columns(2)
+    for idx, insight in enumerate(insights):
+        with insight_cols[idx % 2]:
+            st.markdown(f"<div class='mm-insight-card'>{insight}</div>", unsafe_allow_html=True)
+
+    section_header("Roles & Archetypes", "Taker roles, team profiles, and preparation cues")
+    roles, teams = st.tabs(["Taker roles", "Team archetypes"])
+    with roles:
+        role_table = build_role_archetypes(filtered, label)
+        if role_table.empty:
+            st.info("No taker roles available for the current filter.")
+        else:
+            st.dataframe(role_table, use_container_width=True, hide_index=True)
+    with teams:
+        team_table = build_team_archetypes(filtered)
+        if team_table.empty:
+            st.info("No team archetypes available for the current filter.")
+        else:
+            st.dataframe(team_table, use_container_width=True, hide_index=True)
+
     section_header("Pitch Maps", "Shot locations and delivery/start locations")
     left, right = st.columns(2)
     with left:
@@ -134,6 +166,29 @@ def render_page(label: str) -> None:
             st.plotly_chart(polish_plotly_figure(delivery_map_figure(filtered, f"{label} delivery map · vertical half pitch")), use_container_width=True)
         else:
             st.plotly_chart(polish_plotly_figure(starting_location_map_figure(filtered, f"{label} starting location map · vertical half pitch")), use_container_width=True)
+
+    section_header("Matplotlib / mplsoccer Visuals", "Static report-ready pitch views")
+    mpl_left, mpl_right = st.columns(2)
+    with mpl_left:
+        st.pyplot(mplsoccer_delivery_figure(filtered, label), use_container_width=True)
+    with mpl_right:
+        st.pyplot(mplsoccer_shot_figure(filtered, label), use_container_width=True)
+
+    section_header("Pre-Match Report", "Download a PDF briefing from the current filters")
+    report_left, report_right = st.columns([1, 1.2])
+    with report_left:
+        opponent = st.text_input("Opponent / report label", value="")
+        st.caption("The PDF uses the active sidebar filters, role classifications, archetypes, insights, and mplsoccer visuals.")
+    with report_right:
+        pdf_bytes = _cached_report_pdf(filtered, label, opponent.strip())
+        safe_name = (opponent.strip() or label).lower().replace(" ", "_").replace("/", "-")
+        st.download_button(
+            "Download pre-match PDF",
+            data=pdf_bytes,
+            file_name=f"{safe_name}_set_piece_report.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+        )
 
     section_header("Event Details", f"{len(filtered):,} rows in the current filter")
     display_cols = [c for c in [
