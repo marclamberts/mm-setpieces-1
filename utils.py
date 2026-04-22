@@ -1320,6 +1320,223 @@ def freekick_origin_map_figure(df: pd.DataFrame, title: str = "Freekick origins"
     )
     return fig
 
+
+def throwin_zone(x: object) -> str:
+    px = pd.to_numeric(pd.Series([x]), errors="coerce").iloc[0]
+    if pd.isna(px):
+        return "Unknown"
+    if px >= 102:
+        return "Final-third pressure"
+    if px >= 84:
+        return "Attacking channel"
+    if px >= 60:
+        return "Middle-third platform"
+    if px >= 36:
+        return "Build-up restart"
+    return "Defensive throw"
+
+
+def throwin_side(y: object) -> str:
+    py = pd.to_numeric(pd.Series([y]), errors="coerce").iloc[0]
+    if pd.isna(py):
+        return "Unknown"
+    return "Left touchline" if py <= 40 else "Right touchline"
+
+
+def throwin_sequence_summary(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return pd.DataFrame()
+
+    base = df.copy()
+    if "pass_x" not in base.columns or "pass_y" not in base.columns:
+        return pd.DataFrame()
+
+    group_cols = [c for c in ["match_id", "possession", "Team"] if c in base.columns]
+    if len(group_cols) < 2:
+        return pd.DataFrame()
+
+    sort_cols = ["minute", "second"] if {"minute", "second"}.issubset(base.columns) else group_cols
+    rows = []
+    for keys, part in base.sort_values(sort_cols).groupby(group_cols, dropna=False):
+        if not isinstance(keys, tuple):
+            keys = (keys,)
+        record = dict(zip(group_cols, keys))
+        first = part.iloc[0]
+        shots = unique_shot_events(part)
+        total_xg = float(shots["xg"].fillna(0).sum()) if "xg" in shots.columns and not shots.empty else 0.0
+        goals = int(shots["is_goal"].sum()) if "is_goal" in shots.columns and not shots.empty else 0
+        best = shots.sort_values("xg", ascending=False).iloc[0] if not shots.empty and "xg" in shots.columns else None
+        initial_height = first.get("Delivery height", "Unknown")
+        origin_x = first.get("pass_x", np.nan)
+        origin_y = first.get("pass_y", np.nan)
+        zone = throwin_zone(origin_x)
+        side = throwin_side(origin_y)
+        if zone == "Final-third pressure" and str(initial_height).lower().startswith("high"):
+            profile = "Long throw threat"
+        elif zone in ["Final-third pressure", "Attacking channel"]:
+            profile = "High press restart"
+        elif str(initial_height).lower().startswith("ground"):
+            profile = "Retain and combine"
+        else:
+            profile = "Territory reset"
+
+        record.update(
+            {
+                "Match": first.get("Match", record.get("match_id", "Unknown")),
+                "Minute": int(first.get("minute", 0)) if pd.notna(first.get("minute", np.nan)) else 0,
+                "Origin x": round(float(origin_x), 1) if pd.notna(origin_x) else np.nan,
+                "Origin y": round(float(origin_y), 1) if pd.notna(origin_y) else np.nan,
+                "Zone": zone,
+                "Side": side,
+                "Profile": profile,
+                "Initial taker": first.get("Taker", "Unknown"),
+                "Initial height": initial_height,
+                "Actions": int(len(part)),
+                "Shots": int(len(shots)),
+                "Goals": goals,
+                "Total xG": round(total_xg, 3),
+                "Best shooter": best.get("Shooter", "Unknown") if best is not None else "Unknown",
+                "Best shot xG": round(float(best.get("xg", 0)), 3) if best is not None else 0.0,
+                "Shot outcome": best.get("Shot outcome", "No shot") if best is not None else "No shot",
+            }
+        )
+        rows.append(record)
+
+    return pd.DataFrame(rows).sort_values(["Total xG", "Shots", "Minute"], ascending=[False, False, True])
+
+
+def throwin_zone_summary(df: pd.DataFrame) -> pd.DataFrame:
+    seq = throwin_sequence_summary(df)
+    if seq.empty:
+        return pd.DataFrame()
+    summary = (
+        seq.groupby(["Zone", "Side", "Profile"], dropna=False)
+        .agg(
+            Sequences=("Zone", "size"),
+            Shots=("Shots", "sum"),
+            Goals=("Goals", "sum"),
+            Total_xG=("Total xG", "sum"),
+            Avg_xG=("Total xG", "mean"),
+            Avg_Actions=("Actions", "mean"),
+        )
+        .reset_index()
+    )
+    summary["Shots / seq"] = (summary["Shots"] / summary["Sequences"]).replace([np.inf, -np.inf], 0).fillna(0).round(2)
+    summary["Total_xG"] = summary["Total_xG"].round(2)
+    summary["Avg_xG"] = summary["Avg_xG"].round(3)
+    summary["Avg_Actions"] = summary["Avg_Actions"].round(1)
+    return summary.sort_values(["Total_xG", "Shots / seq", "Sequences"], ascending=False)
+
+
+def throwin_taker_summary(df: pd.DataFrame) -> pd.DataFrame:
+    seq = throwin_sequence_summary(df)
+    if seq.empty:
+        return pd.DataFrame()
+    summary = (
+        seq.groupby("Initial taker", dropna=False)
+        .agg(
+            Team=("Team", lambda s: s.mode().iloc[0] if not s.mode().empty else "Unknown"),
+            Sequences=("Initial taker", "size"),
+            Shots=("Shots", "sum"),
+            Goals=("Goals", "sum"),
+            Total_xG=("Total xG", "sum"),
+            Avg_xG=("Total xG", "mean"),
+            Main_zone=("Zone", lambda s: s.mode().iloc[0] if not s.mode().empty else "Unknown"),
+            Main_side=("Side", lambda s: s.mode().iloc[0] if not s.mode().empty else "Unknown"),
+            Main_profile=("Profile", lambda s: s.mode().iloc[0] if not s.mode().empty else "Unknown"),
+            Main_height=("Initial height", lambda s: s.mode().iloc[0] if not s.mode().empty else "Unknown"),
+        )
+        .reset_index()
+        .rename(columns={"Initial taker": "Taker"})
+    )
+    summary["Shots / seq"] = (summary["Shots"] / summary["Sequences"]).replace([np.inf, -np.inf], 0).fillna(0).round(2)
+    summary["Total_xG"] = summary["Total_xG"].round(2)
+    summary["Avg_xG"] = summary["Avg_xG"].round(3)
+    return summary.sort_values(["Total_xG", "Sequences", "Avg_xG"], ascending=False)
+
+
+def throwin_shooter_summary(df: pd.DataFrame) -> pd.DataFrame:
+    shots = unique_shot_events(df)
+    if shots.empty or "Shooter" not in shots.columns:
+        return pd.DataFrame()
+    summary = (
+        shots.groupby("Shooter", dropna=False)
+        .agg(
+            Team=("Team", lambda s: s.mode().iloc[0] if not s.mode().empty else "Unknown"),
+            Shots=("Shooter", "size"),
+            Goals=("is_goal", "sum") if "is_goal" in shots.columns else ("Shooter", "size"),
+            Total_xG=("xg", "sum") if "xg" in shots.columns else ("Shooter", "size"),
+            Avg_xG=("xg", "mean") if "xg" in shots.columns else ("Shooter", "size"),
+            Best_xG=("xg", "max") if "xg" in shots.columns else ("Shooter", "size"),
+        )
+        .reset_index()
+    )
+    summary["Conversion %"] = summary.apply(lambda r: _rate(r["Goals"], r["Shots"]), axis=1)
+    for col in ["Total_xG", "Avg_xG", "Best_xG"]:
+        summary[col] = pd.to_numeric(summary[col], errors="coerce").fillna(0).round(3)
+    return summary.sort_values(["Total_xG", "Shots", "Goals"], ascending=False)
+
+
+def throwin_origin_map_figure(df: pd.DataFrame, title: str = "Throw-in origins") -> go.Figure:
+    fig = go.Figure()
+    seq = throwin_sequence_summary(df)
+    if seq.empty:
+        fig.add_annotation(text="No throw-in origins available", x=60, y=40, showarrow=False, font=dict(size=16, color=MUTED))
+        return fig
+
+    colors = {
+        "Final-third pressure": RED,
+        "Attacking channel": "#1d4ed8",
+        "Middle-third platform": "#15803d",
+        "Build-up restart": "#b45309",
+        "Defensive throw": "#64748b",
+        "Unknown": "#94a3b8",
+    }
+    for zone, part in seq.groupby("Zone", dropna=False):
+        fig.add_trace(
+            go.Scatter(
+                x=part["Origin x"],
+                y=part["Origin y"],
+                mode="markers",
+                name=str(zone),
+                marker=dict(
+                    size=np.clip(part["Total xG"].fillna(0) * 180 + 8, 8, 40),
+                    color=colors.get(str(zone), "#64748b"),
+                    opacity=0.78,
+                    line=dict(width=0.8, color="white"),
+                ),
+                customdata=np.stack(
+                    [
+                        part["Team"].fillna("Unknown"),
+                        part["Initial taker"].fillna("Unknown"),
+                        part["Profile"].fillna("Unknown"),
+                        part["Total xG"].fillna(0).round(3),
+                        part["Match"].fillna("Unknown"),
+                    ],
+                    axis=1,
+                ),
+                hovertemplate="<b>%{customdata[0]}</b><br>Taker: %{customdata[1]}<br>%{customdata[2]}<br>xG: %{customdata[3]}<br>%{customdata[4]}<extra></extra>",
+            )
+        )
+
+    fig.update_xaxes(range=[0, 120], visible=False, scaleanchor="y", scaleratio=1)
+    fig.update_yaxes(range=[0, 80], visible=False)
+    fig.update_layout(
+        title=title,
+        height=560,
+        margin=dict(l=10, r=10, t=50, b=10),
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        shapes=[
+            dict(type="rect", x0=0, y0=0, x1=120, y1=80, line=dict(color=BLACK, width=1.4)),
+            dict(type="line", x0=60, y0=0, x1=60, y1=80, line=dict(color="#94a3b8", width=1)),
+            dict(type="rect", x0=102, y0=18, x1=120, y1=62, line=dict(color=BLACK, width=1.2)),
+            dict(type="rect", x0=114, y0=30, x1=120, y1=50, line=dict(color=BLACK, width=1.2)),
+        ],
+        legend_title_text="Origin zone",
+    )
+    return fig
+
 def kpi_row(df: pd.DataFrame) -> None:
     if df.empty:
         cols = st.columns(6)
