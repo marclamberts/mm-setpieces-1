@@ -40,8 +40,8 @@ def inject_app_style() -> None:
                 --mm-border: {BORDER};
                 --mm-surface: #ffffff;
                 --mm-surface-soft: #f8fafc;
-                --mm-page: #f3f5f8;
-                --mm-line: #e5e7eb;
+                --mm-page: #f6f7f9;
+                --mm-line: #d9dee7;
                 --mm-blue: #1d4ed8;
                 --mm-green: #15803d;
                 --mm-amber: #b45309;
@@ -93,9 +93,9 @@ def inject_app_style() -> None:
             .mm-hero {{
                 background: var(--mm-surface);
                 border: 1px solid var(--mm-line);
-                border-radius: 8px;
-                padding: 1.45rem 1.55rem;
-                box-shadow: 0 10px 26px rgba(15, 23, 42, 0.055);
+                border-radius: 6px;
+                padding: 1.35rem 1.45rem;
+                box-shadow: none;
                 margin-bottom: 1.1rem;
                 position: relative;
                 overflow: hidden;
@@ -118,7 +118,7 @@ def inject_app_style() -> None:
                 color: var(--mm-black);
                 font-size: clamp(1.8rem, 2.8vw, 2.65rem);
                 line-height: 1.02;
-                font-weight: 900;
+                font-weight: 880;
                 margin: .24rem 0 .55rem 0;
             }}
             .mm-copy {{
@@ -178,16 +178,16 @@ def inject_app_style() -> None:
             .mm-nav-card {{
                 background: var(--mm-surface);
                 border: 1px solid var(--mm-line);
-                border-radius: 8px;
+                border-radius: 6px;
                 padding: 1rem;
                 min-height: 176px;
-                box-shadow: 0 8px 20px rgba(15, 23, 42, 0.045);
+                box-shadow: none;
                 transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
             }}
             .mm-nav-card:hover {{
                 transform: translateY(-2px);
                 border-color: rgba(193,18,31,0.30);
-                box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+                box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
             }}
             .mm-nav-title {{
                 color: var(--mm-black);
@@ -227,14 +227,14 @@ def inject_app_style() -> None:
             .mm-insight-card {{
                 background: var(--mm-surface);
                 border: 1px solid var(--mm-line);
-                border-radius: 8px;
+                border-radius: 6px;
                 padding: .9rem 1rem;
                 margin-bottom: .7rem;
                 min-height: 86px;
                 color: var(--mm-ink);
                 line-height: 1.45;
                 font-weight: 600;
-                box-shadow: 0 8px 18px rgba(15, 23, 42, 0.035);
+                box-shadow: none;
                 position: relative;
             }}
             .mm-insight-card::before {{
@@ -273,9 +273,9 @@ def inject_app_style() -> None:
             div[data-testid="stMetric"] {{
                 background: var(--mm-surface);
                 border: 1px solid var(--mm-line);
-                border-radius: 8px;
+                border-radius: 6px;
                 padding: .82rem .92rem;
-                box-shadow: 0 8px 18px rgba(15, 23, 42, 0.035);
+                box-shadow: none;
             }}
             div[data-testid="stMetricLabel"] p {{
                 color: var(--mm-muted);
@@ -289,9 +289,9 @@ def inject_app_style() -> None:
             }}
             [data-testid="stDataFrameResizable"] {{
                 border: 1px solid var(--mm-line);
-                border-radius: 8px;
+                border-radius: 6px;
                 overflow: hidden;
-                box-shadow: 0 8px 18px rgba(15, 23, 42, 0.03);
+                box-shadow: none;
             }}
             div[data-testid="stTabs"] button {{
                 border-radius: 7px 7px 0 0;
@@ -305,9 +305,15 @@ def inject_app_style() -> None:
             div[data-testid="stPyplot"] {{
                 background: var(--mm-surface);
                 border: 1px solid var(--mm-line);
-                border-radius: 8px;
+                border-radius: 6px;
                 padding: .65rem;
-                box-shadow: 0 8px 18px rgba(15, 23, 42, 0.035);
+                box-shadow: none;
+            }}
+            .mm-table-note {{
+                color: var(--mm-muted);
+                font-size: .8rem;
+                font-weight: 600;
+                margin: -.25rem 0 .55rem 0;
             }}
             [data-baseweb="select"] > div,
             [data-baseweb="input"] > div,
@@ -942,6 +948,157 @@ def build_summary_tables(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, 
     ) if set(["Delivery outcome", "Shot outcome"]).issubset(df.columns) else pd.DataFrame()
 
     return summary, technique_mix, outcome_mix
+
+
+def _rate(numerator: float, denominator: float) -> float:
+    return round((numerator / denominator * 100), 1) if denominator else 0.0
+
+
+def build_team_leaderboard(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty or "Team" not in df.columns:
+        return pd.DataFrame()
+
+    base = add_delivery_zones(unique_start_events(df))
+    rows = []
+    for team, part in base.groupby("Team", dropna=False):
+        events = int(len(part))
+        shots = int(part["is_shot"].sum()) if "is_shot" in part.columns else 0
+        goals = int(part["is_goal"].sum()) if "is_goal" in part.columns else 0
+        total_xg = float(part["xg"].fillna(0).sum()) if "xg" in part.columns else 0.0
+        matches = int(part["match_id"].nunique()) if "match_id" in part.columns else int(part["Match"].nunique()) if "Match" in part.columns else 0
+        takers = int(part["Taker"].nunique()) if "Taker" in part.columns else 0
+        rows.append(
+            {
+                "Team": team,
+                "Matches": matches,
+                "Events": events,
+                "Takers": takers,
+                "Shots": shots,
+                "Goals": goals,
+                "Shot rate %": _rate(shots, events),
+                "Goals / shot %": _rate(goals, shots),
+                "Total xG": round(total_xg, 2),
+                "xG / event": round(total_xg / events, 3) if events else 0,
+            }
+        )
+    return pd.DataFrame(rows).sort_values(["xG / event", "Shot rate %", "Events"], ascending=False)
+
+
+def build_taker_leaderboard(df: pd.DataFrame) -> pd.DataFrame:
+    roles = build_role_archetypes(df)
+    if roles.empty:
+        return roles
+    cols = [
+        "Taker", "Team", "Role", "Archetype", "Events", "Shots", "Goals",
+        "Shot rate", "xG / event", "Top technique", "Top zone",
+    ]
+    return roles[[c for c in cols if c in roles.columns]]
+
+
+def build_shooter_leaderboard(df: pd.DataFrame) -> pd.DataFrame:
+    shots = unique_shot_events(df)
+    if shots.empty or "Shooter" not in shots.columns:
+        return pd.DataFrame()
+
+    rows = []
+    for shooter, part in shots.groupby("Shooter", dropna=False):
+        attempts = int(len(part))
+        goals = int(part["is_goal"].sum()) if "is_goal" in part.columns else 0
+        total_xg = float(part["xg"].fillna(0).sum()) if "xg" in part.columns else 0.0
+        team = part["Team"].fillna("Unknown").mode().iloc[0] if "Team" in part.columns and not part["Team"].dropna().empty else "Unknown"
+        rows.append(
+            {
+                "Shooter": shooter,
+                "Team": team,
+                "Shots": attempts,
+                "Goals": goals,
+                "Total xG": round(total_xg, 2),
+                "xG / shot": round(total_xg / attempts, 3) if attempts else 0,
+                "Conversion %": _rate(goals, attempts),
+            }
+        )
+    return pd.DataFrame(rows).sort_values(["Total xG", "Shots", "Goals"], ascending=False)
+
+
+def build_pattern_library(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return pd.DataFrame()
+
+    base = add_delivery_zones(unique_start_events(df))
+    group_cols = [c for c in ["Team", "side", "Technique", "Delivery height", "Delivery zone", "Delivery outcome"] if c in base.columns]
+    if not group_cols:
+        return pd.DataFrame()
+
+    rows = []
+    for keys, part in base.groupby(group_cols, dropna=False):
+        if not isinstance(keys, tuple):
+            keys = (keys,)
+        record = dict(zip(group_cols, keys))
+        events = int(len(part))
+        shots = int(part["is_shot"].sum()) if "is_shot" in part.columns else 0
+        goals = int(part["is_goal"].sum()) if "is_goal" in part.columns else 0
+        xg = float(part["xg"].fillna(0).sum()) if "xg" in part.columns else 0.0
+        record.update(
+            {
+                "Events": events,
+                "Shots": shots,
+                "Goals": goals,
+                "Shot rate %": _rate(shots, events),
+                "Total xG": round(xg, 2),
+                "xG / event": round(xg / events, 3) if events else 0,
+            }
+        )
+        rows.append(record)
+
+    return (
+        pd.DataFrame(rows)
+        .sort_values(["Events", "xG / event", "Shot rate %"], ascending=False)
+        .head(40)
+    )
+
+
+def build_match_log(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return pd.DataFrame()
+
+    base = add_delivery_zones(unique_start_events(df))
+    group_cols = [c for c in ["Match", "Team"] if c in base.columns]
+    if not group_cols:
+        return pd.DataFrame()
+
+    rows = []
+    for keys, part in base.groupby(group_cols, dropna=False):
+        if not isinstance(keys, tuple):
+            keys = (keys,)
+        record = dict(zip(group_cols, keys))
+        events = int(len(part))
+        shots = int(part["is_shot"].sum()) if "is_shot" in part.columns else 0
+        goals = int(part["is_goal"].sum()) if "is_goal" in part.columns else 0
+        xg = float(part["xg"].fillna(0).sum()) if "xg" in part.columns else 0.0
+        record.update(
+            {
+                "Events": events,
+                "Shots": shots,
+                "Goals": goals,
+                "Shot rate %": _rate(shots, events),
+                "Total xG": round(xg, 2),
+            }
+        )
+        rows.append(record)
+
+    return pd.DataFrame(rows).sort_values(["Match", "Total xG"], ascending=[True, False])
+
+
+def render_analyst_table(df: pd.DataFrame, *, height: int = 360) -> None:
+    if df.empty:
+        st.info("No rows available for this view.")
+        return
+    st.dataframe(
+        df,
+        use_container_width=True,
+        hide_index=True,
+        height=height,
+    )
 
 def kpi_row(df: pd.DataFrame) -> None:
     if df.empty:

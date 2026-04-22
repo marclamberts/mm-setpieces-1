@@ -7,6 +7,11 @@ from utils import (
     build_summary_tables,
     build_role_archetypes,
     build_team_archetypes,
+    build_match_log,
+    build_pattern_library,
+    build_shooter_leaderboard,
+    build_taker_leaderboard,
+    build_team_leaderboard,
     delivery_map_figure,
     generate_set_piece_insights,
     hero_block,
@@ -20,6 +25,7 @@ from utils import (
     polish_plotly_figure,
     prepare_sp_dataframe,
     filter_by_sp_type,
+    render_analyst_table,
     section_header,
     shotmap_figure,
     starting_location_map_figure,
@@ -110,10 +116,9 @@ def render_page(label: str) -> None:
     filtered = filter_by_sp_type(filtered, label)
 
     hero_block(
-        "Set piece analysis",
+        "Set-piece intelligence",
         label,
-        "Filter and explore delivery profiles, outcomes, and resulting shots. "
-        "The plots use a compact vertical half-pitch layout with StatsBomb 120x80 coordinates.",
+        "Scout team patterns, taker roles, shot output, and match-level set-piece value from the connected event workbooks.",
     )
 
     if label == "Corners":
@@ -129,14 +134,17 @@ def render_page(label: str) -> None:
     with overview_tab:
         summary, technique_mix, outcome_mix = build_summary_tables(filtered)
 
-        section_header("General Information", "Team summary, delivery mix, and outcome mix")
-        c1, c2, c3 = st.columns([1.4, 1, 1])
+        section_header("Executive Summary", "Team output, delivery mix, and outcome mix")
+        c1, c2, c3 = st.columns([1.35, 1, 1])
         with c1:
-            st.dataframe(summary, use_container_width=True, hide_index=True)
+            st.markdown('<div class="mm-table-note">Ranked by total xG, goals, and shot volume.</div>', unsafe_allow_html=True)
+            render_analyst_table(summary, height=320)
         with c2:
-            st.dataframe(technique_mix, use_container_width=True, hide_index=True)
+            st.markdown('<div class="mm-table-note">Most common delivery type combinations.</div>', unsafe_allow_html=True)
+            render_analyst_table(technique_mix.head(20), height=320)
         with c3:
-            st.dataframe(outcome_mix, use_container_width=True, hide_index=True)
+            st.markdown('<div class="mm-table-note">Delivery and shot result combinations.</div>', unsafe_allow_html=True)
+            render_analyst_table(outcome_mix.head(20), height=320)
 
         section_header("Insights", "Automatic coaching notes from the current filter")
         insights = generate_set_piece_insights(filtered, label)
@@ -145,20 +153,31 @@ def render_page(label: str) -> None:
             with insight_cols[idx % 2]:
                 st.markdown(f"<div class='mm-insight-card'>{insight}</div>", unsafe_allow_html=True)
 
-        section_header("Roles & Archetypes", "Taker roles, team profiles, and preparation cues")
-        roles, teams = st.tabs(["Taker roles", "Team archetypes"])
-        with roles:
-            role_table = build_role_archetypes(filtered, label)
-            if role_table.empty:
-                st.info("No taker roles available for the current filter.")
-            else:
-                st.dataframe(role_table, use_container_width=True, hide_index=True)
-        with teams:
-            team_table = build_team_archetypes(filtered)
-            if team_table.empty:
-                st.info("No team archetypes available for the current filter.")
-            else:
-                st.dataframe(team_table, use_container_width=True, hide_index=True)
+        section_header("Analyst Tables", "Workbook-derived rankings and tactical pattern reads")
+        teams_tab, takers_tab, shooters_tab, patterns_tab, matches_tab = st.tabs(
+            ["Teams", "Takers", "Shooters", "Patterns", "Matches"]
+        )
+        with teams_tab:
+            render_analyst_table(build_team_leaderboard(filtered), height=430)
+        with takers_tab:
+            render_analyst_table(build_taker_leaderboard(filtered), height=430)
+        with shooters_tab:
+            render_analyst_table(build_shooter_leaderboard(filtered), height=430)
+        with patterns_tab:
+            st.markdown(
+                '<div class="mm-table-note">Pattern rows combine team, side, technique, height, target zone, and outcome.</div>',
+                unsafe_allow_html=True,
+            )
+            render_analyst_table(build_pattern_library(filtered), height=430)
+        with matches_tab:
+            render_analyst_table(build_match_log(filtered), height=430)
+
+        section_header("Roles & Archetypes", "Condensed scouting labels for preparation")
+        role_left, role_right = st.columns(2)
+        with role_left:
+            render_analyst_table(build_role_archetypes(filtered, label).head(15), height=360)
+        with role_right:
+            render_analyst_table(build_team_archetypes(filtered).head(15), height=360)
 
     with visuals_tab:
         section_header("Interactive Maps", "Shot locations and delivery/start locations")
@@ -196,9 +215,11 @@ def render_page(label: str) -> None:
             )
 
     with data_tab:
-        section_header("Event Details", f"{len(filtered):,} rows in the current filter")
+        section_header("Event Details", f"{len(filtered):,} workbook rows in the current filter")
         display_cols = [c for c in [
             "Match", "Team", "SP_Type", "Taker", "Shooter", "side", "minute", "second",
-            "Technique", "Delivery height", "Shot outcome", "xg", "Delivery outcome", "timestamp"
+            "Technique", "Delivery height", "Shot outcome", "xg", "Delivery outcome",
+            "Defensive_setup", "Occupation_Rating", "Proximity_Rating", "Duel_Win_Prob",
+            "OPS_Opponent_Rating", "timestamp"
         ] if c in filtered.columns]
-        st.dataframe(filtered[display_cols], use_container_width=True, hide_index=True)
+        render_analyst_table(filtered[display_cols], height=620)

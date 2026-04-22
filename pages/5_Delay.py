@@ -4,184 +4,170 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from utils import hero_block, inject_app_style, polish_plotly_figure, section_header
+from utils import hero_block, inject_app_style, polish_plotly_figure, render_analyst_table, section_header
 
 st.set_page_config(page_title="Michael Mackin Set Piece | Delay Analysis", page_icon="⚽", layout="wide")
 inject_app_style()
 
-@st.cache_data
-def load_delay():
-    df = pd.read_excel("corner_delays (1).xlsx")
-    return df
 
-def _find_column(df: pd.DataFrame, candidates: list[str]) -> str | None:
-    lower_map = {c.lower(): c for c in df.columns}
-    for cand in candidates:
-        if cand in df.columns:
-            return cand
-        if cand.lower() in lower_map:
-            return lower_map[cand.lower()]
-    return None
+@st.cache_data(show_spinner=False)
+def load_delay_workbook() -> dict[str, pd.DataFrame]:
+    return pd.read_excel("corner_delays (1).xlsx", sheet_name=None)
 
-df = load_delay()
+
+def _clean_delay_events(df: pd.DataFrame) -> pd.DataFrame:
+    clean = df.copy()
+    for col in ["delay_sec", "out_time_sec", "corner_time_sec", "period", "out_value"]:
+        if col in clean.columns:
+            clean[col] = pd.to_numeric(clean[col], errors="coerce")
+    if "delay_sec" in clean.columns:
+        clean = clean[clean["delay_sec"].notna()].copy()
+        clean["Delay band"] = pd.cut(
+            clean["delay_sec"],
+            bins=[-0.001, 10, 20, 30, 45, 10_000],
+            labels=["0-10s", "10-20s", "20-30s", "30-45s", "45s+"],
+        )
+    return clean
+
+
+book = load_delay_workbook()
+events = _clean_delay_events(book.get("All_Corners", pd.DataFrame()))
+summary = book.get("Summary", pd.DataFrame()).copy()
+diagnostics = book.get("Diagnostics", pd.DataFrame()).copy()
+skipped = book.get("Skipped_Files", pd.DataFrame()).copy()
 
 hero_block(
-    "Corner timing analysis",
+    "Corner timing intelligence",
     "Delay Analysis",
-    "Measure how long corners take before delivery and compare delay windows against xG, goals, outcomes, and team behaviour.",
+    "Workbook-level timing audit for corners: matched clearances/exits, delay bands, match reliability, and diagnostic coverage.",
 )
 
-if df.empty:
-    st.warning("No data loaded")
+if events.empty:
+    st.warning("No delay events were found in corner_delays (1).xlsx.")
 else:
-    delay_col = _find_column(df, ["Delay", "delay", "delay_seconds", "Delay_seconds"])
-    team_col = _find_column(df, ["Team", "team", "team_name"])
-    xg_col = _find_column(df, ["xg", "XG", "shot.statsbomb_xg", "shot_statsbomb_xg"])
-    outcome_col = _find_column(df, ["Shot outcome", "shot.outcome.name", "Outcome", "outcome"])
-    match_col = _find_column(df, ["match_id", "Match", "match"])
+    st.sidebar.header("Delay filters")
+    matches = ["All"] + sorted(events["match"].dropna().astype(str).unique().tolist()) if "match" in events.columns else ["All"]
+    periods = ["All"] + sorted(events["period"].dropna().astype(int).astype(str).unique().tolist()) if "period" in events.columns else ["All"]
+    out_types = ["All"] + sorted(events["out_event_type"].dropna().astype(str).unique().tolist()) if "out_event_type" in events.columns else ["All"]
 
-    st.sidebar.header("Filters")
+    match = st.sidebar.selectbox("Match", matches)
+    period = st.sidebar.selectbox("Period", periods)
+    out_type = st.sidebar.selectbox("Exit event", out_types)
 
-    if team_col:
-        team = st.sidebar.selectbox("Team", ["All"] + sorted(df[team_col].dropna().astype(str).unique().tolist()))
-        if team != "All":
-            df = df[df[team_col].astype(str) == team].copy()
+    filtered = events.copy()
+    if match != "All" and "match" in filtered.columns:
+        filtered = filtered[filtered["match"].astype(str).eq(match)].copy()
+    if period != "All" and "period" in filtered.columns:
+        filtered = filtered[filtered["period"].astype("Int64").astype(str).eq(period)].copy()
+    if out_type != "All" and "out_event_type" in filtered.columns:
+        filtered = filtered[filtered["out_event_type"].astype(str).eq(out_type)].copy()
 
-    if delay_col:
-        df[delay_col] = pd.to_numeric(df[delay_col], errors="coerce")
-        df = df[df[delay_col].notna()].copy()
-        if not df.empty:
-            lo = float(df[delay_col].min())
-            hi = float(df[delay_col].max())
-            delay_range = st.sidebar.slider("Delay range (s)", min_value=float(lo), max_value=float(hi), value=(float(lo), float(hi)))
-            df = df[df[delay_col].between(delay_range[0], delay_range[1])].copy()
+    if not filtered.empty and "delay_sec" in filtered.columns:
+        lo = float(filtered["delay_sec"].min())
+        hi = float(filtered["delay_sec"].max())
+        delay_range = st.sidebar.slider("Delay range (seconds)", min_value=lo, max_value=hi, value=(lo, hi))
+        filtered = filtered[filtered["delay_sec"].between(delay_range[0], delay_range[1])].copy()
 
-    if xg_col:
-        df[xg_col] = pd.to_numeric(df[xg_col], errors="coerce").fillna(0)
+    total_events = int(len(filtered))
+    matches_count = int(filtered["match"].nunique()) if "match" in filtered.columns else 0
+    avg_delay = float(filtered["delay_sec"].mean()) if "delay_sec" in filtered.columns and not filtered.empty else 0.0
+    median_delay = float(filtered["delay_sec"].median()) if "delay_sec" in filtered.columns and not filtered.empty else 0.0
+    p90_delay = float(filtered["delay_sec"].quantile(0.9)) if "delay_sec" in filtered.columns and not filtered.empty else 0.0
 
-    goals = 0
-    if outcome_col:
-        goals = int(df[outcome_col].astype(str).str.lower().eq("goal").sum())
+    c1, c2, c3, c4, c5 = st.columns(5)
+    c1.metric("Matched corners", total_events)
+    c2.metric("Matches", matches_count)
+    c3.metric("Avg delay", f"{avg_delay:.1f}s")
+    c4.metric("Median delay", f"{median_delay:.1f}s")
+    c5.metric("90th percentile", f"{p90_delay:.1f}s")
 
-    total_rows = len(df)
-    avg_delay = float(df[delay_col].mean()) if delay_col and not df.empty else 0.0
-    avg_xg = float(df[xg_col].mean()) if xg_col and not df.empty else 0.0
-    total_xg = float(df[xg_col].sum()) if xg_col and not df.empty else 0.0
+    overview_tab, charts_tab, audit_tab, data_tab = st.tabs(["Overview", "Charts", "Audit", "Data"])
 
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Events", total_rows)
-    c2.metric("Average Delay", f"{avg_delay:.2f}s")
-    c3.metric("Average xG", f"{avg_xg:.3f}")
-    c4.metric("Goals", goals)
-
-    if delay_col and xg_col and not df.empty:
-        # Delay buckets
-        bucket_labels = ["0-5s", "5-10s", "10-15s", "15-20s", "20s+"]
-        bins = [-0.001, 5, 10, 15, 20, 10_000]
-        df["Delay bucket"] = pd.cut(df[delay_col], bins=bins, labels=bucket_labels)
-
-        bucket_summary = (
-            df.groupby("Delay bucket", dropna=False)
+    with overview_tab:
+        band_summary = (
+            filtered.groupby("Delay band", dropna=False)
             .agg(
-                Events=(delay_col, "size"),
-                Avg_Delay=(delay_col, "mean"),
-                Avg_xG=(xg_col, "mean"),
-                Total_xG=(xg_col, "sum"),
+                Corners=("delay_sec", "size"),
+                Avg_Delay=("delay_sec", "mean"),
+                Median_Delay=("delay_sec", "median"),
+                Min_Delay=("delay_sec", "min"),
+                Max_Delay=("delay_sec", "max"),
             )
             .reset_index()
         )
+        for col in ["Avg_Delay", "Median_Delay", "Min_Delay", "Max_Delay"]:
+            if col in band_summary.columns:
+                band_summary[col] = band_summary[col].round(1)
 
-        if outcome_col:
-            goals_by_bucket = (
-                df.assign(IsGoal=df[outcome_col].astype(str).str.lower().eq("goal"))
-                .groupby("Delay bucket", dropna=False)["IsGoal"]
-                .sum()
-                .reset_index(name="Goals")
-            )
-            bucket_summary = bucket_summary.merge(goals_by_bucket, on="Delay bucket", how="left")
-            bucket_summary["Goals"] = bucket_summary["Goals"].fillna(0).astype(int)
-        else:
-            bucket_summary["Goals"] = 0
+        out_summary = (
+            filtered.groupby("out_event_type", dropna=False)
+            .agg(Corners=("delay_sec", "size"), Avg_Delay=("delay_sec", "mean"), Median_Delay=("delay_sec", "median"))
+            .reset_index()
+            .sort_values(["Corners", "Avg_Delay"], ascending=False)
+        )
+        out_summary[["Avg_Delay", "Median_Delay"]] = out_summary[["Avg_Delay", "Median_Delay"]].round(1)
 
-        section_header("Delay Impact Summary", "Buckets compare volume, xG, and goals")
-        st.dataframe(bucket_summary, use_container_width=True, hide_index=True)
+        match_delay = (
+            filtered.groupby("match", dropna=False)
+            .agg(Corners=("delay_sec", "size"), Avg_Delay=("delay_sec", "mean"), Median_Delay=("delay_sec", "median"), Max_Delay=("delay_sec", "max"))
+            .reset_index()
+            .sort_values(["Avg_Delay", "Corners"], ascending=False)
+        )
+        match_delay[["Avg_Delay", "Median_Delay", "Max_Delay"]] = match_delay[["Avg_Delay", "Median_Delay", "Max_Delay"]].round(1)
 
-        col1, col2 = st.columns(2)
+        left, right = st.columns([1, 1])
+        with left:
+            section_header("Delay Bands", "How long corners take before the matched exit event")
+            render_analyst_table(band_summary, height=310)
+        with right:
+            section_header("Exit Profile", "Matched event type following the corner")
+            render_analyst_table(out_summary, height=310)
 
-        with col1:
+        section_header("Slowest Match Profiles", "Highest average delay in the active filter")
+        render_analyst_table(match_delay.head(30), height=430)
+
+    with charts_tab:
+        chart_left, chart_right = st.columns(2)
+        with chart_left:
             section_header("Delay Distribution")
-            fig = px.histogram(df, x=delay_col, nbins=20, color_discrete_sequence=["#c1121f"])
-            fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False)
+            fig = px.histogram(filtered, x="delay_sec", nbins=24, color_discrete_sequence=["#111827"])
+            fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False, xaxis_title="Delay seconds", yaxis_title="Corners")
             st.plotly_chart(polish_plotly_figure(fig), use_container_width=True)
+        with chart_right:
+            section_header("Delay by Exit Event")
+            box = px.box(filtered, x="out_event_type", y="delay_sec", color="out_event_type", color_discrete_sequence=["#111827", "#c1121f", "#1d4ed8", "#15803d", "#b45309"])
+            box.update_layout(margin=dict(l=10, r=10, t=30, b=10), legend_title_text="", xaxis_title="", yaxis_title="Delay seconds")
+            st.plotly_chart(polish_plotly_figure(box), use_container_width=True)
 
-        with col2:
-            section_header("Delay vs xG")
-            scatter = px.scatter(
-                df,
-                x=delay_col,
-                y=xg_col,
-                color=team_col if team_col else None,
-                hover_data=[c for c in [team_col, outcome_col, match_col] if c],
-                trendline=None,
-                color_discrete_sequence=["#c1121f", "#0b0f14", "#2563eb", "#16a34a", "#f59e0b"],
-            )
-            scatter.update_layout(margin=dict(l=10, r=10, t=30, b=10), legend_title_text="")
-            st.plotly_chart(polish_plotly_figure(scatter), use_container_width=True)
+    with audit_tab:
+        section_header("Workbook Summary Sheet", "Match-level extraction performance")
+        if not summary.empty:
+            summary_view = summary.copy()
+            for col in ["avg_delay_sec", "median_delay_sec", "min_delay_sec", "max_delay_sec"]:
+                if col in summary_view.columns:
+                    summary_view[col] = pd.to_numeric(summary_view[col], errors="coerce").round(1)
+            render_analyst_table(summary_view.sort_values("avg_delay_sec", ascending=False) if "avg_delay_sec" in summary_view.columns else summary_view, height=420)
+        else:
+            st.info("No Summary sheet found.")
 
-        col3, col4 = st.columns(2)
+        section_header("Diagnostics Sheet", "Coverage checks from source event files")
+        if not diagnostics.empty:
+            render_analyst_table(diagnostics, height=360)
+        else:
+            st.info("No Diagnostics sheet found.")
 
-        with col3:
-            section_header("Average xG by Delay")
-            bar = px.bar(bucket_summary, x="Delay bucket", y="Avg_xG", color_discrete_sequence=["#c1121f"])
-            bar.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False)
-            st.plotly_chart(polish_plotly_figure(bar), use_container_width=True)
+        if not skipped.empty:
+            section_header("Skipped Files", "Files not included in the timing extraction")
+            render_analyst_table(skipped, height=260)
 
-        with col4:
-            if team_col:
-                section_header("Delay by Team")
-                box = px.box(df, x=team_col, y=delay_col, color_discrete_sequence=["#c1121f"])
-                box.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False)
-                st.plotly_chart(polish_plotly_figure(box), use_container_width=True)
-            else:
-                section_header("Total xG by Delay")
-                bar2 = px.bar(bucket_summary, x="Delay bucket", y="Total_xG", color_discrete_sequence=["#c1121f"])
-                bar2.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False)
-                st.plotly_chart(polish_plotly_figure(bar2), use_container_width=True)
-
-        if outcome_col:
-            section_header("Outcome Mix by Delay")
-            outcome_mix = (
-                df.groupby(["Delay bucket", outcome_col], dropna=False)
-                .size()
-                .reset_index(name="Count")
-            )
-            outcome_fig = px.bar(
-                outcome_mix,
-                x="Delay bucket",
-                y="Count",
-                color=outcome_col,
-                barmode="stack",
-                color_discrete_sequence=["#c1121f", "#0b0f14", "#2563eb", "#16a34a", "#f59e0b"],
-            )
-            outcome_fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), legend_title_text="")
-            st.plotly_chart(polish_plotly_figure(outcome_fig), use_container_width=True)
-
-    else:
-        st.info("This file does not include both a delay column and an xG column, so advanced delay-vs-outcome charts could not be created.")
-
-        if delay_col:
-            col1, col2 = st.columns(2)
-            with col1:
-                section_header("Delay Distribution")
-                fig = px.histogram(df, x=delay_col, nbins=20, color_discrete_sequence=["#c1121f"])
-                fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False)
-                st.plotly_chart(polish_plotly_figure(fig), use_container_width=True)
-            with col2:
-                if team_col:
-                    section_header("Delay by Team")
-                    fig2 = px.box(df, x=team_col, y=delay_col, color_discrete_sequence=["#c1121f"])
-                    fig2.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False)
-                    st.plotly_chart(polish_plotly_figure(fig2), use_container_width=True)
-
-    section_header("Raw Data", f"{len(df):,} rows in the current filter")
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    with data_tab:
+        section_header("Matched Corner Events", f"{len(filtered):,} rows in the active filter")
+        display_cols = [
+            c for c in [
+                "match", "period", "out_event_type", "out_value", "gk_outcome",
+                "out_time_mmss", "corner_time_mmss", "delay_sec", "Delay band",
+                "corner_event_index", "out_event_index",
+            ]
+            if c in filtered.columns
+        ]
+        render_analyst_table(filtered[display_cols], height=620)
