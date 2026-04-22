@@ -522,7 +522,7 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
     _ensure_column(df, "League", ["League"], "Allsvenskan")
     _ensure_column(df, "xg", ["xg", "shot.statsbomb_xg"], 0.0)
 
-    if "Match" in df.columns and df["Match"].isna().all() and "match_id" in df.columns:
+    if "Match" in df.columns and (df["Match"].isna().all() or df["Match"].astype(str).eq("Unknown").all()) and "match_id" in df.columns:
         df["Match"] = "Match " + df["match_id"].astype(str)
 
     for col in ["Team", "Match", "Technique", "Delivery height", "Delivery outcome", "Shot outcome", "Taker", "Shooter", "League"]:
@@ -555,7 +555,12 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
     if "minute" not in df.columns:
         if "timestamp" in df.columns:
             parts = df["timestamp"].astype(str).str.split(":", expand=True)
-            df["minute"] = pd.to_numeric(parts[0], errors="coerce").fillna(0) if parts.shape[1] >= 1 else 0
+            if parts.shape[1] >= 2:
+                hours = pd.to_numeric(parts[0], errors="coerce").fillna(0)
+                minutes = pd.to_numeric(parts[1], errors="coerce").fillna(0)
+                df["minute"] = hours * 60 + minutes
+            else:
+                df["minute"] = pd.to_numeric(parts[0], errors="coerce").fillna(0) if parts.shape[1] >= 1 else 0
         else:
             df["minute"] = 0
 
@@ -1099,6 +1104,221 @@ def render_analyst_table(df: pd.DataFrame, *, height: int = 360) -> None:
         hide_index=True,
         height=height,
     )
+
+
+def freekick_zone(x: object, y: object) -> str:
+    px = pd.to_numeric(pd.Series([x]), errors="coerce").iloc[0]
+    py = pd.to_numeric(pd.Series([y]), errors="coerce").iloc[0]
+    if pd.isna(px) or pd.isna(py):
+        return "Unknown"
+    if px >= 96 and 24 <= py <= 56:
+        return "Direct threat"
+    if px >= 82 and (py < 24 or py > 56):
+        return "Wide delivery"
+    if px >= 82:
+        return "Advanced central"
+    if px >= 60:
+        return "Middle third"
+    return "Deep restart"
+
+
+def freekick_channel(y: object) -> str:
+    py = pd.to_numeric(pd.Series([y]), errors="coerce").iloc[0]
+    if pd.isna(py):
+        return "Unknown"
+    if py < 18:
+        return "Left wide"
+    if py < 32:
+        return "Left half-space"
+    if py <= 48:
+        return "Central"
+    if py <= 62:
+        return "Right half-space"
+    return "Right wide"
+
+
+def freekick_sequence_summary(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return pd.DataFrame()
+
+    base = df.copy()
+    if "pass_x" not in base.columns or "pass_y" not in base.columns:
+        return pd.DataFrame()
+
+    group_cols = [c for c in ["match_id", "possession", "Team"] if c in base.columns]
+    if len(group_cols) < 2:
+        return pd.DataFrame()
+
+    rows = []
+    for keys, part in base.sort_values(["minute", "second"] if {"minute", "second"}.issubset(base.columns) else group_cols).groupby(group_cols, dropna=False):
+        if not isinstance(keys, tuple):
+            keys = (keys,)
+        record = dict(zip(group_cols, keys))
+        first = part.iloc[0]
+        shots = unique_shot_events(part)
+        total_xg = float(shots["xg"].fillna(0).sum()) if "xg" in shots.columns and not shots.empty else 0.0
+        goals = int(shots["is_goal"].sum()) if "is_goal" in shots.columns and not shots.empty else 0
+        record.update(
+            {
+                "Match": first.get("Match", record.get("match_id", "Unknown")),
+                "Minute": int(first.get("minute", 0)) if pd.notna(first.get("minute", np.nan)) else 0,
+                "Origin x": round(float(first.get("pass_x", np.nan)), 1) if pd.notna(first.get("pass_x", np.nan)) else np.nan,
+                "Origin y": round(float(first.get("pass_y", np.nan)), 1) if pd.notna(first.get("pass_y", np.nan)) else np.nan,
+                "Zone": freekick_zone(first.get("pass_x", np.nan), first.get("pass_y", np.nan)),
+                "Channel": freekick_channel(first.get("pass_y", np.nan)),
+                "Initial taker": first.get("Taker", "Unknown"),
+                "Initial height": first.get("Delivery height", "Unknown"),
+                "Actions": int(len(part)),
+                "Shots": int(len(shots)),
+                "Goals": goals,
+                "Total xG": round(total_xg, 3),
+                "Best shooter": shots.sort_values("xg", ascending=False).iloc[0].get("Shooter", "Unknown") if not shots.empty and "xg" in shots.columns else "Unknown",
+                "Best shot xG": round(float(shots["xg"].max()), 3) if not shots.empty and "xg" in shots.columns else 0.0,
+                "Shot outcome": shots.iloc[0].get("Shot outcome", "No shot") if not shots.empty else "No shot",
+            }
+        )
+        rows.append(record)
+
+    return pd.DataFrame(rows).sort_values(["Total xG", "Shots", "Minute"], ascending=[False, False, True])
+
+
+def freekick_zone_summary(df: pd.DataFrame) -> pd.DataFrame:
+    seq = freekick_sequence_summary(df)
+    if seq.empty:
+        return pd.DataFrame()
+    summary = (
+        seq.groupby(["Zone", "Channel"], dropna=False)
+        .agg(
+            Sequences=("Zone", "size"),
+            Shots=("Shots", "sum"),
+            Shot_Sequences=("Shots", lambda s: int((s > 0).sum())),
+            Goals=("Goals", "sum"),
+            Total_xG=("Total xG", "sum"),
+            Avg_xG=("Total xG", "mean"),
+            Avg_Actions=("Actions", "mean"),
+        )
+        .reset_index()
+    )
+    summary["Shot sequence %"] = summary.apply(lambda r: _rate(r["Shot_Sequences"], r["Sequences"]), axis=1)
+    summary["Shots / seq"] = (summary["Shots"] / summary["Sequences"]).replace([np.inf, -np.inf], 0).fillna(0).round(2)
+    summary["Total_xG"] = summary["Total_xG"].round(2)
+    summary["Avg_xG"] = summary["Avg_xG"].round(3)
+    summary["Avg_Actions"] = summary["Avg_Actions"].round(1)
+    summary = summary.sort_values(["Total_xG", "Shots / seq", "Sequences"], ascending=False)
+    return summary.drop(columns=[c for c in ["Shot_Sequences", "Shot sequence %"] if c in summary.columns])
+
+
+def freekick_taker_summary(df: pd.DataFrame) -> pd.DataFrame:
+    seq = freekick_sequence_summary(df)
+    if seq.empty:
+        return pd.DataFrame()
+    summary = (
+        seq.groupby("Initial taker", dropna=False)
+        .agg(
+            Team=("Team", lambda s: s.mode().iloc[0] if not s.mode().empty else "Unknown"),
+            Sequences=("Initial taker", "size"),
+            Shots=("Shots", "sum"),
+            Shot_Sequences=("Shots", lambda s: int((s > 0).sum())),
+            Goals=("Goals", "sum"),
+            Total_xG=("Total xG", "sum"),
+            Avg_xG=("Total xG", "mean"),
+            Main_zone=("Zone", lambda s: s.mode().iloc[0] if not s.mode().empty else "Unknown"),
+            Main_channel=("Channel", lambda s: s.mode().iloc[0] if not s.mode().empty else "Unknown"),
+            Main_height=("Initial height", lambda s: s.mode().iloc[0] if not s.mode().empty else "Unknown"),
+        )
+        .reset_index()
+        .rename(columns={"Initial taker": "Taker"})
+    )
+    summary["Shot sequence %"] = summary.apply(lambda r: _rate(r["Shot_Sequences"], r["Sequences"]), axis=1)
+    summary["Shots / seq"] = (summary["Shots"] / summary["Sequences"]).replace([np.inf, -np.inf], 0).fillna(0).round(2)
+    summary["Total_xG"] = summary["Total_xG"].round(2)
+    summary["Avg_xG"] = summary["Avg_xG"].round(3)
+    summary = summary.sort_values(["Total_xG", "Sequences", "Avg_xG"], ascending=False)
+    return summary.drop(columns=[c for c in ["Shot_Sequences", "Shot sequence %"] if c in summary.columns])
+
+
+def freekick_shooter_summary(df: pd.DataFrame) -> pd.DataFrame:
+    shots = unique_shot_events(df)
+    if shots.empty or "Shooter" not in shots.columns:
+        return pd.DataFrame()
+    summary = (
+        shots.groupby("Shooter", dropna=False)
+        .agg(
+            Team=("Team", lambda s: s.mode().iloc[0] if not s.mode().empty else "Unknown"),
+            Shots=("Shooter", "size"),
+            Goals=("is_goal", "sum") if "is_goal" in shots.columns else ("Shooter", "size"),
+            Total_xG=("xg", "sum") if "xg" in shots.columns else ("Shooter", "size"),
+            Avg_xG=("xg", "mean") if "xg" in shots.columns else ("Shooter", "size"),
+            Best_xG=("xg", "max") if "xg" in shots.columns else ("Shooter", "size"),
+        )
+        .reset_index()
+    )
+    summary["Conversion %"] = summary.apply(lambda r: _rate(r["Goals"], r["Shots"]), axis=1)
+    for col in ["Total_xG", "Avg_xG", "Best_xG"]:
+        summary[col] = pd.to_numeric(summary[col], errors="coerce").fillna(0).round(3)
+    return summary.sort_values(["Total_xG", "Shots", "Goals"], ascending=False)
+
+
+def freekick_origin_map_figure(df: pd.DataFrame, title: str = "Freekick origins") -> go.Figure:
+    fig = go.Figure()
+    seq = freekick_sequence_summary(df)
+    if seq.empty:
+        fig.add_annotation(text="No freekick origins available", x=60, y=40, showarrow=False, font=dict(size=16, color=MUTED))
+        return fig
+
+    colors = {
+        "Direct threat": RED,
+        "Wide delivery": "#1d4ed8",
+        "Advanced central": "#15803d",
+        "Middle third": "#b45309",
+        "Deep restart": "#64748b",
+        "Unknown": "#94a3b8",
+    }
+    for zone, part in seq.groupby("Zone", dropna=False):
+        fig.add_trace(
+            go.Scatter(
+                x=part["Origin x"],
+                y=part["Origin y"],
+                mode="markers",
+                name=str(zone),
+                marker=dict(
+                    size=np.clip(part["Total xG"].fillna(0) * 180 + 8, 8, 38),
+                    color=colors.get(str(zone), "#64748b"),
+                    opacity=0.78,
+                    line=dict(width=0.8, color="white"),
+                ),
+                customdata=np.stack(
+                    [
+                        part["Team"].fillna("Unknown"),
+                        part["Initial taker"].fillna("Unknown"),
+                        part["Total xG"].fillna(0).round(3),
+                        part["Shot outcome"].fillna("Unknown"),
+                        part["Match"].fillna("Unknown"),
+                    ],
+                    axis=1,
+                ),
+                hovertemplate="<b>%{customdata[0]}</b><br>Taker: %{customdata[1]}<br>xG: %{customdata[2]}<br>%{customdata[3]}<br>%{customdata[4]}<extra></extra>",
+            )
+        )
+
+    fig.update_xaxes(range=[0, 120], visible=False, scaleanchor="y", scaleratio=1)
+    fig.update_yaxes(range=[0, 80], visible=False)
+    fig.update_layout(
+        title=title,
+        height=560,
+        margin=dict(l=10, r=10, t=50, b=10),
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        shapes=[
+            dict(type="rect", x0=0, y0=0, x1=120, y1=80, line=dict(color=BLACK, width=1.4)),
+            dict(type="line", x0=60, y0=0, x1=60, y1=80, line=dict(color="#94a3b8", width=1)),
+            dict(type="rect", x0=102, y0=18, x1=120, y1=62, line=dict(color=BLACK, width=1.2)),
+            dict(type="rect", x0=114, y0=30, x1=120, y1=50, line=dict(color=BLACK, width=1.2)),
+            dict(type="circle", x0=108, y0=34, x1=112, y1=46, line=dict(color="#94a3b8", width=1)),
+        ],
+        legend_title_text="Origin zone",
+    )
+    return fig
 
 def kpi_row(df: pd.DataFrame) -> None:
     if df.empty:
