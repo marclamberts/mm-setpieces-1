@@ -47,16 +47,23 @@ def inject_app_style() -> None:
                 --mm-amber: #b45309;
             }}
             .stApp {{
-                background: var(--mm-page);
+                background:
+                    linear-gradient(180deg, #eef1f5 0%, #f7f8fa 260px, #f6f7f9 100%);
                 color: var(--mm-black);
+            }}
+            header[data-testid="stHeader"],
+            footer,
+            #MainMenu {{
+                visibility: hidden;
+                height: 0;
             }}
             html, body, [class*="css"] {{
                 font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             }}
             .block-container {{
-                padding-top: 1rem;
+                padding-top: .65rem;
                 padding-bottom: 3rem;
-                max-width: 1360px;
+                max-width: 1440px;
             }}
             h1, h2, h3, h4, h5, h6, p, label, span {{
                 color: var(--mm-black);
@@ -65,7 +72,7 @@ def inject_app_style() -> None:
                 letter-spacing: 0;
             }}
             div[data-testid="stSidebar"] {{
-                background: #101820;
+                background: #0b1118;
                 border-right: 1px solid rgba(255,255,255,0.08);
             }}
             div[data-testid="stSidebar"] * {{
@@ -81,22 +88,28 @@ def inject_app_style() -> None:
                 color: rgba(255,255,255,0.78);
                 font-weight: 650;
             }}
+            div[data-testid="stSidebar"] .st-emotion-cache-ue6h4q,
+            div[data-testid="stSidebar"] .st-emotion-cache-16idsys p {{
+                font-size: .78rem;
+            }}
             div[data-testid="stSidebar"] [data-baseweb="select"] > div,
             div[data-testid="stSidebar"] [data-baseweb="input"] > div {{
-                background: rgba(255,255,255,0.08);
-                border-color: rgba(255,255,255,0.14);
-                border-radius: 8px;
+                background: rgba(255,255,255,0.075);
+                border-color: rgba(255,255,255,0.16);
+                border-radius: 6px;
+                min-height: 38px;
             }}
             div[data-testid="stSidebar"] hr {{
                 border-color: rgba(255,255,255,0.12);
             }}
             .mm-hero {{
-                background: var(--mm-surface);
-                border: 1px solid var(--mm-line);
+                background:
+                    linear-gradient(135deg, rgba(11,17,24,0.98) 0%, rgba(17,24,39,0.98) 58%, rgba(56,12,18,0.98) 100%);
+                border: 1px solid rgba(255,255,255,0.10);
                 border-radius: 6px;
-                padding: 1.35rem 1.45rem;
-                box-shadow: none;
-                margin-bottom: 1.1rem;
+                padding: 1.5rem 1.6rem;
+                box-shadow: 0 18px 42px rgba(15, 23, 42, 0.16);
+                margin-bottom: 1rem;
                 position: relative;
                 overflow: hidden;
             }}
@@ -105,24 +118,24 @@ def inject_app_style() -> None:
                 position: absolute;
                 inset: 0 0 auto 0;
                 height: 4px;
-                background: linear-gradient(90deg, var(--mm-red) 0%, var(--mm-black) 52%, var(--mm-blue) 100%);
+                background: linear-gradient(90deg, var(--mm-red) 0%, #ffffff 48%, var(--mm-blue) 100%);
             }}
             .mm-eyebrow {{
-                color: var(--mm-red-dark);
+                color: rgba(255,255,255,0.72);
                 font-size: .73rem;
                 font-weight: 800;
-                letter-spacing: .08em;
+                letter-spacing: .1em;
                 text-transform: uppercase;
             }}
             .mm-title {{
-                color: var(--mm-black);
+                color: #ffffff;
                 font-size: clamp(1.8rem, 2.8vw, 2.65rem);
                 line-height: 1.02;
-                font-weight: 880;
+                font-weight: 900;
                 margin: .24rem 0 .55rem 0;
             }}
             .mm-copy {{
-                color: var(--mm-muted);
+                color: rgba(255,255,255,0.74);
                 font-size: .98rem;
                 line-height: 1.58;
                 max-width: 980px;
@@ -131,15 +144,16 @@ def inject_app_style() -> None:
             .mm-feature-strip {{
                 display: grid;
                 grid-template-columns: repeat(4, minmax(0, 1fr));
-                gap: .7rem;
-                margin: .2rem 0 1.2rem 0;
+                gap: .55rem;
+                margin: .15rem 0 1.05rem 0;
             }}
             .mm-feature-pill {{
                 background: var(--mm-surface);
                 border: 1px solid var(--mm-line);
-                border-radius: 8px;
-                padding: .78rem .85rem;
-                box-shadow: 0 8px 18px rgba(15, 23, 42, 0.03);
+                border-top: 3px solid #111827;
+                border-radius: 6px;
+                padding: .74rem .85rem;
+                box-shadow: none;
             }}
             .mm-feature-value {{
                 color: var(--mm-black);
@@ -160,15 +174,16 @@ def inject_app_style() -> None:
                 align-items: center;
                 justify-content: space-between;
                 gap: 1rem;
-                border-bottom: 1px solid var(--mm-line);
-                padding: 1.1rem 0 .65rem 0;
-                margin: .65rem 0 .8rem 0;
+                border-bottom: 1px solid #cfd6e1;
+                padding: 1.05rem 0 .55rem 0;
+                margin: .55rem 0 .75rem 0;
             }}
             .mm-section-title {{
                 color: var(--mm-black);
-                font-size: 1.05rem;
-                font-weight: 850;
+                font-size: 1rem;
+                font-weight: 900;
                 margin: 0;
+                letter-spacing: 0;
             }}
             .mm-section-note {{
                 color: var(--mm-muted);
@@ -179,15 +194,24 @@ def inject_app_style() -> None:
                 background: var(--mm-surface);
                 border: 1px solid var(--mm-line);
                 border-radius: 6px;
-                padding: 1rem;
-                min-height: 176px;
+                padding: 1.05rem;
+                min-height: 170px;
                 box-shadow: none;
                 transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+                position: relative;
+                overflow: hidden;
+            }}
+            .mm-nav-card::before {{
+                content: "";
+                position: absolute;
+                inset: 0 auto 0 0;
+                width: 3px;
+                background: #111827;
             }}
             .mm-nav-card:hover {{
                 transform: translateY(-2px);
-                border-color: rgba(193,18,31,0.30);
-                box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+                border-color: rgba(17,24,39,0.28);
+                box-shadow: 0 12px 28px rgba(15, 23, 42, 0.09);
             }}
             .mm-nav-title {{
                 color: var(--mm-black);
@@ -228,11 +252,11 @@ def inject_app_style() -> None:
                 background: var(--mm-surface);
                 border: 1px solid var(--mm-line);
                 border-radius: 6px;
-                padding: .9rem 1rem;
+                padding: .88rem 1rem .88rem 1.1rem;
                 margin-bottom: .7rem;
-                min-height: 86px;
+                min-height: 82px;
                 color: var(--mm-ink);
-                line-height: 1.45;
+                line-height: 1.42;
                 font-weight: 600;
                 box-shadow: none;
                 position: relative;
@@ -249,13 +273,14 @@ def inject_app_style() -> None:
             }}
             div.stButton > button {{
                 width: 100%;
-                border-radius: 7px;
+                border-radius: 6px;
                 border: 1px solid #111827;
                 background: #111827;
                 color: #ffffff;
                 font-weight: 800;
-                padding: .62rem .9rem;
+                padding: .58rem .9rem;
                 transition: all .15s ease;
+                box-shadow: none;
             }}
             div.stButton > button:hover {{
                 border-color: var(--mm-red);
@@ -264,7 +289,7 @@ def inject_app_style() -> None:
                 transform: translateY(-1px);
             }}
             div[data-testid="stDownloadButton"] > button {{
-                border-radius: 7px;
+                border-radius: 6px;
                 background: var(--mm-red);
                 border-color: var(--mm-red);
                 color: #ffffff;
@@ -273,19 +298,22 @@ def inject_app_style() -> None:
             div[data-testid="stMetric"] {{
                 background: var(--mm-surface);
                 border: 1px solid var(--mm-line);
+                border-left: 3px solid #111827;
                 border-radius: 6px;
-                padding: .82rem .92rem;
+                padding: .74rem .86rem;
                 box-shadow: none;
             }}
             div[data-testid="stMetricLabel"] p {{
                 color: var(--mm-muted);
-                font-weight: 750;
-                font-size: .78rem;
+                font-weight: 800;
+                font-size: .72rem;
+                text-transform: uppercase;
+                letter-spacing: .04em;
             }}
             div[data-testid="stMetricValue"] {{
                 color: var(--mm-black);
                 font-weight: 900;
-                font-size: 1.55rem;
+                font-size: 1.42rem;
             }}
             [data-testid="stDataFrameResizable"] {{
                 border: 1px solid var(--mm-line);
@@ -293,12 +321,24 @@ def inject_app_style() -> None:
                 overflow: hidden;
                 box-shadow: none;
             }}
-            div[data-testid="stTabs"] button {{
-                border-radius: 7px 7px 0 0;
-                font-weight: 750;
+            div[data-testid="stTabs"] [role="tablist"] {{
+                background: #ffffff;
+                border: 1px solid var(--mm-line);
+                border-radius: 8px;
+                padding: .25rem;
+                gap: .2rem;
+                margin-bottom: .35rem;
             }}
-            div[data-testid="stTabs"] [aria-selected="true"] {{
-                color: var(--mm-red-dark);
+            div[data-testid="stTabs"] button[role="tab"] {{
+                border-radius: 6px;
+                font-weight: 750;
+                min-height: 36px;
+                padding: .35rem .85rem;
+                color: var(--mm-muted);
+            }}
+            div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {{
+                background: #111827;
+                color: #ffffff;
             }}
             div[data-testid="stPlotlyChart"],
             div[data-testid="stImage"],
@@ -318,10 +358,19 @@ def inject_app_style() -> None:
             [data-baseweb="select"] > div,
             [data-baseweb="input"] > div,
             textarea {{
-                border-radius: 8px;
+                border-radius: 6px;
+            }}
+            div[data-testid="stTextInput"] input,
+            div[data-testid="stMultiSelect"] [data-baseweb="select"] > div,
+            div[data-testid="stSelectbox"] [data-baseweb="select"] > div {{
+                min-height: 38px;
             }}
             .stSlider [data-testid="stTickBar"] {{
                 opacity: .45;
+            }}
+            div[data-testid="stAlert"] {{
+                border-radius: 6px;
+                border: 1px solid var(--mm-line);
             }}
             .stCaptionContainer, .stCaptionContainer p {{
                 color: var(--mm-muted);
