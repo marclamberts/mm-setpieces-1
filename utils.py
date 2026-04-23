@@ -366,7 +366,7 @@ def inject_app_style() -> None:
             }}
             div[data-testid="stTabs"] [role="tablist"] {{
                 background: #ffffff;
-                border: 1px solid var(--mm-line);
+                border: 1px solid rgba(193,18,31,0.28);
                 border-radius: 8px;
                 padding: .25rem;
                 gap: .2rem;
@@ -377,11 +377,14 @@ def inject_app_style() -> None:
                 font-weight: 750;
                 min-height: 36px;
                 padding: .35rem .85rem;
-                color: var(--mm-muted);
+                background: var(--mm-red) !important;
+                border: 1px solid var(--mm-red) !important;
+                color: var(--mm-blue) !important;
             }}
             div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {{
-                background: #111827;
-                color: #ffffff;
+                background: var(--mm-red) !important;
+                color: var(--mm-blue) !important;
+                box-shadow: 0 0 0 2px rgba(29,78,216,0.22) inset;
             }}
             div[data-testid="stPlotlyChart"],
             div[data-testid="stImage"],
@@ -598,22 +601,33 @@ def inject_app_style() -> None:
                 font-size: 1.58rem;
             }}
             div[data-testid="stTabs"] [role="tablist"] {{
-                background: #0f172a;
-                border: 1px solid rgba(255,255,255,0.12);
+                background: #ffffff;
+                border: 1px solid rgba(193,18,31,0.28);
                 border-radius: 10px;
                 padding: .32rem;
                 box-shadow: 0 14px 34px rgba(15,23,42,0.15);
             }}
             div[data-testid="stTabs"] button[role="tab"] {{
-                color: rgba(255,255,255,0.68) !important;
+                background: #c1121f !important;
+                border: 1px solid #c1121f !important;
+                color: #1d4ed8 !important;
                 border-radius: 8px;
                 font-size: .86rem;
                 text-transform: uppercase;
                 letter-spacing: .06em;
+                transition: none;
             }}
             div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {{
-                background: #ffffff;
-                color: #0f172a !important;
+                background: #c1121f !important;
+                color: #1d4ed8 !important;
+                box-shadow: 0 0 0 2px rgba(29,78,216,0.24) inset;
+            }}
+            div[data-testid="stTabs"] button[role="tab"]:hover,
+            div[data-testid="stTabs"] button[role="tab"]:focus,
+            div[data-testid="stTabs"] button[role="tab"]:active {{
+                background: #c1121f !important;
+                border-color: #c1121f !important;
+                color: #1d4ed8 !important;
             }}
             div[data-testid="stPlotlyChart"],
             div[data-testid="stImage"],
