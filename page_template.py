@@ -50,25 +50,25 @@ def _filter_page_data(df: pd.DataFrame, label: str) -> pd.DataFrame:
     takers = _safe_sorted(df["Taker"]) if "Taker" in df.columns else []
     shot_outcomes = _safe_sorted(df["Shot outcome"]) if "Shot outcome" in df.columns else []
 
-    team = st.sidebar.selectbox("Team", teams)
-    league = st.sidebar.selectbox("League", leagues)
-    sample = st.sidebar.radio("Sample", ["Total", "Last 10 games"], horizontal=True)
-    side = st.sidebar.radio("Side", sides, horizontal=True)
-    time_in_game = st.sidebar.selectbox("Time in the game", periods)
+    with st.sidebar.expander("Scope", expanded=True):
+        team = st.selectbox("Team", teams)
+        league = st.selectbox("League", leagues)
+        sample = st.radio("Sample", ["Total", "Last 10 games"], horizontal=True)
+        side = st.radio("Side", sides, horizontal=True)
+        time_in_game = st.selectbox("Time in the game", periods)
 
-    st.sidebar.markdown("---")
     minute_min = 0
     minute_max = 95
     if "minute" in df.columns and not df["minute"].dropna().empty:
         minute_min = int(pd.to_numeric(df["minute"], errors="coerce").fillna(0).min())
         minute_max = max(95, int(pd.to_numeric(df["minute"], errors="coerce").fillna(95).max()))
-    minute_range = st.sidebar.slider("Minute range", minute_min, minute_max, (minute_min, minute_max))
-
-    taker_filter = st.sidebar.multiselect("Taker", takers)
-    technique_filter = st.sidebar.multiselect("Delivery technique", techniques)
-    height_filter = st.sidebar.multiselect("Delivery height", heights)
-    shot_outcome_filter = st.sidebar.multiselect("Shot outcome", shot_outcomes)
-    only_shots = st.sidebar.checkbox(f"Only {label.lower()} ending with a shot", value=False)
+    with st.sidebar.expander("Event filters", expanded=True):
+        minute_range = st.slider("Minute range", minute_min, minute_max, (minute_min, minute_max))
+        taker_filter = st.multiselect("Taker", takers)
+        technique_filter = st.multiselect("Delivery technique", techniques)
+        height_filter = st.multiselect("Delivery height", heights)
+        shot_outcome_filter = st.multiselect("Shot outcome", shot_outcomes)
+        only_shots = st.checkbox(f"Only {label.lower()} ending with a shot", value=False)
 
     filtered = df.copy()
     if team != "All" and "Team" in filtered.columns:
@@ -222,4 +222,5 @@ def render_page(label: str) -> None:
             "Defensive_setup", "Occupation_Rating", "Proximity_Rating", "Duel_Win_Prob",
             "OPS_Opponent_Rating", "timestamp"
         ] if c in filtered.columns]
-        render_analyst_table(filtered[display_cols], height=620)
+        with st.expander("Event-level rows", expanded=True):
+            render_analyst_table(filtered[display_cols], height=620)

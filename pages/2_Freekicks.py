@@ -55,18 +55,19 @@ heights = _safe_sorted(df["Delivery height"]) if "Delivery height" in df.columns
 outcomes = _safe_sorted(df["Shot outcome"]) if "Shot outcome" in df.columns else []
 periods = ["All"] + _safe_sorted(df["game_period"]) if "game_period" in df.columns else ["All"]
 
-team = st.sidebar.selectbox("Team", teams)
-period = st.sidebar.selectbox("Game period", periods)
-sample = st.sidebar.radio("Sample", ["Total", "Last 10 games"], horizontal=True)
+with st.sidebar.expander("Scope", expanded=True):
+    team = st.selectbox("Team", teams)
+    period = st.selectbox("Game period", periods)
+    sample = st.radio("Sample", ["Total", "Last 10 games"], horizontal=True)
 
 minute_min = int(pd.to_numeric(df["minute"], errors="coerce").fillna(0).min()) if "minute" in df.columns else 0
 minute_max = max(95, int(pd.to_numeric(df["minute"], errors="coerce").fillna(95).max())) if "minute" in df.columns else 95
-minute_range = st.sidebar.slider("Minute range", minute_min, minute_max, (minute_min, minute_max))
-
-taker_filter = st.sidebar.multiselect("Initial / sequence taker", takers)
-shooter_filter = st.sidebar.multiselect("Shooter", shooters)
-height_filter = st.sidebar.multiselect("Pass height", heights)
-outcome_filter = st.sidebar.multiselect("Shot outcome", outcomes)
+with st.sidebar.expander("Event filters", expanded=True):
+    minute_range = st.slider("Minute range", minute_min, minute_max, (minute_min, minute_max))
+    taker_filter = st.multiselect("Initial / sequence taker", takers)
+    shooter_filter = st.multiselect("Shooter", shooters)
+    height_filter = st.multiselect("Pass height", heights)
+    outcome_filter = st.multiselect("Shot outcome", outcomes)
 
 filtered = df.copy()
 if team != "All" and "Team" in filtered.columns:
@@ -108,8 +109,12 @@ overview_tab, origin_tab, people_tab, visuals_tab, data_tab = st.tabs(
 )
 
 with overview_tab:
-    section_header("Freekick Read", "Highest-signal notes from the active filter")
-    insight_cols = st.columns(2)
+    top_left, top_right = st.columns([0.9, 1.35])
+    with top_left:
+        section_header("Freekick Read", "Highest-signal notes")
+    with top_right:
+        section_header("Origin Map", "Starting points sized by sequence xG")
+
     insights = generate_set_piece_insights(filtered, "Freekicks")
     if not sequences.empty:
         top_zone = sequences["Zone"].value_counts().head(1)
@@ -118,11 +123,14 @@ with overview_tab:
             insights.insert(0, f"Most common origin profile is {top_zone.index[0].lower()} ({top_zone.iloc[0]} sequences).")
         if not top_height.empty:
             insights.insert(1, f"Primary initial delivery height is {top_height.index[0]} ({top_height.iloc[0]} sequences).")
-    for idx, insight in enumerate(insights[:6]):
-        with insight_cols[idx % 2]:
-            st.markdown(f"<div class='mm-insight-card'>{insight}</div>", unsafe_allow_html=True)
 
-    left, right = st.columns([1.15, 1])
+    with top_left:
+        for insight in insights[:5]:
+            st.markdown(f"<div class='mm-insight-card'>{insight}</div>", unsafe_allow_html=True)
+    with top_right:
+        st.plotly_chart(polish_plotly_figure(freekick_origin_map_figure(filtered)), use_container_width=True)
+
+    left, right = st.columns([1.1, 1])
     with left:
         section_header("Origin Zones", "Sequence value by restart location")
         render_analyst_table(freekick_zone_summary(filtered), height=390)
@@ -138,12 +146,12 @@ with overview_tab:
         render_analyst_table(display.head(30), height=390)
 
 with origin_tab:
-    section_header("Origin Map", "Free-kick starting points sized by possession xG")
-    st.plotly_chart(polish_plotly_figure(freekick_origin_map_figure(filtered)), use_container_width=True)
-
-    left, right = st.columns(2)
+    left, right = st.columns([1.55, 1])
     with left:
-        section_header("Zone Mix")
+        section_header("Origin Map", "Free-kick starting points sized by possession xG")
+        st.plotly_chart(polish_plotly_figure(freekick_origin_map_figure(filtered)), use_container_width=True)
+    with right:
+        section_header("Zone Mix", "Volume by restart territory")
         zone_mix = sequences.groupby("Zone", dropna=False).size().reset_index(name="Sequences") if not sequences.empty else pd.DataFrame()
         if not zone_mix.empty:
             fig = px.bar(zone_mix.sort_values("Sequences", ascending=False), x="Zone", y="Sequences", color="Zone", color_discrete_sequence=["#111827", "#c1121f", "#1d4ed8", "#15803d", "#b45309"])
@@ -151,8 +159,8 @@ with origin_tab:
             st.plotly_chart(polish_plotly_figure(fig), use_container_width=True)
         else:
             st.info("No zone data available.")
-    with right:
-        section_header("Channel Mix")
+
+        section_header("Channel Mix", "Central vs wide origin balance")
         channel_mix = sequences.groupby("Channel", dropna=False).size().reset_index(name="Sequences") if not sequences.empty else pd.DataFrame()
         if not channel_mix.empty:
             fig = px.bar(channel_mix.sort_values("Sequences", ascending=False), x="Channel", y="Sequences", color="Channel", color_discrete_sequence=["#111827", "#c1121f", "#1d4ed8", "#15803d", "#b45309"])
@@ -162,13 +170,13 @@ with origin_tab:
             st.info("No channel data available.")
 
 with people_tab:
-    taker_tab, shooter_tab = st.tabs(["Takers", "Shooters"])
-    with taker_tab:
+    left, right = st.columns(2)
+    with left:
         section_header("Initial Takers", "Free-kick sequences started, value created, and preferred zones")
-        render_analyst_table(freekick_taker_summary(filtered), height=560)
-    with shooter_tab:
+        render_analyst_table(freekick_taker_summary(filtered), height=620)
+    with right:
         section_header("Shot Targets", "Shooters receiving or taking the final freekick shot")
-        render_analyst_table(freekick_shooter_summary(filtered), height=560)
+        render_analyst_table(freekick_shooter_summary(filtered), height=620)
 
 with visuals_tab:
     left, right = st.columns(2)
@@ -183,10 +191,9 @@ with visuals_tab:
     st.pyplot(mplsoccer_shot_figure(filtered, "Freekicks"), use_container_width=True)
 
 with data_tab:
-    sequence_tab, event_tab = st.tabs(["Sequences", "Events"])
-    with sequence_tab:
-        render_analyst_table(sequences, height=620)
-    with event_tab:
+    section_header("Sequence Table", "One row per match_id + possession + team")
+    render_analyst_table(sequences, height=430)
+    with st.expander("Event-level rows", expanded=False):
         display_cols = [
             c for c in [
                 "Match", "Team", "Taker", "Shooter", "minute", "second", "pass_x", "pass_y",
