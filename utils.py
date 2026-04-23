@@ -75,18 +75,28 @@ def inject_app_style() -> None:
                 background: #0b1118;
                 border-right: 1px solid rgba(255,255,255,0.08);
             }}
-            div[data-testid="stSidebar"] * {{
-                color: rgba(255,255,255,0.88);
+            div[data-testid="stSidebar"] *,
+            div[data-testid="stSidebar"] span,
+            div[data-testid="stSidebar"] div,
+            div[data-testid="stSidebar"] button,
+            div[data-testid="stSidebar"] a {{
+                color: rgba(255,255,255,0.88) !important;
             }}
             div[data-testid="stSidebar"] h2,
             div[data-testid="stSidebar"] h3 {{
-                color: #ffffff;
+                color: #ffffff !important;
                 font-weight: 800;
             }}
             div[data-testid="stSidebar"] label,
             div[data-testid="stSidebar"] p {{
-                color: rgba(255,255,255,0.78);
+                color: rgba(255,255,255,0.78) !important;
                 font-weight: 650;
+            }}
+            div[data-testid="stSidebar"] [data-testid="stSidebarNav"] a,
+            div[data-testid="stSidebar"] [data-testid="stSidebarNav"] span,
+            div[data-testid="stSidebar"] [data-testid="stExpander"] summary,
+            div[data-testid="stSidebar"] [data-testid="stExpander"] summary * {{
+                color: #ffffff !important;
             }}
             div[data-testid="stSidebar"] .st-emotion-cache-ue6h4q,
             div[data-testid="stSidebar"] .st-emotion-cache-16idsys p {{
@@ -94,13 +104,46 @@ def inject_app_style() -> None:
             }}
             div[data-testid="stSidebar"] [data-baseweb="select"] > div,
             div[data-testid="stSidebar"] [data-baseweb="input"] > div {{
-                background: rgba(255,255,255,0.075);
-                border-color: rgba(255,255,255,0.16);
+                background: rgba(255,255,255,0.075) !important;
+                border-color: rgba(255,255,255,0.16) !important;
                 border-radius: 6px;
                 min-height: 38px;
             }}
+            div[data-testid="stSidebar"] [data-baseweb="select"] input,
+            div[data-testid="stSidebar"] [data-baseweb="select"] span,
+            div[data-testid="stSidebar"] [data-baseweb="tag"] span,
+            div[data-testid="stSidebar"] [data-baseweb="input"] input {{
+                color: #ffffff !important;
+                -webkit-text-fill-color: #ffffff !important;
+            }}
+            div[data-testid="stSidebar"] [data-baseweb="tag"] {{
+                background: rgba(255,255,255,0.14) !important;
+            }}
+            div[data-testid="stSidebar"] [role="radiogroup"] label,
+            div[data-testid="stSidebar"] [role="radiogroup"] span,
+            div[data-testid="stSidebar"] [data-testid="stCheckbox"] label,
+            div[data-testid="stSidebar"] [data-testid="stCheckbox"] span {{
+                color: rgba(255,255,255,0.86) !important;
+            }}
             div[data-testid="stSidebar"] hr {{
                 border-color: rgba(255,255,255,0.12);
+            }}
+            div[data-baseweb="popover"] ul,
+            div[data-baseweb="popover"] [role="listbox"] {{
+                background: #ffffff !important;
+                border: 1px solid #d9dee7 !important;
+                box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18) !important;
+            }}
+            div[data-baseweb="popover"] [role="option"],
+            div[data-baseweb="popover"] [role="option"] *,
+            div[data-baseweb="popover"] li,
+            div[data-baseweb="popover"] li * {{
+                color: #0b0f14 !important;
+                -webkit-text-fill-color: #0b0f14 !important;
+            }}
+            div[data-baseweb="popover"] [aria-selected="true"],
+            div[data-baseweb="popover"] [role="option"]:hover {{
+                background: #eef1f5 !important;
             }}
             .mm-hero {{
                 background:
