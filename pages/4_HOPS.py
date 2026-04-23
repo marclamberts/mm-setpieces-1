@@ -34,8 +34,10 @@ hero_block(
 
 st.sidebar.header("HOPS filters")
 teams = ["All"] + sorted(df["Team"].dropna().astype(str).unique().tolist())
-team = st.sidebar.selectbox("Team", teams)
-top_n = st.sidebar.slider("Show top / bottom players", min_value=5, max_value=30, value=10)
+with st.sidebar.expander("Scope", expanded=True):
+    team = st.selectbox("Team", teams)
+with st.sidebar.expander("Board settings", expanded=True):
+    top_n = st.slider("Show top / bottom players", min_value=5, max_value=30, value=10)
 
 filtered = df.copy()
 if team != "All":
@@ -74,15 +76,15 @@ team_summary = team_summary.sort_values(["Avg_Rating", "Elite", "Strong_Plus"], 
 top_players = filtered.nlargest(top_n, "Rating")[["Player", "Team", "Rating", "Percentile", "Tier"]].copy()
 bottom_players = filtered.nsmallest(top_n, "Rating")[["Player", "Team", "Rating", "Percentile", "Tier"]].copy()
 
-overview_tab, charts_tab, data_tab = st.tabs(["Overview", "Charts", "Data"])
+overview_tab, charts_tab, data_tab = st.tabs(["Briefing", "Duel Evidence", "Player Log"])
 
 with overview_tab:
     left, right = st.columns([1.15, 1])
     with left:
-        section_header("Team Duel Depth", "Average rating and high-end profiles by squad")
+        section_header("Team Duel Board", "Average rating and high-end profiles by squad")
         render_analyst_table(team_summary, height=410)
     with right:
-        section_header("Top Players", f"Best {len(top_players)} in filter")
+        section_header("Priority Profiles", f"Best {len(top_players)} in filter")
         render_analyst_table(top_players, height=410)
 
     section_header("Risk Check", "Lowest ratings in the active filter")
@@ -92,7 +94,7 @@ with charts_tab:
     chart_left, chart_right = st.columns(2)
 
     with chart_left:
-        section_header("Top Rating Chart")
+        section_header("Top Rating Evidence")
         chart_df = filtered.nlargest(min(15, len(filtered)), "Rating").sort_values("Rating")
         fig = px.bar(
             chart_df,
@@ -120,7 +122,7 @@ with charts_tab:
         st.plotly_chart(polish_plotly_figure(hist), use_container_width=True)
 
 with data_tab:
-    section_header("Full HOPS Table", f"{len(filtered):,} players")
+    section_header("Player Log", f"{len(filtered):,} players")
     render_analyst_table(
         filtered.sort_values("Rating", ascending=False)[["Player", "Team", "Rating", "Percentile", "Tier"]],
         height=620,

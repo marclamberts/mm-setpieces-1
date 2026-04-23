@@ -437,6 +437,295 @@ def inject_app_style() -> None:
                     padding: 1.15rem;
                 }}
             }}
+            /* Scouting product layer */
+            .stApp {{
+                background:
+                    radial-gradient(circle at 15% 0%, rgba(193,18,31,0.12), transparent 28rem),
+                    linear-gradient(180deg, #091019 0%, #0d1722 11.5rem, #edf1f5 11.55rem, #f5f7fa 100%) !important;
+            }}
+            .block-container {{
+                max-width: 1500px;
+                padding-top: 1.05rem;
+            }}
+            .mm-hero {{
+                background:
+                    linear-gradient(135deg, rgba(5,10,16,0.98) 0%, rgba(11,17,24,0.96) 48%, rgba(83,18,27,0.92) 100%),
+                    repeating-linear-gradient(90deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 42px);
+                border: 1px solid rgba(255,255,255,0.14);
+                border-radius: 10px;
+                padding: 1.45rem 1.55rem 1.35rem;
+                box-shadow: 0 26px 70px rgba(2,6,23,0.24);
+            }}
+            .mm-hero::before {{
+                height: 5px;
+                background: linear-gradient(90deg, #c1121f 0%, #f8fafc 42%, #0ea5e9 72%, #16a34a 100%);
+            }}
+            .mm-eyebrow {{
+                color: rgba(255,255,255,0.66) !important;
+                font-size: .68rem;
+                letter-spacing: .16em;
+            }}
+            .mm-title {{
+                color: #ffffff !important;
+                font-size: clamp(2rem, 3.2vw, 3.25rem);
+                line-height: .98;
+            }}
+            .mm-copy {{
+                color: rgba(226,232,240,0.82) !important;
+                max-width: 1040px;
+            }}
+            .mm-feature-strip {{
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: .75rem;
+                margin: .8rem 0 1.1rem 0;
+            }}
+            .mm-feature-pill,
+            .mm-nav-card,
+            .mm-insight-card,
+            div[data-testid="stMetric"],
+            [data-testid="stDataFrameResizable"],
+            div[data-testid="stPlotlyChart"],
+            div[data-testid="stImage"],
+            div[data-testid="stPyplot"] {{
+                border-radius: 10px;
+                border: 1px solid rgba(15,23,42,0.12);
+                box-shadow: 0 14px 36px rgba(15,23,42,0.07);
+            }}
+            .mm-feature-pill {{
+                background: #ffffff;
+                border-top: 0;
+                border-left: 4px solid #0f172a;
+                padding: .86rem .95rem;
+            }}
+            .mm-feature-value {{
+                font-size: 1.02rem;
+            }}
+            .mm-feature-label,
+            .mm-card-kicker,
+            .mm-table-note,
+            div[data-testid="stMetricLabel"] p {{
+                letter-spacing: .08em;
+            }}
+            .mm-section {{
+                border-bottom: 0;
+                padding: .2rem 0 .4rem;
+                margin: 1.15rem 0 .65rem;
+            }}
+            .mm-section-title {{
+                display: inline-flex;
+                align-items: center;
+                gap: .55rem;
+                color: #0b0f14;
+                font-size: .92rem;
+                text-transform: uppercase;
+                letter-spacing: .1em;
+            }}
+            .mm-section-title::before {{
+                content: "";
+                width: .55rem;
+                height: .55rem;
+                border-radius: 999px;
+                background: #c1121f;
+                box-shadow: 0 0 0 4px rgba(193,18,31,0.12);
+            }}
+            .mm-section-note {{
+                color: #64748b;
+                font-size: .78rem;
+                font-weight: 750;
+            }}
+            .mm-nav-card {{
+                background:
+                    linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%);
+                min-height: 210px;
+                padding: 1rem 1.05rem 1.1rem;
+            }}
+            .mm-nav-card::before {{
+                inset: 0 0 auto 0;
+                height: 4px;
+                width: auto;
+                background: linear-gradient(90deg, #0f172a, #c1121f);
+            }}
+            .mm-nav-card:hover {{
+                transform: translateY(-3px);
+                border-color: rgba(193,18,31,0.32);
+                box-shadow: 0 22px 46px rgba(15,23,42,0.13);
+            }}
+            .mm-nav-title {{
+                font-size: 1.22rem;
+                font-weight: 900;
+            }}
+            .mm-card-kicker {{
+                color: #991b1b;
+                font-size: .66rem;
+            }}
+            .mm-nav-copy {{
+                color: #475569;
+                font-size: .88rem;
+            }}
+            .mm-tiny {{
+                border-radius: 6px;
+                background: #f1f5f9;
+                color: #334155;
+                border-color: #dbe3ee;
+            }}
+            .mm-insight-card {{
+                background: #ffffff;
+                min-height: auto;
+                border-left: 0;
+                padding: .82rem .92rem .82rem 1rem;
+            }}
+            .mm-insight-card::before {{
+                top: 0;
+                bottom: 0;
+                border-radius: 10px 0 0 10px;
+                background: linear-gradient(180deg, #c1121f, #0f172a);
+            }}
+            div[data-testid="stMetric"] {{
+                background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+                border-left: 0;
+                padding: .82rem .92rem;
+                position: relative;
+                overflow: hidden;
+            }}
+            div[data-testid="stMetric"]::before {{
+                content: "";
+                position: absolute;
+                inset: 0 0 auto 0;
+                height: 3px;
+                background: linear-gradient(90deg, #0f172a, #c1121f);
+            }}
+            div[data-testid="stMetricValue"] {{
+                font-size: 1.58rem;
+            }}
+            div[data-testid="stTabs"] [role="tablist"] {{
+                background: #0f172a;
+                border: 1px solid rgba(255,255,255,0.12);
+                border-radius: 10px;
+                padding: .32rem;
+                box-shadow: 0 14px 34px rgba(15,23,42,0.15);
+            }}
+            div[data-testid="stTabs"] button[role="tab"] {{
+                color: rgba(255,255,255,0.68) !important;
+                border-radius: 8px;
+                font-size: .86rem;
+                text-transform: uppercase;
+                letter-spacing: .06em;
+            }}
+            div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {{
+                background: #ffffff;
+                color: #0f172a !important;
+            }}
+            div[data-testid="stPlotlyChart"],
+            div[data-testid="stImage"],
+            div[data-testid="stPyplot"] {{
+                background: #ffffff;
+                padding: .72rem;
+            }}
+            [data-testid="stDataFrameResizable"] {{
+                background: #ffffff;
+            }}
+            div.stButton > button,
+            div[data-testid="stDownloadButton"] > button {{
+                min-height: 40px;
+                border-radius: 8px;
+                background: #0f172a;
+                border-color: #0f172a;
+                text-transform: uppercase;
+                letter-spacing: .04em;
+                font-size: .78rem;
+            }}
+            div.stButton > button:hover,
+            div[data-testid="stDownloadButton"] > button:hover {{
+                background: #c1121f;
+                border-color: #c1121f;
+            }}
+            .mm-scout-shell {{
+                display: grid;
+                grid-template-columns: minmax(0, 1.28fr) minmax(310px, .72fr);
+                gap: .9rem;
+                margin: .8rem 0 1rem;
+            }}
+            .mm-command-panel {{
+                background: #0f172a;
+                color: #e5e7eb;
+                border: 1px solid rgba(255,255,255,0.12);
+                border-radius: 10px;
+                padding: 1rem;
+                min-height: 100%;
+                box-shadow: 0 22px 50px rgba(15,23,42,0.18);
+            }}
+            .mm-command-panel * {{
+                color: inherit;
+            }}
+            .mm-command-title {{
+                color: #ffffff;
+                font-size: 1rem;
+                font-weight: 900;
+                letter-spacing: .08em;
+                text-transform: uppercase;
+                margin-bottom: .75rem;
+            }}
+            .mm-command-row {{
+                display: grid;
+                grid-template-columns: 7.2rem minmax(0, 1fr);
+                gap: .75rem;
+                padding: .64rem 0;
+                border-top: 1px solid rgba(255,255,255,0.1);
+            }}
+            .mm-command-label {{
+                color: rgba(226,232,240,0.62);
+                font-size: .68rem;
+                font-weight: 850;
+                text-transform: uppercase;
+                letter-spacing: .08em;
+            }}
+            .mm-command-value {{
+                color: #f8fafc;
+                font-size: .88rem;
+                line-height: 1.35;
+                font-weight: 650;
+            }}
+            .mm-workflow-grid {{
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: .7rem;
+                margin: .75rem 0 1rem;
+            }}
+            .mm-workflow-card {{
+                background: #ffffff;
+                border: 1px solid #dbe3ee;
+                border-radius: 10px;
+                padding: .9rem;
+            }}
+            .mm-workflow-step {{
+                color: #c1121f;
+                font-size: .68rem;
+                font-weight: 900;
+                letter-spacing: .12em;
+                text-transform: uppercase;
+                margin-bottom: .32rem;
+            }}
+            .mm-workflow-title {{
+                color: #0f172a;
+                font-weight: 900;
+                margin-bottom: .28rem;
+            }}
+            .mm-workflow-copy {{
+                color: #64748b;
+                font-size: .84rem;
+                line-height: 1.42;
+                font-weight: 550;
+            }}
+            div[data-testid="stSidebar"] {{
+                background:
+                    linear-gradient(180deg, #050a10 0%, #0b1118 46%, #111827 100%) !important;
+            }}
+            @media (max-width: 980px) {{
+                .mm-scout-shell,
+                .mm-workflow-grid {{
+                    grid-template-columns: 1fr;
+                }}
+            }}
         </style>
         """,
         unsafe_allow_html=True,

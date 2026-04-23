@@ -129,12 +129,12 @@ def render_page(label: str) -> None:
     kpi_row(filtered)
     info_panel(filtered)
 
-    overview_tab, visuals_tab, report_tab, data_tab = st.tabs(["Overview", "Visuals", "Report", "Data"])
+    overview_tab, visuals_tab, report_tab, data_tab = st.tabs(["Briefing", "Pitch Evidence", "PDF Brief", "Event Log"])
 
     with overview_tab:
         summary, technique_mix, outcome_mix = build_summary_tables(filtered)
 
-        section_header("Executive Summary", "Team output, delivery mix, and outcome mix")
+        section_header("Scouting Brief", "Team output, delivery mix, and outcome mix")
         c1, c2, c3 = st.columns([1.35, 1, 1])
         with c1:
             st.markdown('<div class="mm-table-note">Ranked by total xG, goals, and shot volume.</div>', unsafe_allow_html=True)
@@ -146,16 +146,16 @@ def render_page(label: str) -> None:
             st.markdown('<div class="mm-table-note">Delivery and shot result combinations.</div>', unsafe_allow_html=True)
             render_analyst_table(outcome_mix.head(20), height=320)
 
-        section_header("Insights", "Automatic coaching notes from the current filter")
+        section_header("Staff Notes", "Automatic coaching notes from the current filter")
         insights = generate_set_piece_insights(filtered, label)
         insight_cols = st.columns(2)
         for idx, insight in enumerate(insights):
             with insight_cols[idx % 2]:
                 st.markdown(f"<div class='mm-insight-card'>{insight}</div>", unsafe_allow_html=True)
 
-        section_header("Analyst Tables", "Workbook-derived rankings and tactical pattern reads")
+        section_header("Scouting Boards", "Workbook-derived rankings and tactical pattern reads")
         teams_tab, takers_tab, shooters_tab, patterns_tab, matches_tab = st.tabs(
-            ["Teams", "Takers", "Shooters", "Patterns", "Matches"]
+            ["Team Threat", "Takers", "Shot Targets", "Patterns", "Match Log"]
         )
         with teams_tab:
             render_analyst_table(build_team_leaderboard(filtered), height=430)
@@ -180,7 +180,7 @@ def render_page(label: str) -> None:
             render_analyst_table(build_team_archetypes(filtered).head(15), height=360)
 
     with visuals_tab:
-        section_header("Interactive Maps", "Shot locations and delivery/start locations")
+        section_header("Interactive Pitch Evidence", "Shot locations and delivery/start locations")
         left, right = st.columns(2)
         with left:
             st.plotly_chart(polish_plotly_figure(shotmap_figure(filtered, f"{label} shotmap · vertical half pitch")), use_container_width=True)
@@ -190,7 +190,7 @@ def render_page(label: str) -> None:
             else:
                 st.plotly_chart(polish_plotly_figure(starting_location_map_figure(filtered, f"{label} starting location map · vertical half pitch")), use_container_width=True)
 
-        section_header("Report Visuals", "Static matplotlib / mplsoccer pitch views")
+        section_header("Static Report Visuals", "Matplotlib / mplsoccer pitch views")
         mpl_left, mpl_right = st.columns(2)
         with mpl_left:
             st.pyplot(mplsoccer_delivery_figure(filtered, label), use_container_width=True)
@@ -198,7 +198,7 @@ def render_page(label: str) -> None:
             st.pyplot(mplsoccer_shot_figure(filtered, label), use_container_width=True)
 
     with report_tab:
-        section_header("Pre-Match Report", "Download a PDF briefing from the current filters")
+        section_header("Pre-Match PDF", "Download a staff briefing from the current filters")
         report_left, report_right = st.columns([1, 1.2])
         with report_left:
             opponent = st.text_input("Opponent / report label", value="")
@@ -215,7 +215,7 @@ def render_page(label: str) -> None:
             )
 
     with data_tab:
-        section_header("Event Details", f"{len(filtered):,} workbook rows in the current filter")
+        section_header("Event Log", f"{len(filtered):,} workbook rows in the current filter")
         display_cols = [c for c in [
             "Match", "Team", "SP_Type", "Taker", "Shooter", "side", "minute", "second",
             "Technique", "Delivery height", "Shot outcome", "xg", "Delivery outcome",

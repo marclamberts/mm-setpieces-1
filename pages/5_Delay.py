@@ -50,9 +50,11 @@ else:
     periods = ["All"] + sorted(events["period"].dropna().astype(int).astype(str).unique().tolist()) if "period" in events.columns else ["All"]
     out_types = ["All"] + sorted(events["out_event_type"].dropna().astype(str).unique().tolist()) if "out_event_type" in events.columns else ["All"]
 
-    match = st.sidebar.selectbox("Match", matches)
-    period = st.sidebar.selectbox("Period", periods)
-    out_type = st.sidebar.selectbox("Exit event", out_types)
+    with st.sidebar.expander("Scope", expanded=True):
+        match = st.selectbox("Match", matches)
+        period = st.selectbox("Period", periods)
+    with st.sidebar.expander("Event filters", expanded=True):
+        out_type = st.selectbox("Exit event", out_types)
 
     filtered = events.copy()
     if match != "All" and "match" in filtered.columns:
@@ -65,7 +67,8 @@ else:
     if not filtered.empty and "delay_sec" in filtered.columns:
         lo = float(filtered["delay_sec"].min())
         hi = float(filtered["delay_sec"].max())
-        delay_range = st.sidebar.slider("Delay range (seconds)", min_value=lo, max_value=hi, value=(lo, hi))
+        with st.sidebar.expander("Timing window", expanded=True):
+            delay_range = st.slider("Delay range (seconds)", min_value=lo, max_value=hi, value=(lo, hi))
         filtered = filtered[filtered["delay_sec"].between(delay_range[0], delay_range[1])].copy()
 
     total_events = int(len(filtered))
@@ -81,7 +84,7 @@ else:
     c4.metric("Median delay", f"{median_delay:.1f}s")
     c5.metric("90th percentile", f"{p90_delay:.1f}s")
 
-    overview_tab, charts_tab, audit_tab, data_tab = st.tabs(["Overview", "Charts", "Audit", "Data"])
+    overview_tab, charts_tab, audit_tab, data_tab = st.tabs(["Briefing", "Timing Evidence", "Audit", "Event Log"])
 
     with overview_tab:
         band_summary = (
@@ -129,12 +132,12 @@ else:
     with charts_tab:
         chart_left, chart_right = st.columns(2)
         with chart_left:
-            section_header("Delay Distribution")
+            section_header("Delay Evidence")
             fig = px.histogram(filtered, x="delay_sec", nbins=24, color_discrete_sequence=["#111827"])
             fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False, xaxis_title="Delay seconds", yaxis_title="Corners")
             st.plotly_chart(polish_plotly_figure(fig), use_container_width=True)
         with chart_right:
-            section_header("Delay by Exit Event")
+            section_header("Exit Event Evidence")
             box = px.box(filtered, x="out_event_type", y="delay_sec", color="out_event_type", color_discrete_sequence=["#111827", "#c1121f", "#1d4ed8", "#15803d", "#b45309"])
             box.update_layout(margin=dict(l=10, r=10, t=30, b=10), legend_title_text="", xaxis_title="", yaxis_title="Delay seconds")
             st.plotly_chart(polish_plotly_figure(box), use_container_width=True)
@@ -161,7 +164,7 @@ else:
             render_analyst_table(skipped, height=260)
 
     with data_tab:
-        section_header("Matched Corner Events", f"{len(filtered):,} rows in the active filter")
+        section_header("Matched Corner Event Log", f"{len(filtered):,} rows in the active filter")
         display_cols = [
             c for c in [
                 "match", "period", "out_event_type", "out_value", "gk_outcome",

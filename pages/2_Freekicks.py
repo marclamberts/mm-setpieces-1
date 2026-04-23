@@ -105,13 +105,13 @@ c3.metric("Direct threat share", f"{direct_share:.1f}%")
 c4.metric("Best sequence xG", f"{best_seq_xg:.3f}")
 
 overview_tab, origin_tab, people_tab, visuals_tab, data_tab = st.tabs(
-    ["Overview", "Origins", "People", "Visuals", "Data"]
+    ["Briefing", "Origins", "Roles", "Pitch Evidence", "Event Log"]
 )
 
 with overview_tab:
     top_left, top_right = st.columns([0.9, 1.35])
     with top_left:
-        section_header("Freekick Read", "Highest-signal notes")
+        section_header("Freekick Brief", "Highest-signal notes")
     with top_right:
         section_header("Origin Map", "Starting points sized by sequence xG")
 
@@ -132,10 +132,10 @@ with overview_tab:
 
     left, right = st.columns([1.1, 1])
     with left:
-        section_header("Origin Zones", "Sequence value by restart location")
+        section_header("Origin Threat Board", "Sequence value by restart location")
         render_analyst_table(freekick_zone_summary(filtered), height=390)
     with right:
-        section_header("Top Sequences", "Best possession-level freekick outcomes")
+        section_header("Priority Sequences", "Best possession-level freekick outcomes")
         display = sequences[
             [
                 "Match", "Team", "Minute", "Zone", "Channel", "Initial taker",
@@ -172,7 +172,7 @@ with origin_tab:
 with people_tab:
     left, right = st.columns(2)
     with left:
-        section_header("Initial Takers", "Free-kick sequences started, value created, and preferred zones")
+        section_header("Taker Roles", "Free-kick sequences started, value created, and preferred zones")
         render_analyst_table(freekick_taker_summary(filtered), height=620)
     with right:
         section_header("Shot Targets", "Shooters receiving or taking the final freekick shot")
@@ -191,7 +191,7 @@ with visuals_tab:
     st.pyplot(mplsoccer_shot_figure(filtered, "Freekicks"), use_container_width=True)
 
 with data_tab:
-    section_header("Sequence Table", "One row per match_id + possession + team")
+    section_header("Sequence Log", "One row per match_id + possession + team")
     render_analyst_table(sequences, height=430)
     with st.expander("Event-level rows", expanded=False):
         display_cols = [
