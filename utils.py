@@ -317,25 +317,25 @@ def inject_app_style() -> None:
             div.stButton > button {{
                 width: 100%;
                 border-radius: 6px;
-                border: 1px solid #111827;
-                background: #111827;
-                color: #ffffff;
+                border: 1px solid var(--mm-red);
+                background: var(--mm-red);
+                color: var(--mm-blue) !important;
                 font-weight: 800;
                 padding: .58rem .9rem;
-                transition: all .15s ease;
+                transition: none;
                 box-shadow: none;
             }}
             div.stButton > button:hover {{
                 border-color: var(--mm-red);
                 background: var(--mm-red);
-                color: #ffffff;
-                transform: translateY(-1px);
+                color: var(--mm-blue) !important;
+                transform: none;
             }}
             div[data-testid="stDownloadButton"] > button {{
                 border-radius: 6px;
                 background: var(--mm-red);
                 border-color: var(--mm-red);
-                color: #ffffff;
+                color: var(--mm-blue) !important;
                 font-weight: 800;
             }}
             div[data-testid="stMetric"] {{
@@ -628,16 +628,30 @@ def inject_app_style() -> None:
             div[data-testid="stDownloadButton"] > button {{
                 min-height: 40px;
                 border-radius: 8px;
-                background: #0f172a;
-                border-color: #0f172a;
+                background: #c1121f;
+                border-color: #c1121f;
+                color: #1d4ed8 !important;
                 text-transform: uppercase;
                 letter-spacing: .04em;
                 font-size: .78rem;
+                transition: none;
             }}
             div.stButton > button:hover,
             div[data-testid="stDownloadButton"] > button:hover {{
                 background: #c1121f;
                 border-color: #c1121f;
+                color: #1d4ed8 !important;
+                transform: none;
+                box-shadow: none;
+            }}
+            div.stButton > button:focus,
+            div.stButton > button:active,
+            div[data-testid="stDownloadButton"] > button:focus,
+            div[data-testid="stDownloadButton"] > button:active {{
+                background: #c1121f !important;
+                border-color: #c1121f !important;
+                color: #1d4ed8 !important;
+                box-shadow: 0 0 0 3px rgba(29,78,216,0.18) !important;
             }}
             .mm-scout-shell {{
                 display: grid;
