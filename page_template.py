@@ -85,7 +85,12 @@ def _filter_page_data(df: pd.DataFrame, label: str) -> pd.DataFrame:
     return filtered
 
 def render_page(label: str) -> None:
-    st.set_page_config(page_title=f"Michael Mackin Set Piece | {label}", page_icon="⚽", layout="wide")
+    st.set_page_config(
+        page_title=f"Michael Mackin Set Piece | {label}",
+        page_icon="⚽",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
     inject_app_style()
 
     raw = load_sp_data(label)

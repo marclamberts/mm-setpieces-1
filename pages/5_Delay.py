@@ -6,7 +6,12 @@ import streamlit as st
 
 from mm_utils import dataframe_to_excel_bytes, hero_block, inject_app_style, polish_plotly_figure, render_analyst_table, section_header
 
-st.set_page_config(page_title="Michael Mackin Set Piece | Delay Analysis", page_icon="⚽", layout="wide")
+st.set_page_config(
+    page_title="Michael Mackin Set Piece | Delay Analysis",
+    page_icon="⚽",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 inject_app_style()
 
 

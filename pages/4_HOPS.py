@@ -14,7 +14,12 @@ from mm_utils import (
     section_header,
 )
 
-st.set_page_config(page_title="Michael Mackin Set Piece | HOPS", page_icon="⚽", layout="wide")
+st.set_page_config(
+    page_title="Michael Mackin Set Piece | HOPS",
+    page_icon="⚽",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 inject_app_style()
 
 @st.cache_data(show_spinner=False)

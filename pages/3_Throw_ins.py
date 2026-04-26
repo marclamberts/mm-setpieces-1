@@ -26,7 +26,12 @@ from mm_utils import (
 )
 
 
-st.set_page_config(page_title="Michael Mackin Set Piece | Throw-ins", page_icon="⚽", layout="wide")
+st.set_page_config(
+    page_title="Michael Mackin Set Piece | Throw-ins",
+    page_icon="⚽",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 inject_app_style()
 
 

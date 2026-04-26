@@ -74,6 +74,20 @@ def inject_app_style() -> None:
             div[data-testid="stSidebar"] {{
                 background: #0b1118;
                 border-right: 1px solid rgba(255,255,255,0.08);
+                min-width: 21rem !important;
+                width: 21rem !important;
+            }}
+            button[data-testid="stSidebarCollapseButton"],
+            button[data-testid="stSidebarExpandButton"],
+            div[data-testid="collapsedControl"],
+            [data-testid="stSidebarCollapsedControl"],
+            button[title="Hide sidebar"],
+            button[title="Show sidebar"],
+            button[aria-label="Close sidebar"],
+            button[aria-label="Open sidebar"] {{
+                display: none !important;
+                visibility: hidden !important;
+                pointer-events: none !important;
             }}
             div[data-testid="stSidebar"] *,
             div[data-testid="stSidebar"] span,
