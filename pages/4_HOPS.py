@@ -22,7 +22,14 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 inject_app_style()
-render_sidebar_menu()
+render_sidebar_menu(
+    "HOPS",
+    [
+        ("Team", "All"),
+        ("Board size", "Top 10 and bottom 10"),
+        ("Rating rows", "All players"),
+    ],
+)
 
 @st.cache_data(show_spinner=False)
 def load_hops_data() -> pd.DataFrame:

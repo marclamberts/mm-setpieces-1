@@ -21,7 +21,15 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 inject_app_style()
-render_sidebar_menu()
+render_sidebar_menu(
+    "Delay Analysis",
+    [
+        ("Match", "All"),
+        ("Period", "All"),
+        ("Exit event", "All"),
+        ("Delay range", "0-120 seconds"),
+    ],
+)
 
 
 @st.cache_data(show_spinner=False)

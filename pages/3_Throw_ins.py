@@ -34,7 +34,19 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 inject_app_style()
-render_sidebar_menu()
+render_sidebar_menu(
+    "Throw-ins",
+    [
+        ("Team", "All"),
+        ("Game period", "All"),
+        ("Sample", "Total"),
+        ("Minute range", "0-95"),
+        ("Thrower", "All"),
+        ("Shooter", "All"),
+        ("Initial pass height", "All"),
+        ("Shot outcome", "All"),
+    ],
+)
 
 
 def _safe_sorted(values: pd.Series) -> list[str]:

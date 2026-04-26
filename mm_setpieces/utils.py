@@ -52,8 +52,13 @@ def inject_app_style() -> None:
                 color: var(--mm-black);
             }}
             @media (min-width: 860px) {{
-                .stApp {{
-                    padding-left: 17rem;
+                div[data-testid="stAppViewContainer"] > section.main,
+                main[data-testid="stMain"] {{
+                    margin-left: 18rem !important;
+                    width: calc(100% - 18rem) !important;
+                }}
+                .block-container {{
+                    max-width: 1240px;
                 }}
             }}
             header[data-testid="stHeader"],
@@ -153,11 +158,11 @@ def inject_app_style() -> None:
             .mm-fixed-nav {{
                 position: fixed;
                 inset: 0 auto 0 0;
-                width: 17rem;
+                width: 18rem;
                 z-index: 999999;
                 background: #0b1118;
                 border-right: 1px solid rgba(255,255,255,0.10);
-                padding: 1.15rem 1rem;
+                padding: 1.15rem 1rem 1.4rem 1rem;
                 overflow-y: auto;
             }}
             .mm-fixed-brand {{
@@ -174,6 +179,36 @@ def inject_app_style() -> None:
                 letter-spacing: .08em;
                 text-transform: uppercase;
                 margin-bottom: 1rem;
+            }}
+            .mm-filter-card {{
+                background: rgba(255,255,255,0.075);
+                border: 1px solid rgba(255,255,255,0.12);
+                border-radius: 6px;
+                padding: .68rem .72rem;
+                margin: .42rem 0;
+            }}
+            .mm-filter-label {{
+                color: rgba(255,255,255,0.56);
+                font-size: .68rem;
+                font-weight: 850;
+                letter-spacing: .07em;
+                text-transform: uppercase;
+                margin-bottom: .18rem;
+            }}
+            .mm-filter-value {{
+                color: #ffffff;
+                font-size: .9rem;
+                font-weight: 850;
+                line-height: 1.25;
+                overflow-wrap: anywhere;
+            }}
+            .mm-fixed-section {{
+                color: rgba(255,255,255,0.58);
+                font-size: .68rem;
+                font-weight: 900;
+                letter-spacing: .08em;
+                text-transform: uppercase;
+                margin: 1rem 0 .35rem 0;
             }}
             .mm-fixed-link {{
                 display: block;
@@ -192,13 +227,13 @@ def inject_app_style() -> None:
                 border-color: rgba(255,255,255,0.28);
             }}
             @media (max-width: 859px) {{
-                .stApp {{
-                    padding-top: 17.5rem;
+                div[data-testid="stAppViewContainer"] {{
+                    padding-top: 20rem;
                 }}
                 .mm-fixed-nav {{
                     inset: 0 0 auto 0;
                     width: auto;
-                    max-height: 17rem;
+                    max-height: 19.5rem;
                     border-right: 0;
                     border-bottom: 1px solid rgba(255,255,255,0.10);
                 }}
@@ -850,12 +885,24 @@ def inject_app_style() -> None:
     )
 
 
-def render_sidebar_menu() -> None:
-    st.markdown(
+def render_sidebar_menu(active: str = "Home", filters: list[tuple[str, str]] | None = None) -> None:
+    filters = filters or [("Scope", "Full sample"), ("Selection", "All rows")]
+    filter_html = "\n".join(
+        f"""
+            <div class="mm-filter-card">
+                <div class="mm-filter-label">{label}</div>
+                <div class="mm-filter-value">{value}</div>
+            </div>
         """
-        <nav class="mm-fixed-nav" aria-label="Set-piece desk navigation">
-            <div class="mm-fixed-brand">Set-piece desk</div>
+        for label, value in filters
+    )
+    st.markdown(
+        f"""
+        <nav class="mm-fixed-nav" aria-label="Hard-coded filter menu">
+            <div class="mm-fixed-brand">{active} filters</div>
             <div class="mm-fixed-kicker">Michael Mackin</div>
+            {filter_html}
+            <div class="mm-fixed-section">Pages</div>
             <a class="mm-fixed-link" href="/" target="_self">Home</a>
             <a class="mm-fixed-link" href="/Corners" target="_self">Corners</a>
             <a class="mm-fixed-link" href="/Freekicks" target="_self">Freekicks</a>

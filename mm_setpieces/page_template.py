@@ -93,7 +93,20 @@ def render_page(label: str) -> None:
         initial_sidebar_state="expanded",
     )
     inject_app_style()
-    render_sidebar_menu()
+    render_sidebar_menu(
+        label,
+        [
+            ("Team", "All"),
+            ("League", "All"),
+            ("Sample", "Total"),
+            ("Side", "All"),
+            ("Time", "All"),
+            ("Minute range", "0-95"),
+            ("Takers", "All"),
+            ("Delivery", "All techniques and heights"),
+            ("Shot outcome", "All"),
+        ],
+    )
 
     raw = load_sp_data(label)
     if raw.empty:

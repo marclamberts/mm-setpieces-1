@@ -34,7 +34,19 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 inject_app_style()
-render_sidebar_menu()
+render_sidebar_menu(
+    "Freekicks",
+    [
+        ("Team", "All"),
+        ("Game period", "All"),
+        ("Sample", "Total"),
+        ("Minute range", "0-95"),
+        ("Initial taker", "All"),
+        ("Shooter", "All"),
+        ("Pass height", "All"),
+        ("Shot outcome", "All"),
+    ],
+)
 
 
 def _safe_sorted(values: pd.Series) -> list[str]:

@@ -6,7 +6,13 @@ from mm_setpieces.utils import hero_block, inject_app_style, render_sidebar_menu
 
 st.set_page_config(page_title="Michael Mackin Set Piece", page_icon="⚽", layout="wide", initial_sidebar_state="expanded")
 inject_app_style()
-render_sidebar_menu()
+render_sidebar_menu(
+    "Home",
+    [
+        ("Scope", "Full set-piece desk"),
+        ("Filters", "Open a page to view fixed filter values"),
+    ],
+)
 
 hero_block(
     "Michael Mackin · Scouting Department",
