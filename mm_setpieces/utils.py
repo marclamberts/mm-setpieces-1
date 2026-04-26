@@ -51,31 +51,11 @@ def inject_app_style() -> None:
                     linear-gradient(180deg, #eef1f5 0%, #f7f8fa 260px, #f6f7f9 100%);
                 color: var(--mm-black);
             }}
-            @media (min-width: 860px) {{
-                div[data-testid="stAppViewContainer"] {{
-                    margin-left: 11rem !important;
-                    width: calc(100vw - 11rem) !important;
-                    max-width: calc(100vw - 11rem) !important;
-                }}
-                div[data-testid="stAppViewContainer"] .main,
-                div[data-testid="stAppViewContainer"] > section.main,
-                main[data-testid="stMain"] {{
-                    margin-left: 0 !important;
-                    width: 100% !important;
-                    max-width: 100% !important;
-                }}
-                .block-container {{
-                    max-width: 1360px;
-                }}
-            }}
             header[data-testid="stHeader"],
             footer,
             #MainMenu {{
                 visibility: hidden;
                 height: 0;
-            }}
-            section[data-testid="stSidebar"] {{
-                display: none !important;
             }}
             html, body, [class*="css"] {{
                 font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -94,20 +74,8 @@ def inject_app_style() -> None:
             div[data-testid="stSidebar"] {{
                 background: #0b1118;
                 border-right: 1px solid rgba(255,255,255,0.08);
-                min-width: 21rem !important;
-                width: 21rem !important;
-            }}
-            button[data-testid="stSidebarCollapseButton"],
-            button[data-testid="stSidebarExpandButton"],
-            div[data-testid="collapsedControl"],
-            [data-testid="stSidebarCollapsedControl"],
-            button[title="Hide sidebar"],
-            button[title="Show sidebar"],
-            button[aria-label="Close sidebar"],
-            button[aria-label="Open sidebar"] {{
-                display: none !important;
-                visibility: hidden !important;
-                pointer-events: none !important;
+                min-width: 15rem !important;
+                width: 15rem !important;
             }}
             div[data-testid="stSidebar"] *,
             div[data-testid="stSidebar"] span,
@@ -162,43 +130,16 @@ def inject_app_style() -> None:
             div[data-testid="stSidebar"] hr {{
                 border-color: rgba(255,255,255,0.12);
             }}
-            .mm-fixed-nav {{
-                position: fixed;
-                inset: 0 auto 0 0;
-                box-sizing: border-box;
-                width: 10.5rem;
-                max-width: 10.5rem;
-                z-index: 999999;
-                background: #0b1118;
-                border-right: 1px solid rgba(255,255,255,0.10);
-                padding: .72rem .42rem .9rem .42rem;
-                overflow-y: auto;
-            }}
-            .mm-fixed-brand {{
-                color: #ffffff;
-                font-size: .72rem;
-                font-weight: 900;
-                line-height: 1.2;
-                margin-bottom: .2rem;
-            }}
-            .mm-fixed-kicker {{
-                color: rgba(255,255,255,0.58);
-                font-size: .54rem;
-                font-weight: 800;
-                letter-spacing: .08em;
-                text-transform: uppercase;
-                margin-bottom: .72rem;
-            }}
             .mm-filter-card {{
                 background: rgba(255,255,255,0.075);
                 border: 1px solid rgba(255,255,255,0.12);
                 border-radius: 6px;
-                padding: .38rem .38rem;
-                margin: .22rem 0;
+                padding: .46rem .5rem;
+                margin: .28rem 0;
             }}
             .mm-filter-label {{
                 color: rgba(255,255,255,0.56);
-                font-size: .5rem;
+                font-size: .56rem;
                 font-weight: 850;
                 letter-spacing: .07em;
                 text-transform: uppercase;
@@ -206,50 +147,10 @@ def inject_app_style() -> None:
             }}
             .mm-filter-value {{
                 color: #ffffff;
-                font-size: .66rem;
+                font-size: .72rem;
                 font-weight: 850;
                 line-height: 1.25;
                 overflow-wrap: anywhere;
-            }}
-            .mm-fixed-section {{
-                color: rgba(255,255,255,0.58);
-                font-size: .5rem;
-                font-weight: 900;
-                letter-spacing: .08em;
-                text-transform: uppercase;
-                margin: .72rem 0 .25rem 0;
-            }}
-            .mm-fixed-link {{
-                display: block;
-                color: rgba(255,255,255,0.88) !important;
-                text-decoration: none !important;
-                background: rgba(255,255,255,0.075);
-                border: 1px solid rgba(255,255,255,0.12);
-                border-radius: 6px;
-                padding: .38rem .38rem;
-                margin: .22rem 0;
-                font-size: .64rem;
-                font-weight: 800;
-            }}
-            .mm-fixed-link:hover {{
-                background: rgba(255,255,255,0.15);
-                border-color: rgba(255,255,255,0.28);
-            }}
-            @media (max-width: 859px) {{
-                div[data-testid="stAppViewContainer"] {{
-                    padding-top: 20rem;
-                }}
-                .mm-fixed-nav {{
-                    inset: 0 0 auto 0;
-                    width: auto;
-                    max-height: 19.5rem;
-                    border-right: 0;
-                    border-bottom: 1px solid rgba(255,255,255,0.10);
-                }}
-                .mm-fixed-link {{
-                    display: inline-block;
-                    margin: .2rem .16rem;
-                }}
             }}
             div[data-testid="stSidebar"] [data-testid="stPageLink"] a {{
                 background: rgba(255,255,255,0.075);
@@ -896,32 +797,27 @@ def inject_app_style() -> None:
 
 def render_sidebar_menu(active: str = "Home", filters: list[tuple[str, str]] | None = None) -> None:
     filters = filters or [("Scope", "Full sample"), ("Selection", "All rows")]
-    filter_html = "\n".join(
-        f"""
+    st.sidebar.markdown(f"### {active} filters")
+    st.sidebar.caption("Fixed to full-sample defaults")
+    for label, value in filters:
+        st.sidebar.markdown(
+            f"""
             <div class="mm-filter-card">
                 <div class="mm-filter-label">{label}</div>
                 <div class="mm-filter-value">{value}</div>
             </div>
-        """
-        for label, value in filters
-    )
-    st.markdown(
-        f"""
-        <nav class="mm-fixed-nav" aria-label="Hard-coded filter menu">
-            <div class="mm-fixed-brand">{active} filters</div>
-            <div class="mm-fixed-kicker">Michael Mackin</div>
-            {filter_html}
-            <div class="mm-fixed-section">Pages</div>
-            <a class="mm-fixed-link" href="/" target="_self">Home</a>
-            <a class="mm-fixed-link" href="/Corners" target="_self">Corners</a>
-            <a class="mm-fixed-link" href="/Freekicks" target="_self">Freekicks</a>
-            <a class="mm-fixed-link" href="/Throw_ins" target="_self">Throw-ins</a>
-            <a class="mm-fixed-link" href="/HOPS" target="_self">HOPS</a>
-            <a class="mm-fixed-link" href="/Delay" target="_self">Delay Analysis</a>
-        </nav>
-        """,
-        unsafe_allow_html=True,
-    )
+            """,
+            unsafe_allow_html=True,
+        )
+
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### Pages")
+    st.sidebar.page_link("app.py", label="Home")
+    st.sidebar.page_link("pages/1_Corners.py", label="Corners")
+    st.sidebar.page_link("pages/2_Freekicks.py", label="Freekicks")
+    st.sidebar.page_link("pages/3_Throw_ins.py", label="Throw-ins")
+    st.sidebar.page_link("pages/4_HOPS.py", label="HOPS")
+    st.sidebar.page_link("pages/5_Delay.py", label="Delay Analysis")
 
 
 def hero_block(eyebrow: str, title: str, copy: str) -> None:
