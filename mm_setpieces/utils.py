@@ -51,11 +51,19 @@ def inject_app_style() -> None:
                     linear-gradient(180deg, #eef1f5 0%, #f7f8fa 260px, #f6f7f9 100%);
                 color: var(--mm-black);
             }}
+            @media (min-width: 860px) {{
+                .stApp {{
+                    padding-left: 17rem;
+                }}
+            }}
             header[data-testid="stHeader"],
             footer,
             #MainMenu {{
                 visibility: hidden;
                 height: 0;
+            }}
+            section[data-testid="stSidebar"] {{
+                display: none !important;
             }}
             html, body, [class*="css"] {{
                 font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -141,6 +149,63 @@ def inject_app_style() -> None:
             }}
             div[data-testid="stSidebar"] hr {{
                 border-color: rgba(255,255,255,0.12);
+            }}
+            .mm-fixed-nav {{
+                position: fixed;
+                inset: 0 auto 0 0;
+                width: 17rem;
+                z-index: 999999;
+                background: #0b1118;
+                border-right: 1px solid rgba(255,255,255,0.10);
+                padding: 1.15rem 1rem;
+                overflow-y: auto;
+            }}
+            .mm-fixed-brand {{
+                color: #ffffff;
+                font-size: .92rem;
+                font-weight: 900;
+                line-height: 1.2;
+                margin-bottom: .2rem;
+            }}
+            .mm-fixed-kicker {{
+                color: rgba(255,255,255,0.58);
+                font-size: .7rem;
+                font-weight: 800;
+                letter-spacing: .08em;
+                text-transform: uppercase;
+                margin-bottom: 1rem;
+            }}
+            .mm-fixed-link {{
+                display: block;
+                color: rgba(255,255,255,0.88) !important;
+                text-decoration: none !important;
+                background: rgba(255,255,255,0.075);
+                border: 1px solid rgba(255,255,255,0.12);
+                border-radius: 6px;
+                padding: .66rem .72rem;
+                margin: .32rem 0;
+                font-size: .86rem;
+                font-weight: 800;
+            }}
+            .mm-fixed-link:hover {{
+                background: rgba(255,255,255,0.15);
+                border-color: rgba(255,255,255,0.28);
+            }}
+            @media (max-width: 859px) {{
+                .stApp {{
+                    padding-top: 17.5rem;
+                }}
+                .mm-fixed-nav {{
+                    inset: 0 0 auto 0;
+                    width: auto;
+                    max-height: 17rem;
+                    border-right: 0;
+                    border-bottom: 1px solid rgba(255,255,255,0.10);
+                }}
+                .mm-fixed-link {{
+                    display: inline-block;
+                    margin: .2rem .16rem;
+                }}
             }}
             div[data-testid="stSidebar"] [data-testid="stPageLink"] a {{
                 background: rgba(255,255,255,0.075);
@@ -786,14 +851,21 @@ def inject_app_style() -> None:
 
 
 def render_sidebar_menu() -> None:
-    st.sidebar.markdown("### Set-piece desk")
-    st.sidebar.page_link("app.py", label="Home")
-    st.sidebar.page_link("pages/1_Corners.py", label="Corners")
-    st.sidebar.page_link("pages/2_Freekicks.py", label="Freekicks")
-    st.sidebar.page_link("pages/3_Throw_ins.py", label="Throw-ins")
-    st.sidebar.page_link("pages/4_HOPS.py", label="HOPS")
-    st.sidebar.page_link("pages/5_Delay.py", label="Delay Analysis")
-    st.sidebar.markdown("---")
+    st.markdown(
+        """
+        <nav class="mm-fixed-nav" aria-label="Set-piece desk navigation">
+            <div class="mm-fixed-brand">Set-piece desk</div>
+            <div class="mm-fixed-kicker">Michael Mackin</div>
+            <a class="mm-fixed-link" href="/" target="_self">Home</a>
+            <a class="mm-fixed-link" href="/Corners" target="_self">Corners</a>
+            <a class="mm-fixed-link" href="/Freekicks" target="_self">Freekicks</a>
+            <a class="mm-fixed-link" href="/Throw_ins" target="_self">Throw-ins</a>
+            <a class="mm-fixed-link" href="/HOPS" target="_self">HOPS</a>
+            <a class="mm-fixed-link" href="/Delay" target="_self">Delay Analysis</a>
+        </nav>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def hero_block(eyebrow: str, title: str, copy: str) -> None:
