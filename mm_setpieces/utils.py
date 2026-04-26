@@ -54,11 +54,11 @@ def inject_app_style() -> None:
             @media (min-width: 860px) {{
                 div[data-testid="stAppViewContainer"] > section.main,
                 main[data-testid="stMain"] {{
-                    margin-left: 18rem !important;
-                    width: calc(100% - 18rem) !important;
+                    margin-left: 14rem !important;
+                    width: calc(100% - 14rem) !important;
                 }}
                 .block-container {{
-                    max-width: 1240px;
+                    max-width: 1320px;
                 }}
             }}
             header[data-testid="stHeader"],
@@ -158,38 +158,38 @@ def inject_app_style() -> None:
             .mm-fixed-nav {{
                 position: fixed;
                 inset: 0 auto 0 0;
-                width: 18rem;
+                width: 13rem;
                 z-index: 999999;
                 background: #0b1118;
                 border-right: 1px solid rgba(255,255,255,0.10);
-                padding: 1.15rem 1rem 1.4rem 1rem;
+                padding: .9rem .62rem 1rem .62rem;
                 overflow-y: auto;
             }}
             .mm-fixed-brand {{
                 color: #ffffff;
-                font-size: .92rem;
+                font-size: .82rem;
                 font-weight: 900;
                 line-height: 1.2;
                 margin-bottom: .2rem;
             }}
             .mm-fixed-kicker {{
                 color: rgba(255,255,255,0.58);
-                font-size: .7rem;
+                font-size: .62rem;
                 font-weight: 800;
                 letter-spacing: .08em;
                 text-transform: uppercase;
-                margin-bottom: 1rem;
+                margin-bottom: .72rem;
             }}
             .mm-filter-card {{
                 background: rgba(255,255,255,0.075);
                 border: 1px solid rgba(255,255,255,0.12);
                 border-radius: 6px;
-                padding: .68rem .72rem;
-                margin: .42rem 0;
+                padding: .48rem .5rem;
+                margin: .28rem 0;
             }}
             .mm-filter-label {{
                 color: rgba(255,255,255,0.56);
-                font-size: .68rem;
+                font-size: .58rem;
                 font-weight: 850;
                 letter-spacing: .07em;
                 text-transform: uppercase;
@@ -197,18 +197,18 @@ def inject_app_style() -> None:
             }}
             .mm-filter-value {{
                 color: #ffffff;
-                font-size: .9rem;
+                font-size: .76rem;
                 font-weight: 850;
                 line-height: 1.25;
                 overflow-wrap: anywhere;
             }}
             .mm-fixed-section {{
                 color: rgba(255,255,255,0.58);
-                font-size: .68rem;
+                font-size: .58rem;
                 font-weight: 900;
                 letter-spacing: .08em;
                 text-transform: uppercase;
-                margin: 1rem 0 .35rem 0;
+                margin: .72rem 0 .25rem 0;
             }}
             .mm-fixed-link {{
                 display: block;
@@ -217,9 +217,9 @@ def inject_app_style() -> None:
                 background: rgba(255,255,255,0.075);
                 border: 1px solid rgba(255,255,255,0.12);
                 border-radius: 6px;
-                padding: .66rem .72rem;
-                margin: .32rem 0;
-                font-size: .86rem;
+                padding: .46rem .5rem;
+                margin: .22rem 0;
+                font-size: .74rem;
                 font-weight: 800;
             }}
             .mm-fixed-link:hover {{
