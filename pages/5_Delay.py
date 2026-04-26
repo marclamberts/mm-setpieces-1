@@ -181,12 +181,12 @@ else:
             section_header("Delay Evidence")
             fig = px.histogram(filtered, x="delay_sec", nbins=24, color_discrete_sequence=["#111827"])
             fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False, xaxis_title="Delay seconds", yaxis_title="Corners")
-            st.plotly_chart(polish_plotly_figure(fig), use_container_width=True)
+            st.plotly_chart(polish_plotly_figure(fig), use_container_width=True, key="delay_histogram")
         with chart_right:
             section_header("Exit Event Evidence")
             box = px.box(filtered, x="out_event_type", y="delay_sec", color="out_event_type", color_discrete_sequence=["#111827", "#c1121f", "#1d4ed8", "#15803d", "#b45309"])
             box.update_layout(margin=dict(l=10, r=10, t=30, b=10), legend_title_text="", xaxis_title="", yaxis_title="Delay seconds")
-            st.plotly_chart(polish_plotly_figure(box), use_container_width=True)
+            st.plotly_chart(polish_plotly_figure(box), use_container_width=True, key="delay_exit_event_box")
 
         section_header("Match Comparison", "Average delay by match")
         avg_by_match = (
@@ -204,7 +204,7 @@ else:
             color_discrete_sequence=["#c1121f"],
         )
         match_fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False, xaxis_title="Average delay (s)", yaxis_title="")
-        st.plotly_chart(polish_plotly_figure(match_fig), use_container_width=True)
+        st.plotly_chart(polish_plotly_figure(match_fig), use_container_width=True, key="delay_match_comparison")
 
     with audit_tab:
         section_header("Workbook Summary Sheet", "Match-level extraction performance")

@@ -128,7 +128,11 @@ with overview_tab:
         for insight in insights[:5]:
             st.markdown(f"<div class='mm-insight-card'>{insight}</div>", unsafe_allow_html=True)
     with top_right:
-        st.plotly_chart(polish_plotly_figure(freekick_origin_map_figure(filtered)), use_container_width=True)
+        st.plotly_chart(
+            polish_plotly_figure(freekick_origin_map_figure(filtered)),
+            use_container_width=True,
+            key="freekicks_overview_origin_map",
+        )
 
     left, right = st.columns([1.1, 1])
     with left:
@@ -149,14 +153,18 @@ with origin_tab:
     left, right = st.columns([1.55, 1])
     with left:
         section_header("Origin Map", "Free-kick starting points sized by possession xG")
-        st.plotly_chart(polish_plotly_figure(freekick_origin_map_figure(filtered)), use_container_width=True)
+        st.plotly_chart(
+            polish_plotly_figure(freekick_origin_map_figure(filtered)),
+            use_container_width=True,
+            key="freekicks_origin_tab_origin_map",
+        )
     with right:
         section_header("Zone Mix", "Volume by restart territory")
         zone_mix = sequences.groupby("Zone", dropna=False).size().reset_index(name="Sequences") if not sequences.empty else pd.DataFrame()
         if not zone_mix.empty:
             fig = px.bar(zone_mix.sort_values("Sequences", ascending=False), x="Zone", y="Sequences", color="Zone", color_discrete_sequence=["#111827", "#c1121f", "#1d4ed8", "#15803d", "#b45309"])
             fig.update_layout(showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
-            st.plotly_chart(polish_plotly_figure(fig), use_container_width=True)
+            st.plotly_chart(polish_plotly_figure(fig), use_container_width=True, key="freekicks_origin_zone_mix")
         else:
             st.info("No zone data available.")
 
@@ -165,7 +173,7 @@ with origin_tab:
         if not channel_mix.empty:
             fig = px.bar(channel_mix.sort_values("Sequences", ascending=False), x="Channel", y="Sequences", color="Channel", color_discrete_sequence=["#111827", "#c1121f", "#1d4ed8", "#15803d", "#b45309"])
             fig.update_layout(showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
-            st.plotly_chart(polish_plotly_figure(fig), use_container_width=True)
+            st.plotly_chart(polish_plotly_figure(fig), use_container_width=True, key="freekicks_origin_channel_mix")
         else:
             st.info("No channel data available.")
 
@@ -182,10 +190,18 @@ with visuals_tab:
     left, right = st.columns(2)
     with left:
         section_header("Start Locations", "Where freekick possessions begin")
-        st.plotly_chart(polish_plotly_figure(starting_location_map_figure(filtered, "Freekick start locations")), use_container_width=True)
+        st.plotly_chart(
+            polish_plotly_figure(starting_location_map_figure(filtered, "Freekick start locations")),
+            use_container_width=True,
+            key="freekicks_visuals_start_locations",
+        )
     with right:
         section_header("Shot Map", "Shot quality generated from freekicks")
-        st.plotly_chart(polish_plotly_figure(shotmap_figure(filtered, "Freekick shot map")), use_container_width=True)
+        st.plotly_chart(
+            polish_plotly_figure(shotmap_figure(filtered, "Freekick shot map")),
+            use_container_width=True,
+            key="freekicks_visuals_shot_map",
+        )
 
     section_header("Report Shot View", "Static mplsoccer shot-quality figure")
     st.pyplot(mplsoccer_shot_figure(filtered, "Freekicks"), use_container_width=True)

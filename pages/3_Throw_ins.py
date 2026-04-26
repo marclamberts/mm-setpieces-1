@@ -131,7 +131,11 @@ with overview_tab:
         for insight in insights[:5]:
             st.markdown(f"<div class='mm-insight-card'>{insight}</div>", unsafe_allow_html=True)
     with top_right:
-        st.plotly_chart(polish_plotly_figure(throwin_origin_map_figure(filtered)), use_container_width=True)
+        st.plotly_chart(
+            polish_plotly_figure(throwin_origin_map_figure(filtered)),
+            use_container_width=True,
+            key="throwins_overview_origin_map",
+        )
 
     left, right = st.columns([1.1, 1])
     with left:
@@ -152,14 +156,18 @@ with origin_tab:
     left, right = st.columns([1.55, 1])
     with left:
         section_header("Origin Map", "Throw-in starting points sized by possession xG")
-        st.plotly_chart(polish_plotly_figure(throwin_origin_map_figure(filtered)), use_container_width=True)
+        st.plotly_chart(
+            polish_plotly_figure(throwin_origin_map_figure(filtered)),
+            use_container_width=True,
+            key="throwins_origin_tab_origin_map",
+        )
     with right:
         section_header("Territory Mix", "Volume by field location")
         zone_mix = sequences.groupby("Zone", dropna=False).size().reset_index(name="Sequences") if not sequences.empty else pd.DataFrame()
         if not zone_mix.empty:
             fig = px.bar(zone_mix.sort_values("Sequences", ascending=False), x="Zone", y="Sequences", color="Zone", color_discrete_sequence=["#111827", "#c1121f", "#1d4ed8", "#15803d", "#b45309"])
             fig.update_layout(showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
-            st.plotly_chart(polish_plotly_figure(fig), use_container_width=True)
+            st.plotly_chart(polish_plotly_figure(fig), use_container_width=True, key="throwins_origin_zone_mix")
         else:
             st.info("No territory data available.")
 
@@ -168,7 +176,7 @@ with origin_tab:
         if not profile_mix.empty:
             fig = px.bar(profile_mix.sort_values("Sequences", ascending=False), x="Profile", y="Sequences", color="Profile", color_discrete_sequence=["#111827", "#c1121f", "#1d4ed8", "#15803d", "#b45309"])
             fig.update_layout(showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
-            st.plotly_chart(polish_plotly_figure(fig), use_container_width=True)
+            st.plotly_chart(polish_plotly_figure(fig), use_container_width=True, key="throwins_origin_profile_mix")
         else:
             st.info("No profile data available.")
 
@@ -185,10 +193,18 @@ with visuals_tab:
     left, right = st.columns(2)
     with left:
         section_header("Start Locations", "Where throw-in possessions begin")
-        st.plotly_chart(polish_plotly_figure(starting_location_map_figure(filtered, "Throw-in start locations")), use_container_width=True)
+        st.plotly_chart(
+            polish_plotly_figure(starting_location_map_figure(filtered, "Throw-in start locations")),
+            use_container_width=True,
+            key="throwins_visuals_start_locations",
+        )
     with right:
         section_header("Shot Map", "Shot quality generated from throw-ins")
-        st.plotly_chart(polish_plotly_figure(shotmap_figure(filtered, "Throw-in shot map")), use_container_width=True)
+        st.plotly_chart(
+            polish_plotly_figure(shotmap_figure(filtered, "Throw-in shot map")),
+            use_container_width=True,
+            key="throwins_visuals_shot_map",
+        )
 
     section_header("Report Shot View", "Static mplsoccer shot-quality figure")
     st.pyplot(mplsoccer_shot_figure(filtered, "Throw-ins"), use_container_width=True)

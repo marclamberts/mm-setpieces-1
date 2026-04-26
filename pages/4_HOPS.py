@@ -125,11 +125,13 @@ with overview_tab:
         st.plotly_chart(
             categorical_breakdown_figure(filtered, "Tier", "Tier split", top_n=4, color="#c1121f"),
             use_container_width=True,
+            key="hops_quick_tier_split",
         )
     with q2:
         st.plotly_chart(
             categorical_breakdown_figure(filtered, "Team", "Team depth", top_n=8, color="#111827"),
             use_container_width=True,
+            key="hops_quick_team_depth",
         )
     with q3:
         percentile_band = filtered.copy()
@@ -141,6 +143,7 @@ with overview_tab:
         st.plotly_chart(
             categorical_breakdown_figure(percentile_band, "Percentile band", "Percentile spread", top_n=5, color="#1d4ed8"),
             use_container_width=True,
+            key="hops_quick_percentile_spread",
         )
 
 with charts_tab:
@@ -162,7 +165,7 @@ with charts_tab:
             margin=dict(l=10, r=10, t=30, b=10),
             legend_title_text="",
         )
-        st.plotly_chart(polish_plotly_figure(fig), use_container_width=True)
+        st.plotly_chart(polish_plotly_figure(fig), use_container_width=True, key="hops_top_rating_evidence")
 
     with chart_right:
         section_header("Rating Distribution")
@@ -172,7 +175,7 @@ with charts_tab:
             margin=dict(l=10, r=10, t=30, b=10),
             legend_title_text="",
         )
-        st.plotly_chart(polish_plotly_figure(hist), use_container_width=True)
+        st.plotly_chart(polish_plotly_figure(hist), use_container_width=True, key="hops_rating_distribution")
 
 with data_tab:
     section_header("Player Log", f"{len(filtered):,} players")

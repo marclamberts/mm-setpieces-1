@@ -183,16 +183,19 @@ def render_page(label: str) -> None:
             st.plotly_chart(
                 categorical_breakdown_figure(filtered, "Taker", "Top takers", top_n=8, color="#c1121f"),
                 use_container_width=True,
+                key=f"{label.lower()}_quick_top_takers",
             )
         with qr2:
             st.plotly_chart(
                 categorical_breakdown_figure(filtered, "Shot outcome", "Shot outcomes", top_n=8, color="#1d4ed8"),
                 use_container_width=True,
+                key=f"{label.lower()}_quick_shot_outcomes",
             )
         with qr3:
             st.plotly_chart(
                 minute_distribution_figure(filtered, "Minute distribution"),
                 use_container_width=True,
+                key=f"{label.lower()}_quick_minute_distribution",
             )
 
         section_header("Scouting Boards", "Workbook-derived rankings and tactical pattern reads")
@@ -225,12 +228,24 @@ def render_page(label: str) -> None:
         section_header("Interactive Pitch Evidence", "Shot locations and delivery/start locations")
         left, right = st.columns(2)
         with left:
-            st.plotly_chart(polish_plotly_figure(shotmap_figure(filtered, f"{label} shotmap · vertical half pitch")), use_container_width=True)
+            st.plotly_chart(
+                polish_plotly_figure(shotmap_figure(filtered, f"{label} shotmap · vertical half pitch")),
+                use_container_width=True,
+                key=f"{label.lower()}_shotmap",
+            )
         with right:
             if label == "Corners":
-                st.plotly_chart(polish_plotly_figure(delivery_map_figure(filtered, f"{label} delivery map · vertical half pitch")), use_container_width=True)
+                st.plotly_chart(
+                    polish_plotly_figure(delivery_map_figure(filtered, f"{label} delivery map · vertical half pitch")),
+                    use_container_width=True,
+                    key=f"{label.lower()}_delivery_map",
+                )
             else:
-                st.plotly_chart(polish_plotly_figure(starting_location_map_figure(filtered, f"{label} starting location map · vertical half pitch")), use_container_width=True)
+                st.plotly_chart(
+                    polish_plotly_figure(starting_location_map_figure(filtered, f"{label} starting location map · vertical half pitch")),
+                    use_container_width=True,
+                    key=f"{label.lower()}_starting_location_map",
+                )
 
         section_header("Static Report Visuals", "Matplotlib / mplsoccer pitch views")
         mpl_left, mpl_right = st.columns(2)
