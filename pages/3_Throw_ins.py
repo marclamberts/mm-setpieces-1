@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from mm_utils import (
+from mm_setpieces.utils import (
     filter_by_sp_type,
     generate_set_piece_insights,
     hero_block,

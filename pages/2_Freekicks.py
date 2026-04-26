@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from mm_utils import (
+from mm_setpieces.utils import (
     filter_by_sp_type,
     freekick_origin_map_figure,
     freekick_sequence_summary,

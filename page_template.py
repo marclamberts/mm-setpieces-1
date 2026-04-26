@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from mm_utils import (
+from mm_setpieces.utils import (
     build_summary_tables,
     build_role_archetypes,
     build_team_archetypes,

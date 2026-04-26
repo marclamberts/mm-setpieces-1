@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from mm_utils import (
+from mm_setpieces.utils import (
     categorical_breakdown_figure,
     dataframe_to_excel_bytes,
     hero_block,
