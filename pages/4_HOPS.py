@@ -4,7 +4,15 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from utils import hero_block, inject_app_style, polish_plotly_figure, render_analyst_table, section_header
+from utils import (
+    categorical_breakdown_figure,
+    dataframe_to_excel_bytes,
+    hero_block,
+    inject_app_style,
+    polish_plotly_figure,
+    render_analyst_table,
+    section_header,
+)
 
 st.set_page_config(page_title="Michael Mackin Set Piece | HOPS", page_icon="⚽", layout="wide")
 inject_app_style()
@@ -42,6 +50,27 @@ with st.sidebar.expander("Board settings", expanded=True):
 filtered = df.copy()
 if team != "All":
     filtered = filtered[filtered["Team"] == team].copy()
+
+nav_left, nav_mid, nav_right = st.columns([0.9, 1.1, 1.1])
+with nav_left:
+    if st.button("Back to Home", use_container_width=True):
+        st.switch_page("app.py")
+with nav_mid:
+    st.download_button(
+        "Export filtered CSV",
+        data=filtered.to_csv(index=False).encode("utf-8"),
+        file_name="hops_filtered.csv",
+        mime="text/csv",
+        use_container_width=True,
+    )
+with nav_right:
+    st.download_button(
+        "Export filtered Excel",
+        data=dataframe_to_excel_bytes(filtered, sheet_name="HOPS"),
+        file_name="hops_filtered.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        use_container_width=True,
+    )
 
 player_count = int(filtered["Player"].nunique())
 team_count = int(filtered["Team"].nunique())
@@ -89,6 +118,30 @@ with overview_tab:
 
     section_header("Risk Check", "Lowest ratings in the active filter")
     render_analyst_table(bottom_players, height=330)
+
+    section_header("Quick Reads", "Fast profile summaries")
+    q1, q2, q3 = st.columns(3)
+    with q1:
+        st.plotly_chart(
+            categorical_breakdown_figure(filtered, "Tier", "Tier split", top_n=4, color="#c1121f"),
+            use_container_width=True,
+        )
+    with q2:
+        st.plotly_chart(
+            categorical_breakdown_figure(filtered, "Team", "Team depth", top_n=8, color="#111827"),
+            use_container_width=True,
+        )
+    with q3:
+        percentile_band = filtered.copy()
+        percentile_band["Percentile band"] = pd.cut(
+            percentile_band["Percentile"],
+            bins=[-0.1, 25, 50, 75, 90, 100],
+            labels=["0-25", "26-50", "51-75", "76-90", "91-100"],
+        ).astype(str)
+        st.plotly_chart(
+            categorical_breakdown_figure(percentile_band, "Percentile band", "Percentile spread", top_n=5, color="#1d4ed8"),
+            use_container_width=True,
+        )
 
 with charts_tab:
     chart_left, chart_right = st.columns(2)

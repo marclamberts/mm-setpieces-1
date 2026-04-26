@@ -4,7 +4,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from utils import hero_block, inject_app_style, polish_plotly_figure, render_analyst_table, section_header
+from utils import dataframe_to_excel_bytes, hero_block, inject_app_style, polish_plotly_figure, render_analyst_table, section_header
 
 st.set_page_config(page_title="Michael Mackin Set Piece | Delay Analysis", page_icon="⚽", layout="wide")
 inject_app_style()
@@ -71,6 +71,27 @@ else:
             delay_range = st.slider("Delay range (seconds)", min_value=lo, max_value=hi, value=(lo, hi))
         filtered = filtered[filtered["delay_sec"].between(delay_range[0], delay_range[1])].copy()
 
+    nav_left, nav_mid, nav_right = st.columns([0.9, 1.1, 1.1])
+    with nav_left:
+        if st.button("Back to Home", use_container_width=True):
+            st.switch_page("app.py")
+    with nav_mid:
+        st.download_button(
+            "Export filtered CSV",
+            data=filtered.to_csv(index=False).encode("utf-8"),
+            file_name="delay_filtered.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
+    with nav_right:
+        st.download_button(
+            "Export filtered Excel",
+            data=dataframe_to_excel_bytes(filtered, sheet_name="Delay"),
+            file_name="delay_filtered.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+        )
+
     total_events = int(len(filtered))
     matches_count = int(filtered["match"].nunique()) if "match" in filtered.columns else 0
     avg_delay = float(filtered["delay_sec"].mean()) if "delay_sec" in filtered.columns and not filtered.empty else 0.0
@@ -83,6 +104,10 @@ else:
     c3.metric("Avg delay", f"{avg_delay:.1f}s")
     c4.metric("Median delay", f"{median_delay:.1f}s")
     c5.metric("90th percentile", f"{p90_delay:.1f}s")
+
+    if filtered.empty:
+        st.warning("No rows match the active delay filters.")
+        st.stop()
 
     overview_tab, charts_tab, audit_tab, data_tab = st.tabs(["Briefing", "Timing Evidence", "Audit", "Event Log"])
 
@@ -118,6 +143,27 @@ else:
         )
         match_delay[["Avg_Delay", "Median_Delay", "Max_Delay"]] = match_delay[["Avg_Delay", "Median_Delay", "Max_Delay"]].round(1)
 
+        insight_cols = st.columns(3)
+        top_band = str(band_summary.sort_values("Corners", ascending=False).iloc[0]["Delay band"]) if not band_summary.empty else "Unknown"
+        top_exit = str(out_summary.iloc[0]["out_event_type"]) if not out_summary.empty else "Unknown"
+        slow_match = str(match_delay.iloc[0]["match"]) if not match_delay.empty else "Unknown"
+
+        with insight_cols[0]:
+            st.markdown(
+                f"<div class='mm-insight-card'>Most common delay band: <strong>{top_band}</strong>.</div>",
+                unsafe_allow_html=True,
+            )
+        with insight_cols[1]:
+            st.markdown(
+                f"<div class='mm-insight-card'>Most common exit event: <strong>{top_exit}</strong>.</div>",
+                unsafe_allow_html=True,
+            )
+        with insight_cols[2]:
+            st.markdown(
+                f"<div class='mm-insight-card'>Slowest average match in filter: <strong>{slow_match}</strong>.</div>",
+                unsafe_allow_html=True,
+            )
+
         left, right = st.columns([1, 1])
         with left:
             section_header("Delay Bands", "How long corners take before the matched exit event")
@@ -141,6 +187,24 @@ else:
             box = px.box(filtered, x="out_event_type", y="delay_sec", color="out_event_type", color_discrete_sequence=["#111827", "#c1121f", "#1d4ed8", "#15803d", "#b45309"])
             box.update_layout(margin=dict(l=10, r=10, t=30, b=10), legend_title_text="", xaxis_title="", yaxis_title="Delay seconds")
             st.plotly_chart(polish_plotly_figure(box), use_container_width=True)
+
+        section_header("Match Comparison", "Average delay by match")
+        avg_by_match = (
+            filtered.groupby("match", dropna=False)["delay_sec"]
+            .mean()
+            .reset_index(name="Avg delay")
+            .sort_values("Avg delay", ascending=False)
+            .head(20)
+        )
+        match_fig = px.bar(
+            avg_by_match.sort_values("Avg delay"),
+            x="Avg delay",
+            y="match",
+            orientation="h",
+            color_discrete_sequence=["#c1121f"],
+        )
+        match_fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False, xaxis_title="Average delay (s)", yaxis_title="")
+        st.plotly_chart(polish_plotly_figure(match_fig), use_container_width=True)
 
     with audit_tab:
         section_header("Workbook Summary Sheet", "Match-level extraction performance")

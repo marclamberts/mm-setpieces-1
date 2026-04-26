@@ -798,6 +798,75 @@ def polish_plotly_figure(fig: go.Figure) -> go.Figure:
     fig.update_yaxes(showgrid=True, gridcolor="rgba(15,23,42,0.08)", zeroline=False)
     return fig
 
+
+def dataframe_to_excel_bytes(df: pd.DataFrame, sheet_name: str = "Data") -> bytes:
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df.to_excel(writer, sheet_name=sheet_name, index=False)
+    return output.getvalue()
+
+
+def categorical_breakdown_figure(
+    df: pd.DataFrame,
+    column: str,
+    title: str,
+    *,
+    top_n: int = 8,
+    color: str = RED,
+) -> go.Figure:
+    fig = go.Figure()
+    if df.empty or column not in df.columns:
+        fig.add_annotation(text="No data available", x=0.5, y=0.5, xref="paper", yref="paper", showarrow=False)
+        return polish_plotly_figure(fig)
+
+    counts = (
+        df[column]
+        .fillna("Unknown")
+        .astype(str)
+        .value_counts()
+        .head(top_n)
+        .sort_values(ascending=True)
+    )
+
+    fig.add_trace(
+        go.Bar(
+            x=counts.values,
+            y=counts.index.tolist(),
+            orientation="h",
+            marker=dict(color=color),
+            hovertemplate="%{y}: %{x}<extra></extra>",
+        )
+    )
+    fig.update_layout(title=title, height=340, margin=dict(l=10, r=10, t=45, b=10), showlegend=False)
+    return polish_plotly_figure(fig)
+
+
+def minute_distribution_figure(df: pd.DataFrame, title: str) -> go.Figure:
+    fig = go.Figure()
+    if df.empty or "minute" not in df.columns:
+        fig.add_annotation(text="No minute data available", x=0.5, y=0.5, xref="paper", yref="paper", showarrow=False)
+        return polish_plotly_figure(fig)
+
+    minutes = pd.to_numeric(df["minute"], errors="coerce").dropna()
+    if minutes.empty:
+        fig.add_annotation(text="No minute data available", x=0.5, y=0.5, xref="paper", yref="paper", showarrow=False)
+        return polish_plotly_figure(fig)
+
+    bins = list(range(0, int(max(95, minutes.max())) + 6, 5))
+    bucket = pd.cut(minutes, bins=bins, right=False, include_lowest=True)
+    counts = bucket.value_counts().sort_index()
+    labels = [f"{int(interval.left)}-{int(interval.right - 1)}" for interval in counts.index]
+    fig.add_trace(
+        go.Bar(
+            x=labels,
+            y=counts.values,
+            marker=dict(color=BLACK),
+            hovertemplate="Minute window %{x}: %{y}<extra></extra>",
+        )
+    )
+    fig.update_layout(title=title, height=340, margin=dict(l=10, r=10, t=45, b=10), showlegend=False)
+    return polish_plotly_figure(fig)
+
 def _candidate_paths(filename: str) -> list[Path]:
     return [BASE_DIR / filename, BASE_DIR.parent / filename, Path(filename)]
 

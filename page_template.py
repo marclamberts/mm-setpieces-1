@@ -12,6 +12,8 @@ from utils import (
     build_shooter_leaderboard,
     build_taker_leaderboard,
     build_team_leaderboard,
+    categorical_breakdown_figure,
+    dataframe_to_excel_bytes,
     delivery_map_figure,
     generate_set_piece_insights,
     hero_block,
@@ -19,6 +21,7 @@ from utils import (
     inject_app_style,
     kpi_row,
     load_sp_data,
+    minute_distribution_figure,
     mplsoccer_delivery_figure,
     mplsoccer_shot_figure,
     prematch_report_pdf_bytes,
@@ -121,6 +124,27 @@ def render_page(label: str) -> None:
         "Scout team patterns, taker roles, shot output, and match-level set-piece value from the connected event workbooks.",
     )
 
+    nav_left, nav_mid, nav_right = st.columns([0.9, 1.1, 1.1])
+    with nav_left:
+        if st.button("Back to Home", use_container_width=True):
+            st.switch_page("app.py")
+    with nav_mid:
+        st.download_button(
+            "Export filtered CSV",
+            data=filtered.to_csv(index=False).encode("utf-8"),
+            file_name=f"{label.lower().replace(' ', '_')}_filtered.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
+    with nav_right:
+        st.download_button(
+            "Export filtered Excel",
+            data=dataframe_to_excel_bytes(filtered, sheet_name=label[:31] or "Data"),
+            file_name=f"{label.lower().replace(' ', '_')}_filtered.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+        )
+
     if label == "Corners":
         st.caption("Corners use Allsvenskan - Corners 2025.xlsx. 'Last 10 games' is approximated via descending match_id when dates are missing.")
     else:
@@ -152,6 +176,24 @@ def render_page(label: str) -> None:
         for idx, insight in enumerate(insights):
             with insight_cols[idx % 2]:
                 st.markdown(f"<div class='mm-insight-card'>{insight}</div>", unsafe_allow_html=True)
+
+        section_header("Quick Reads", "Fast visual summaries for the active filter")
+        qr1, qr2, qr3 = st.columns(3)
+        with qr1:
+            st.plotly_chart(
+                categorical_breakdown_figure(filtered, "Taker", "Top takers", top_n=8, color="#c1121f"),
+                use_container_width=True,
+            )
+        with qr2:
+            st.plotly_chart(
+                categorical_breakdown_figure(filtered, "Shot outcome", "Shot outcomes", top_n=8, color="#1d4ed8"),
+                use_container_width=True,
+            )
+        with qr3:
+            st.plotly_chart(
+                minute_distribution_figure(filtered, "Minute distribution"),
+                use_container_width=True,
+            )
 
         section_header("Scouting Boards", "Workbook-derived rankings and tactical pattern reads")
         teams_tab, takers_tab, shooters_tab, patterns_tab, matches_tab = st.tabs(
