@@ -48,26 +48,15 @@ if df.empty:
     st.stop()
 
 st.sidebar.header("Freekick filters")
-teams = ["All"] + _safe_sorted(df["Team"]) if "Team" in df.columns else ["All"]
-takers = _safe_sorted(df["Taker"]) if "Taker" in df.columns else []
-shooters = _safe_sorted(df["Shooter"]) if "Shooter" in df.columns else []
-heights = _safe_sorted(df["Delivery height"]) if "Delivery height" in df.columns else []
-outcomes = _safe_sorted(df["Shot outcome"]) if "Shot outcome" in df.columns else []
-periods = ["All"] + _safe_sorted(df["game_period"]) if "game_period" in df.columns else ["All"]
-
-with st.sidebar.expander("Scope", expanded=True):
-    team = st.selectbox("Team", teams)
-    period = st.selectbox("Game period", periods)
-    sample = st.radio("Sample", ["Total", "Last 10 games"], horizontal=True)
-
-minute_min = int(pd.to_numeric(df["minute"], errors="coerce").fillna(0).min()) if "minute" in df.columns else 0
-minute_max = max(95, int(pd.to_numeric(df["minute"], errors="coerce").fillna(95).max())) if "minute" in df.columns else 95
-with st.sidebar.expander("Event filters", expanded=True):
-    minute_range = st.slider("Minute range", minute_min, minute_max, (minute_min, minute_max))
-    taker_filter = st.multiselect("Initial / sequence taker", takers)
-    shooter_filter = st.multiselect("Shooter", shooters)
-    height_filter = st.multiselect("Pass height", heights)
-    outcome_filter = st.multiselect("Shot outcome", outcomes)
+st.sidebar.caption("Filters are hard-coded to the full sample.")
+team = "All"
+period = "All"
+sample = "Total"
+minute_range = (0, 95)
+taker_filter: list[str] = []
+shooter_filter: list[str] = []
+height_filter: list[str] = []
+outcome_filter: list[str] = []
 
 filtered = df.copy()
 if team != "All" and "Team" in filtered.columns:

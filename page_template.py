@@ -43,35 +43,19 @@ def _cached_report_pdf(df: pd.DataFrame, label: str, opponent: str) -> bytes:
 
 def _filter_page_data(df: pd.DataFrame, label: str) -> pd.DataFrame:
     st.sidebar.header(f"{label} filters")
+    st.sidebar.caption("Filters are hard-coded to the full sample.")
 
-    teams = ["All"] + _safe_sorted(df["Team"]) if "Team" in df.columns else ["All"]
-    leagues = ["All"] + _safe_sorted(df["League"]) if "League" in df.columns else ["All"]
-    sides = ["All"] + _safe_sorted(df["side"]) if "side" in df.columns else ["All"]
-    periods = ["All"] + _safe_sorted(df["game_period"]) if "game_period" in df.columns else ["All"]
-    techniques = _safe_sorted(df["Technique"]) if "Technique" in df.columns else []
-    heights = _safe_sorted(df["Delivery height"]) if "Delivery height" in df.columns else []
-    takers = _safe_sorted(df["Taker"]) if "Taker" in df.columns else []
-    shot_outcomes = _safe_sorted(df["Shot outcome"]) if "Shot outcome" in df.columns else []
-
-    with st.sidebar.expander("Scope", expanded=True):
-        team = st.selectbox("Team", teams)
-        league = st.selectbox("League", leagues)
-        sample = st.radio("Sample", ["Total", "Last 10 games"], horizontal=True)
-        side = st.radio("Side", sides, horizontal=True)
-        time_in_game = st.selectbox("Time in the game", periods)
-
-    minute_min = 0
-    minute_max = 95
-    if "minute" in df.columns and not df["minute"].dropna().empty:
-        minute_min = int(pd.to_numeric(df["minute"], errors="coerce").fillna(0).min())
-        minute_max = max(95, int(pd.to_numeric(df["minute"], errors="coerce").fillna(95).max()))
-    with st.sidebar.expander("Event filters", expanded=True):
-        minute_range = st.slider("Minute range", minute_min, minute_max, (minute_min, minute_max))
-        taker_filter = st.multiselect("Taker", takers)
-        technique_filter = st.multiselect("Delivery technique", techniques)
-        height_filter = st.multiselect("Delivery height", heights)
-        shot_outcome_filter = st.multiselect("Shot outcome", shot_outcomes)
-        only_shots = st.checkbox(f"Only {label.lower()} ending with a shot", value=False)
+    team = "All"
+    league = "All"
+    sample = "Total"
+    side = "All"
+    time_in_game = "All"
+    minute_range = (0, 95)
+    taker_filter: list[str] = []
+    technique_filter: list[str] = []
+    height_filter: list[str] = []
+    shot_outcome_filter: list[str] = []
+    only_shots = False
 
     filtered = df.copy()
     if team != "All" and "Team" in filtered.columns:

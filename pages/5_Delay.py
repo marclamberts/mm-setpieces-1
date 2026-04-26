@@ -46,15 +46,10 @@ if events.empty:
     st.warning("No delay events were found in corner_delays (1).xlsx.")
 else:
     st.sidebar.header("Delay filters")
-    matches = ["All"] + sorted(events["match"].dropna().astype(str).unique().tolist()) if "match" in events.columns else ["All"]
-    periods = ["All"] + sorted(events["period"].dropna().astype(int).astype(str).unique().tolist()) if "period" in events.columns else ["All"]
-    out_types = ["All"] + sorted(events["out_event_type"].dropna().astype(str).unique().tolist()) if "out_event_type" in events.columns else ["All"]
-
-    with st.sidebar.expander("Scope", expanded=True):
-        match = st.selectbox("Match", matches)
-        period = st.selectbox("Period", periods)
-    with st.sidebar.expander("Event filters", expanded=True):
-        out_type = st.selectbox("Exit event", out_types)
+    st.sidebar.caption("Filters are hard-coded to the full sample.")
+    match = "All"
+    period = "All"
+    out_type = "All"
 
     filtered = events.copy()
     if match != "All" and "match" in filtered.columns:
@@ -65,10 +60,7 @@ else:
         filtered = filtered[filtered["out_event_type"].astype(str).eq(out_type)].copy()
 
     if not filtered.empty and "delay_sec" in filtered.columns:
-        lo = float(filtered["delay_sec"].min())
-        hi = float(filtered["delay_sec"].max())
-        with st.sidebar.expander("Timing window", expanded=True):
-            delay_range = st.slider("Delay range (seconds)", min_value=lo, max_value=hi, value=(lo, hi))
+        delay_range = (0.0, 120.0)
         filtered = filtered[filtered["delay_sec"].between(delay_range[0], delay_range[1])].copy()
 
     nav_left, nav_mid, nav_right = st.columns([0.9, 1.1, 1.1])

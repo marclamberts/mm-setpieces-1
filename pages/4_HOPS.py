@@ -41,11 +41,9 @@ hero_block(
 )
 
 st.sidebar.header("HOPS filters")
-teams = ["All"] + sorted(df["Team"].dropna().astype(str).unique().tolist())
-with st.sidebar.expander("Scope", expanded=True):
-    team = st.selectbox("Team", teams)
-with st.sidebar.expander("Board settings", expanded=True):
-    top_n = st.slider("Show top / bottom players", min_value=5, max_value=30, value=10)
+st.sidebar.caption("Filters are hard-coded to the full sample.")
+team = "All"
+top_n = 10
 
 filtered = df.copy()
 if team != "All":
