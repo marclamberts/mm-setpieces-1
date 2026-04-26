@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from utils import hero_block, inject_app_style, section_header
+from mm_utils import hero_block, inject_app_style, section_header
 
 st.set_page_config(page_title="Michael Mackin Set Piece", page_icon="⚽", layout="wide")
 inject_app_style()
