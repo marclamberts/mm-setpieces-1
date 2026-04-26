@@ -77,6 +77,32 @@ def inject_app_style() -> None:
                 min-width: 15rem !important;
                 width: 15rem !important;
             }}
+            button[data-testid="stSidebarCollapseButton"],
+            button[data-testid="stSidebarExpandButton"],
+            div[data-testid="collapsedControl"] button,
+            [data-testid="stSidebarCollapsedControl"] button,
+            button[title="Hide sidebar"],
+            button[title="Show sidebar"],
+            button[aria-label="Close sidebar"],
+            button[aria-label="Open sidebar"] {{
+                display: inline-flex !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+                pointer-events: auto !important;
+                color: #ffffff !important;
+                background: #0b1118 !important;
+                border: 1px solid rgba(255,255,255,0.28) !important;
+                border-radius: 6px !important;
+                box-shadow: 0 6px 18px rgba(15, 23, 42, 0.18) !important;
+            }}
+            button[data-testid="stSidebarCollapseButton"] svg,
+            button[data-testid="stSidebarExpandButton"] svg,
+            div[data-testid="collapsedControl"] button svg,
+            [data-testid="stSidebarCollapsedControl"] button svg {{
+                color: #ffffff !important;
+                fill: #ffffff !important;
+                stroke: #ffffff !important;
+            }}
             div[data-testid="stSidebar"] *,
             div[data-testid="stSidebar"] span,
             div[data-testid="stSidebar"] div,
