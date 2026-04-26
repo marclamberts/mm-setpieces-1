@@ -28,6 +28,7 @@ from mm_utils import (
     polish_plotly_figure,
     prepare_sp_dataframe,
     filter_by_sp_type,
+    render_sidebar_menu,
     render_analyst_table,
     section_header,
     shotmap_figure,
@@ -92,6 +93,7 @@ def render_page(label: str) -> None:
         initial_sidebar_state="expanded",
     )
     inject_app_style()
+    render_sidebar_menu()
 
     raw = load_sp_data(label)
     if raw.empty:

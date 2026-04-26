@@ -14,6 +14,7 @@ from mm_utils import (
     mplsoccer_shot_figure,
     polish_plotly_figure,
     prepare_sp_dataframe,
+    render_sidebar_menu,
     render_analyst_table,
     section_header,
     shotmap_figure,
@@ -33,6 +34,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 inject_app_style()
+render_sidebar_menu()
 
 
 def _safe_sorted(values: pd.Series) -> list[str]:

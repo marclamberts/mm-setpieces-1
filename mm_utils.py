@@ -142,6 +142,17 @@ def inject_app_style() -> None:
             div[data-testid="stSidebar"] hr {{
                 border-color: rgba(255,255,255,0.12);
             }}
+            div[data-testid="stSidebar"] [data-testid="stPageLink"] a {{
+                background: rgba(255,255,255,0.075);
+                border: 1px solid rgba(255,255,255,0.12);
+                border-radius: 6px;
+                padding: .55rem .7rem;
+                margin: .18rem 0;
+            }}
+            div[data-testid="stSidebar"] [data-testid="stPageLink"] a:hover {{
+                background: rgba(255,255,255,0.14);
+                border-color: rgba(255,255,255,0.22);
+            }}
             div[data-baseweb="popover"] ul,
             div[data-baseweb="popover"] [role="listbox"] {{
                 background: #ffffff !important;
@@ -772,6 +783,17 @@ def inject_app_style() -> None:
         """,
         unsafe_allow_html=True,
     )
+
+
+def render_sidebar_menu() -> None:
+    st.sidebar.markdown("### Set-piece desk")
+    st.sidebar.page_link("app.py", label="Home")
+    st.sidebar.page_link("pages/1_Corners.py", label="Corners")
+    st.sidebar.page_link("pages/2_Freekicks.py", label="Freekicks")
+    st.sidebar.page_link("pages/3_Throw_ins.py", label="Throw-ins")
+    st.sidebar.page_link("pages/4_HOPS.py", label="HOPS")
+    st.sidebar.page_link("pages/5_Delay.py", label="Delay Analysis")
+    st.sidebar.markdown("---")
 
 
 def hero_block(eyebrow: str, title: str, copy: str) -> None:

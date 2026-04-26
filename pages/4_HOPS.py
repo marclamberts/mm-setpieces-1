@@ -10,6 +10,7 @@ from mm_utils import (
     hero_block,
     inject_app_style,
     polish_plotly_figure,
+    render_sidebar_menu,
     render_analyst_table,
     section_header,
 )
@@ -21,6 +22,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 inject_app_style()
+render_sidebar_menu()
 
 @st.cache_data(show_spinner=False)
 def load_hops_data() -> pd.DataFrame:

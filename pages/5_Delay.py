@@ -4,7 +4,15 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from mm_utils import dataframe_to_excel_bytes, hero_block, inject_app_style, polish_plotly_figure, render_analyst_table, section_header
+from mm_utils import (
+    dataframe_to_excel_bytes,
+    hero_block,
+    inject_app_style,
+    polish_plotly_figure,
+    render_analyst_table,
+    render_sidebar_menu,
+    section_header,
+)
 
 st.set_page_config(
     page_title="Michael Mackin Set Piece | Delay Analysis",
@@ -13,6 +21,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 inject_app_style()
+render_sidebar_menu()
 
 
 @st.cache_data(show_spinner=False)
