@@ -820,9 +820,112 @@ def inject_app_style() -> None:
             }}
             .mm-stat-grid {{
                 display: grid;
-                grid-template-columns: repeat(4, minmax(0, 1fr));
+                grid-template-columns: repeat(6, minmax(0, 1fr));
                 gap: .55rem;
                 margin: .65rem 0 .85rem;
+            }}
+            .mm-kpi-deck {{
+                display: grid;
+                grid-template-columns: repeat(6, minmax(0, 1fr));
+                gap: .58rem;
+                margin: .8rem 0 .55rem;
+            }}
+            .mm-kpi-card {{
+                background: #ffffff;
+                border: 1px solid #e1e7ef;
+                border-top: 3px solid #0b0f14;
+                border-radius: 8px;
+                padding: .78rem .82rem;
+                box-shadow: 0 10px 28px rgba(15,23,42,0.055);
+                min-height: 92px;
+            }}
+            .mm-kpi-card.is-red {{
+                border-top-color: #c1121f;
+            }}
+            .mm-kpi-label {{
+                color: #64748b;
+                font-size: .66rem;
+                font-weight: 900;
+                letter-spacing: .08em;
+                text-transform: uppercase;
+                margin-bottom: .22rem;
+            }}
+            .mm-kpi-value {{
+                color: #0b0f14;
+                font-size: 1.35rem;
+                font-weight: 950;
+                line-height: 1.08;
+            }}
+            .mm-kpi-help {{
+                color: #64748b;
+                font-size: .72rem;
+                font-weight: 650;
+                line-height: 1.25;
+                margin-top: .3rem;
+            }}
+            .mm-read-strip {{
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: .58rem;
+                margin: .6rem 0 1rem;
+            }}
+            .mm-read-card {{
+                background: #10151c;
+                border: 1px solid rgba(255,255,255,0.10);
+                border-left: 3px solid #c1121f;
+                border-radius: 8px;
+                padding: .78rem .85rem;
+                box-shadow: 0 12px 30px rgba(15,23,42,0.12);
+            }}
+            .mm-read-title {{
+                color: rgba(255,255,255,0.58);
+                font-size: .66rem;
+                font-weight: 900;
+                letter-spacing: .1em;
+                text-transform: uppercase;
+                margin-bottom: .24rem;
+            }}
+            .mm-read-value {{
+                color: #ffffff;
+                font-size: .88rem;
+                font-weight: 800;
+                line-height: 1.34;
+                overflow-wrap: anywhere;
+            }}
+            .mm-workflow-rail {{
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: .5rem;
+                margin: .65rem 0 .8rem;
+            }}
+            .mm-rail-step {{
+                background: #ffffff;
+                border: 1px solid #e1e7ef;
+                border-radius: 8px;
+                padding: .62rem .7rem;
+                box-shadow: 0 8px 22px rgba(15,23,42,0.045);
+                position: relative;
+            }}
+            .mm-rail-step::before {{
+                content: "";
+                position: absolute;
+                inset: 0 auto 0 0;
+                width: 3px;
+                background: #c1121f;
+                border-radius: 8px 0 0 8px;
+            }}
+            .mm-rail-label {{
+                color: #64748b;
+                font-size: .62rem;
+                font-weight: 900;
+                letter-spacing: .1em;
+                text-transform: uppercase;
+                margin-bottom: .16rem;
+            }}
+            .mm-rail-title {{
+                color: #0b0f14;
+                font-size: .82rem;
+                font-weight: 900;
             }}
             .mm-stat-card {{
                 background: #f8fafc;
@@ -959,7 +1062,10 @@ def inject_app_style() -> None:
                 .mm-workflow-grid,
                 .mm-command-center,
                 .mm-stat-grid,
-                .mm-profile-strip {{
+                .mm-profile-strip,
+                .mm-kpi-deck,
+                .mm-read-strip,
+                .mm-workflow-rail {{
                     grid-template-columns: 1fr;
                     align-items: flex-start;
                 }}
@@ -1079,6 +1185,9 @@ def inject_app_style() -> None:
             .mm-panel,
             .mm-stat-card,
             .mm-profile-card,
+            .mm-kpi-card,
+            .mm-read-card,
+            .mm-rail-step,
             .mm-filter-summary,
             .mm-command-panel,
             .mm-workflow-card,
@@ -1222,6 +1331,17 @@ def inject_app_style() -> None:
                     font-size: 1.85rem;
                 }}
             }}
+            @media (min-width: 761px) and (max-width: 1180px) {{
+                .mm-stat-grid,
+                .mm-kpi-deck {{
+                    grid-template-columns: repeat(3, minmax(0, 1fr));
+                }}
+                .mm-read-strip,
+                .mm-profile-strip,
+                .mm-workflow-rail {{
+                    grid-template-columns: 1fr;
+                }}
+            }}
         </style>
         """,
         unsafe_allow_html=True,
@@ -1300,6 +1420,25 @@ def render_empty_filter_state() -> None:
         """,
         unsafe_allow_html=True,
     )
+
+
+def render_workflow_rail() -> None:
+    steps = [
+        ("1", "Filter opponent"),
+        ("2", "Read KPIs"),
+        ("3", "Check evidence"),
+        ("4", "Export brief"),
+    ]
+    html = "<div class='mm-workflow-rail'>"
+    for number, title in steps:
+        html += (
+            "<div class='mm-rail-step'>"
+            f"<div class='mm-rail-label'>Step {escape(number)}</div>"
+            f"<div class='mm-rail-title'>{escape(title)}</div>"
+            "</div>"
+        )
+    html += "</div>"
+    st.markdown(html, unsafe_allow_html=True)
 
 
 def hero_block(eyebrow: str, title: str, copy: str) -> None:
@@ -2096,6 +2235,98 @@ def _rate(numerator: float, denominator: float) -> float:
     return round((numerator / denominator * 100), 1) if denominator else 0.0
 
 
+def set_piece_kpi_values(df: pd.DataFrame) -> dict[str, object]:
+    if df.empty:
+        return {
+            "matches": 0,
+            "restarts": 0,
+            "shots": 0,
+            "goals": 0,
+            "total_xg": 0.0,
+            "shot_rate": 0.0,
+            "goal_conversion": 0.0,
+            "xg_per_restart": 0.0,
+            "xg_per_100": 0.0,
+            "xg_per_shot": 0.0,
+            "top_taker": "Unknown",
+            "top_shooter": "Unknown",
+            "top_delivery": "Unknown",
+            "top_outcome": "Unknown",
+        }
+
+    starts = unique_start_events(df)
+    shots_df = unique_shot_events(df)
+    restarts = int(len(starts)) if not starts.empty else int(len(df))
+    shots = int(len(shots_df))
+    goals = int(shots_df["is_goal"].sum()) if "is_goal" in shots_df.columns and not shots_df.empty else 0
+    total_xg = float(shots_df["xg"].fillna(0).sum()) if "xg" in shots_df.columns and not shots_df.empty else 0.0
+    matches = int(df["match_id"].nunique()) if "match_id" in df.columns else int(df["Match"].nunique()) if "Match" in df.columns else 0
+
+    def top_value(source: pd.DataFrame, column: str) -> str:
+        if column not in source.columns or source.empty:
+            return "Unknown"
+        values = source[column].dropna().astype(str)
+        values = values[values.str.strip().ne("") & values.str.lower().ne("unknown")]
+        return values.value_counts().index[0] if not values.empty else "Unknown"
+
+    return {
+        "matches": matches,
+        "restarts": restarts,
+        "shots": shots,
+        "goals": goals,
+        "total_xg": total_xg,
+        "shot_rate": _rate(shots, restarts),
+        "goal_conversion": _rate(goals, shots),
+        "xg_per_restart": round(total_xg / restarts, 3) if restarts else 0.0,
+        "xg_per_100": round(total_xg / restarts * 100, 2) if restarts else 0.0,
+        "xg_per_shot": round(total_xg / shots, 3) if shots else 0.0,
+        "top_taker": top_value(starts, "Taker"),
+        "top_shooter": top_value(shots_df, "Shooter"),
+        "top_delivery": top_value(starts, "Delivery height"),
+        "top_outcome": top_value(starts, "Delivery outcome"),
+    }
+
+
+def render_set_piece_kpi_deck(df: pd.DataFrame, label: str = "Set pieces") -> None:
+    kpi = set_piece_kpi_values(df)
+    cards = [
+        ("Restarts", f"{kpi['restarts']:,}", f"{kpi['matches']:,} matches", False),
+        ("Shot creation", f"{kpi['shot_rate']:.1f}%", f"{kpi['shots']:,} shots", True),
+        ("xG / 100", f"{kpi['xg_per_100']:.2f}", "Threat per 100 restarts", False),
+        ("xG / shot", f"{kpi['xg_per_shot']:.3f}", "Shot quality", True),
+        ("Goals", f"{kpi['goals']:,}", f"{kpi['goal_conversion']:.1f}% conversion", False),
+        ("Total xG", f"{kpi['total_xg']:.2f}", label, True),
+    ]
+    html = "<div class='mm-kpi-deck'>"
+    for title, value, note, is_red in cards:
+        cls = "mm-kpi-card is-red" if is_red else "mm-kpi-card"
+        html += (
+            f"<div class='{cls}'>"
+            f"<div class='mm-kpi-label'>{escape(str(title))}</div>"
+            f"<div class='mm-kpi-value'>{escape(str(value))}</div>"
+            f"<div class='mm-kpi-help'>{escape(str(note))}</div>"
+            "</div>"
+        )
+    html += "</div>"
+    st.markdown(html, unsafe_allow_html=True)
+
+    reads = [
+        ("Primary taker", kpi["top_taker"]),
+        ("Main delivery", kpi["top_delivery"]),
+        ("Best shooter", kpi["top_shooter"]),
+    ]
+    read_html = "<div class='mm-read-strip'>"
+    for title, value in reads:
+        read_html += (
+            "<div class='mm-read-card'>"
+            f"<div class='mm-read-title'>{escape(str(title))}</div>"
+            f"<div class='mm-read-value'>{escape(str(value))}</div>"
+            "</div>"
+        )
+    read_html += "</div>"
+    st.markdown(read_html, unsafe_allow_html=True)
+
+
 def build_team_leaderboard(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "Team" not in df.columns:
         return pd.DataFrame()
@@ -2121,9 +2352,11 @@ def build_team_leaderboard(df: pd.DataFrame) -> pd.DataFrame:
                 "Goals / shot %": _rate(goals, shots),
                 "Total xG": round(total_xg, 2),
                 "xG / event": round(total_xg / events, 3) if events else 0,
+                "xG / 100": round(total_xg / events * 100, 2) if events else 0,
+                "xG / shot": round(total_xg / shots, 3) if shots else 0,
             }
         )
-    return pd.DataFrame(rows).sort_values(["xG / event", "Shot rate %", "Events"], ascending=False)
+    return pd.DataFrame(rows).sort_values(["xG / 100", "Shot rate %", "Events"], ascending=False)
 
 
 def build_taker_leaderboard(df: pd.DataFrame) -> pd.DataFrame:
@@ -2132,7 +2365,7 @@ def build_taker_leaderboard(df: pd.DataFrame) -> pd.DataFrame:
         return roles
     cols = [
         "Taker", "Team", "Role", "Archetype", "Events", "Shots", "Goals",
-        "Shot rate", "xG / event", "Top technique", "Top zone",
+        "Shot rate", "xG / event", "xG / 100", "Top technique", "Top zone",
     ]
     return roles[[c for c in cols if c in roles.columns]]
 
@@ -2188,6 +2421,8 @@ def build_pattern_library(df: pd.DataFrame) -> pd.DataFrame:
                 "Shot rate %": _rate(shots, events),
                 "Total xG": round(xg, 2),
                 "xG / event": round(xg / events, 3) if events else 0,
+                "xG / 100": round(xg / events * 100, 2) if events else 0,
+                "xG / shot": round(xg / shots, 3) if shots else 0,
             }
         )
         rows.append(record)
@@ -2679,54 +2914,7 @@ def throwin_origin_map_figure(df: pd.DataFrame, title: str = "Throw-in origins")
     return fig
 
 def kpi_row(df: pd.DataFrame) -> None:
-    if df.empty:
-        cols = st.columns(6)
-        for col, label in zip(cols, ["Matches", "Set Pieces", "Shots", "Goals", "Shot rate", "Total xG"]):
-            col.metric(label, 0)
-        st.caption("Goal conversion from shots: 0.0%")
-        return
-
-    # Use unique possession sequences for KPI calculations when available.
-    sequences = int(df["possession"].nunique()) if "possession" in df.columns else int(len(df))
-
-    if set(["possession", "shot_x", "shot_y"]).issubset(df.columns):
-        shots_df = df[df["shot_x"].notna()][["possession", "shot_x", "shot_y"]].drop_duplicates()
-        shots = int(shots_df["possession"].nunique()) if not shots_df.empty else 0
-    elif "is_shot" in df.columns and "possession" in df.columns:
-        shots = int(df[df["is_shot"]]["possession"].nunique())
-    else:
-        shots = int(df["is_shot"].sum()) if "is_shot" in df.columns else 0
-
-    if set(["possession", "shot_x", "shot_y"]).issubset(df.columns) and "is_goal" in df.columns:
-        goals_df = df[df["is_goal"] & df["shot_x"].notna()][["possession", "shot_x", "shot_y"]].drop_duplicates()
-        goals = int(goals_df["possession"].nunique()) if not goals_df.empty else 0
-    elif "is_goal" in df.columns and "possession" in df.columns:
-        goals = int(df[df["is_goal"]]["possession"].nunique())
-    else:
-        goals = int(df["is_goal"].sum()) if "is_goal" in df.columns else 0
-
-    if set(["possession", "shot_x", "shot_y", "xg"]).issubset(df.columns):
-        xg_df = df[df["shot_x"].notna()][["possession", "shot_x", "shot_y", "xg"]].drop_duplicates()
-        total_xg = float(xg_df["xg"].sum()) if not xg_df.empty else 0.0
-    else:
-        total_xg = float(df["xg"].sum()) if "xg" in df.columns else 0.0
-
-    matches = int(df["match_id"].nunique()) if "match_id" in df.columns else (int(df["Match"].nunique()) if "Match" in df.columns else 0)
-    shot_rate = (shots / sequences * 100) if sequences else 0.0
-    goal_rate = (goals / shots * 100) if shots else 0.0
-
-    cols = st.columns(6)
-    metrics = [
-        ("Matches", matches),
-        ("Set Pieces", sequences),
-        ("Shots", shots),
-        ("Goals", goals),
-        ("Shot rate", f"{shot_rate:.1f}%"),
-        ("Total xG", f"{total_xg:.2f}"),
-    ]
-    for col, (label, value) in zip(cols, metrics):
-        col.metric(label, value)
-    st.caption(f"Goal conversion from shots: {goal_rate:.1f}%")
+    render_set_piece_kpi_deck(df)
 
 def info_panel(df: pd.DataFrame) -> None:
     if df.empty:
@@ -2830,6 +3018,7 @@ def build_role_archetypes(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
                 "Goals": goals,
                 "Shot rate": round(shot_rate * 100, 1),
                 "xG / event": round(xg_per_event, 3),
+                "xG / 100": round(xg_per_event * 100, 2),
                 "Top technique": top_technique,
                 "Top zone": top_zone,
             }
@@ -2837,7 +3026,7 @@ def build_role_archetypes(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
 
     if not rows:
         return pd.DataFrame()
-    return pd.DataFrame(rows).sort_values(["Events", "xG / event", "Shot rate"], ascending=False)
+    return pd.DataFrame(rows).sort_values(["xG / 100", "Shot rate", "Events"], ascending=False)
 
 
 def build_team_archetypes(df: pd.DataFrame) -> pd.DataFrame:

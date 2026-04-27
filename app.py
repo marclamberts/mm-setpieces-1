@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from html import escape
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import streamlit as st
@@ -104,10 +105,10 @@ def _mode_text(series: pd.Series) -> str:
 
 def _phase_snapshot(df: pd.DataFrame, phase: str, team: str) -> dict[str, object]:
     if df.empty or "Team" not in df.columns:
-        return {"Phase": phase, "Rows": 0, "Set pieces": 0, "Shots": 0, "Goals": 0, "xG": 0.0, "Top taker": "Unknown", "Top shooter": "Unknown", "Shot rate %": 0.0}
+        return {"Phase": phase, "Rows": 0, "Set pieces": 0, "Shots": 0, "Goals": 0, "xG": 0.0, "xG / 100": 0.0, "xG / shot": 0.0, "Top taker": "Unknown", "Top shooter": "Unknown", "Shot rate %": 0.0, "Goal conv %": 0.0}
     part = df[df["Team"].astype(str).eq(team)].copy()
     if part.empty:
-        return {"Phase": phase, "Rows": 0, "Set pieces": 0, "Shots": 0, "Goals": 0, "xG": 0.0, "Top taker": "Unknown", "Top shooter": "Unknown", "Shot rate %": 0.0}
+        return {"Phase": phase, "Rows": 0, "Set pieces": 0, "Shots": 0, "Goals": 0, "xG": 0.0, "xG / 100": 0.0, "xG / shot": 0.0, "Top taker": "Unknown", "Top shooter": "Unknown", "Shot rate %": 0.0, "Goal conv %": 0.0}
 
     if "possession" in part.columns:
         set_pieces = int(part["possession"].nunique())
@@ -133,9 +134,12 @@ def _phase_snapshot(df: pd.DataFrame, phase: str, team: str) -> dict[str, object
         "Shots": shots,
         "Goals": goals,
         "xG": round(total_xg, 2),
+        "xG / 100": round((total_xg / set_pieces * 100) if set_pieces else 0, 2),
+        "xG / shot": round((total_xg / shots) if shots else 0, 3),
         "Top taker": _mode_text(part["Taker"]) if "Taker" in part.columns else "Unknown",
         "Top shooter": _mode_text(part["Shooter"]) if "Shooter" in part.columns else "Unknown",
         "Shot rate %": round((shots / set_pieces * 100) if set_pieces else 0, 1),
+        "Goal conv %": round((goals / shots * 100) if shots else 0, 1),
     }
 
 
@@ -359,6 +363,8 @@ def render_home() -> None:
             total_shots = int(snapshot["Shots"].sum())
             total_goals = int(snapshot["Goals"].sum())
             total_xg = float(snapshot["xG"].sum())
+            xg_per_100 = (total_xg / total_set_pieces * 100) if total_set_pieces else 0
+            shot_rate = (total_shots / total_set_pieces * 100) if total_set_pieces else 0
             phase_read, role_read, hops_read = selected_team_staff_read(selected_team, snapshot, hops)
             st.markdown(
                 f"""
@@ -381,6 +387,14 @@ def render_home() -> None:
                         <div class="mm-stat-card is-red">
                             <div class="mm-stat-label">Total xG</div>
                             <div class="mm-stat-value">{_fmt_num(total_xg, 2)}</div>
+                        </div>
+                        <div class="mm-stat-card">
+                            <div class="mm-stat-label">xG / 100</div>
+                            <div class="mm-stat-value">{_fmt_num(xg_per_100, 2)}</div>
+                        </div>
+                        <div class="mm-stat-card is-red">
+                            <div class="mm-stat-label">Shot rate</div>
+                            <div class="mm-stat-value">{_fmt_num(shot_rate, 1)}%</div>
                         </div>
                     </div>
                     <div class="mm-profile-strip">
@@ -419,7 +433,7 @@ def render_home() -> None:
                 color="Team",
                 barmode="group",
                 color_discrete_sequence=["#0b0f14", "#c1121f"],
-                hover_data=["Set pieces", "Shots", "Goals", "Shot rate %"],
+                hover_data=["Set pieces", "Shots", "Goals", "Shot rate %", "xG / 100", "xG / shot"],
             )
             fig.update_layout(height=345, margin=dict(l=10, r=10, t=35, b=10), legend_title_text="")
             st.plotly_chart(polish_plotly_figure(fig), use_container_width=True, key="home_team_compare")
@@ -585,6 +599,7 @@ def render_corners() -> None:
         st.warning("No corner rows were found in the bundled workbook(s).")
         return
 
+    render_workflow_rail()
     filtered, filters = filter_sp_page_data(df, label, "corners")
     render_export_controls(filtered, label, label)
     st.caption("Corners use Data/Allsvenskan - Corners 2025.xlsx and Data/CZ - Corners 2025-2026.csv.")
@@ -699,6 +714,7 @@ def render_sequence_page(label: str) -> None:
         st.warning(f"No {readable.lower()} rows were found in Data/SWE SP.xlsx or Data/Czech SP.xlsx.")
         return
 
+    render_workflow_rail()
     key = "freekicks" if is_freekick else "throwins"
     leagues = ["All"] + _safe_sorted(df["League"]) if "League" in df.columns else ["All"]
     teams = ["All"] + _safe_sorted(df["Team"]) if "Team" in df.columns else ["All"]
