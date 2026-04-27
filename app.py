@@ -275,7 +275,7 @@ def render_single_app_sidebar() -> str:
     st.sidebar.markdown("---")
     st.sidebar.markdown(f"### {section} filters")
     if section != "Home":
-        if st.sidebar.button("Reset filters", key=f"reset_{section}", use_container_width=True):
+        if st.sidebar.button("Reset filters", key=f"reset_{section}", width="stretch"):
             reset_current_filters(section)
     return section
 
@@ -436,7 +436,7 @@ def render_home() -> None:
                 hover_data=["Set pieces", "Shots", "Goals", "Shot rate %", "xG / 100", "xG / shot"],
             )
             fig.update_layout(height=345, margin=dict(l=10, r=10, t=35, b=10), legend_title_text="")
-            st.plotly_chart(polish_plotly_figure(fig), use_container_width=True, key="home_team_compare")
+            st.plotly_chart(polish_plotly_figure(fig), width="stretch")
 
         search_query = st.text_input("Search player, taker, shooter, or HOPS profile", key="home_people_search", placeholder="Type at least 2 characters")
         search_results = search_people(search_query, corners, freekicks, throwins, hops)
@@ -634,11 +634,11 @@ def render_corners() -> None:
         section_header("Quick Reads", "Fast visual summaries for the active filter")
         qr1, qr2, qr3 = st.columns(3)
         with qr1:
-            st.plotly_chart(categorical_breakdown_figure(filtered, "Taker", "Top takers", top_n=8, color="#c1121f"), use_container_width=True, key="corners_takers")
+            st.plotly_chart(categorical_breakdown_figure(filtered, "Taker", "Top takers", top_n=8, color="#c1121f"), width="stretch")
         with qr2:
-            st.plotly_chart(categorical_breakdown_figure(filtered, "Shot outcome", "Shot outcomes", top_n=8, color="#1d4ed8"), use_container_width=True, key="corners_outcomes")
+            st.plotly_chart(categorical_breakdown_figure(filtered, "Shot outcome", "Shot outcomes", top_n=8, color="#1d4ed8"), width="stretch")
         with qr3:
-            st.plotly_chart(minute_distribution_figure(filtered, "Minute distribution"), use_container_width=True, key="corners_minutes")
+            st.plotly_chart(minute_distribution_figure(filtered, "Minute distribution"), width="stretch")
 
         section_header("Scouting Boards", "Workbook-derived rankings and tactical pattern reads")
         board_view = st.radio("Scouting board", ["Team Threat", "Takers", "Shot Targets", "Patterns", "Match Log"], horizontal=True, key="corners_board")
@@ -666,15 +666,15 @@ def render_corners() -> None:
         if visual_view == "Interactive maps":
             left, right = st.columns(2)
             with left:
-                st.plotly_chart(polish_plotly_figure(shotmap_figure(filtered, f"{label} shotmap · vertical half pitch")), use_container_width=True, key="corners_shotmap")
+                st.plotly_chart(polish_plotly_figure(shotmap_figure(filtered, f"{label} shotmap · vertical half pitch")), width="stretch")
             with right:
-                st.plotly_chart(polish_plotly_figure(delivery_map_figure(filtered, f"{label} delivery map · vertical half pitch")), use_container_width=True, key="corners_delivery")
+                st.plotly_chart(polish_plotly_figure(delivery_map_figure(filtered, f"{label} delivery map · vertical half pitch")), width="stretch")
         else:
             left, right = st.columns(2)
             with left:
-                st.pyplot(mplsoccer_delivery_figure(filtered, label), use_container_width=True)
+                st.pyplot(mplsoccer_delivery_figure(filtered, label), width="stretch")
             with right:
-                st.pyplot(mplsoccer_shot_figure(filtered, label), use_container_width=True)
+                st.pyplot(mplsoccer_shot_figure(filtered, label), width="stretch")
 
     elif view == "PDF Brief":
         section_header("Pre-Match PDF", "Download a staff briefing from the current filters")
@@ -686,7 +686,7 @@ def render_corners() -> None:
             safe_name = (opponent.strip() or label).lower().replace(" ", "_").replace("/", "-")
             st.markdown('<div class="mm-table-note">PDF generation is prepared on demand because pitch images are heavier than tables.</div>', unsafe_allow_html=True)
             if st.checkbox("Prepare PDF brief", key="corners_prepare_pdf"):
-                st.download_button("Download pre-match PDF", data=_cached_report_pdf(filtered, label, opponent.strip()), file_name=f"{safe_name}_set_piece_report.pdf", mime="application/pdf", use_container_width=True)
+                st.download_button("Download pre-match PDF", data=_cached_report_pdf(filtered, label, opponent.strip()), file_name=f"{safe_name}_set_piece_report.pdf", mime="application/pdf", width="stretch")
 
     elif view == "Event Log":
         section_header("Event Log", f"{len(filtered):,} workbook rows in the current filter")
@@ -826,7 +826,7 @@ def render_sequence_page(label: str) -> None:
         with left:
             section_header("Origin Map", f"{readable} starting points sized by possession xG")
             fig = freekick_origin_map_figure(filtered) if is_freekick else throwin_origin_map_figure(filtered)
-            st.plotly_chart(polish_plotly_figure(fig), use_container_width=True, key=f"{key}_origin_map")
+            st.plotly_chart(polish_plotly_figure(fig), width="stretch")
         with right:
             mix_col = "Zone"
             section_header("Zone Mix" if is_freekick else "Territory Mix", "Volume by restart territory")
@@ -834,14 +834,14 @@ def render_sequence_page(label: str) -> None:
             if not zone_mix.empty:
                 fig = px.bar(zone_mix.sort_values("Sequences", ascending=False), x=mix_col, y="Sequences", color=mix_col, color_discrete_sequence=["#111827", "#c1121f", "#1d4ed8", "#15803d", "#b45309"])
                 fig.update_layout(showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
-                st.plotly_chart(polish_plotly_figure(fig), use_container_width=True, key=f"{key}_zone_mix")
+                st.plotly_chart(polish_plotly_figure(fig), width="stretch")
             section_header("Channel Mix" if is_freekick else "Profile Mix", "How teams use the restart")
             group_col = "Channel" if is_freekick else "Profile"
             group_mix = sequences.groupby(group_col, dropna=False).size().reset_index(name="Sequences") if not sequences.empty else pd.DataFrame()
             if not group_mix.empty:
                 fig = px.bar(group_mix.sort_values("Sequences", ascending=False), x=group_col, y="Sequences", color=group_col, color_discrete_sequence=["#111827", "#c1121f", "#1d4ed8", "#15803d", "#b45309"])
                 fig.update_layout(showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
-                st.plotly_chart(polish_plotly_figure(fig), use_container_width=True, key=f"{key}_group_mix")
+                st.plotly_chart(polish_plotly_figure(fig), width="stretch")
 
     elif view == "Roles":
         left, right = st.columns(2)
@@ -858,13 +858,13 @@ def render_sequence_page(label: str) -> None:
             left, right = st.columns(2)
             with left:
                 section_header("Start Locations", f"Where {readable.lower()} possessions begin")
-                st.plotly_chart(polish_plotly_figure(starting_location_map_figure(filtered, f"{readable} start locations")), use_container_width=True, key=f"{key}_starts")
+                st.plotly_chart(polish_plotly_figure(starting_location_map_figure(filtered, f"{readable} start locations")), width="stretch")
             with right:
                 section_header("Shot Map", f"Shot quality generated from {readable.lower()}")
-                st.plotly_chart(polish_plotly_figure(shotmap_figure(filtered, f"{readable} shot map")), use_container_width=True, key=f"{key}_shots")
+                st.plotly_chart(polish_plotly_figure(shotmap_figure(filtered, f"{readable} shot map")), width="stretch")
         else:
             section_header("Report Shot View", "Static mplsoccer shot-quality figure")
-            st.pyplot(mplsoccer_shot_figure(filtered, readable), use_container_width=True)
+            st.pyplot(mplsoccer_shot_figure(filtered, readable), width="stretch")
 
     elif view == "Event Log":
         section_header("Sequence Log", "One row per match_id + possession + team")
@@ -952,12 +952,12 @@ def render_hops() -> None:
             chart_df = filtered.nlargest(min(15, len(filtered)), "Rating").sort_values("Rating")
             fig = px.bar(chart_df, x="Rating", y="Player", color="Team", orientation="h", color_discrete_sequence=["#111827", "#c1121f", "#1d4ed8", "#15803d", "#b45309"])
             fig.update_layout(height=520, margin=dict(l=10, r=10, t=30, b=10), legend_title_text="")
-            st.plotly_chart(polish_plotly_figure(fig), use_container_width=True, key="hops_top_rating")
+            st.plotly_chart(polish_plotly_figure(fig), width="stretch")
         with chart_right:
             section_header("Rating Distribution")
             hist = px.histogram(filtered, x="Rating", color="Tier", nbins=20, color_discrete_sequence=["#94a3b8", "#64748b", "#1d4ed8", "#c1121f"])
             hist.update_layout(height=520, margin=dict(l=10, r=10, t=30, b=10), legend_title_text="")
-            st.plotly_chart(polish_plotly_figure(hist), use_container_width=True, key="hops_rating_distribution")
+            st.plotly_chart(polish_plotly_figure(hist), width="stretch")
 
     elif view == "Player Log":
         section_header("Player Log", f"{len(filtered):,} players")
@@ -1077,18 +1077,18 @@ def render_delay() -> None:
             section_header("Delay Evidence")
             fig = px.histogram(filtered, x="delay_sec", nbins=24, color_discrete_sequence=["#111827"])
             fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False, xaxis_title="Delay seconds", yaxis_title="Corners")
-            st.plotly_chart(polish_plotly_figure(fig), use_container_width=True, key="delay_histogram")
+            st.plotly_chart(polish_plotly_figure(fig), width="stretch")
         with chart_right:
             section_header("Exit Event Evidence")
             box = px.box(filtered, x="out_event_type", y="delay_sec", color="out_event_type", color_discrete_sequence=["#111827", "#c1121f", "#1d4ed8", "#15803d", "#b45309"])
             box.update_layout(margin=dict(l=10, r=10, t=30, b=10), legend_title_text="", xaxis_title="", yaxis_title="Delay seconds")
-            st.plotly_chart(polish_plotly_figure(box), use_container_width=True, key="delay_exit_box")
+            st.plotly_chart(polish_plotly_figure(box), width="stretch")
 
         section_header("Match Comparison", "Average delay by match")
         avg_by_match = filtered.groupby("match", dropna=False)["delay_sec"].mean().reset_index(name="Avg delay").sort_values("Avg delay", ascending=False).head(20)
         match_fig = px.bar(avg_by_match.sort_values("Avg delay"), x="Avg delay", y="match", orientation="h", color_discrete_sequence=["#c1121f"])
         match_fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False, xaxis_title="Average delay (s)", yaxis_title="")
-        st.plotly_chart(polish_plotly_figure(match_fig), use_container_width=True, key="delay_match_comparison")
+        st.plotly_chart(polish_plotly_figure(match_fig), width="stretch")
 
     elif view == "Audit":
         section_header("Workbook Summary Sheet", "Match-level extraction performance")
