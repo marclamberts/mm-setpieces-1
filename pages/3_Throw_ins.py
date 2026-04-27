@@ -1,30 +1,16 @@
 from __future__ import annotations
 
+from pathlib import Path
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from mm_setpieces.utils import (
-    filter_by_sp_type,
-    generate_set_piece_insights,
-    hero_block,
-    inject_app_style,
-    kpi_row,
-    load_sp_data,
-    mplsoccer_shot_figure,
-    polish_plotly_figure,
-    prepare_sp_dataframe,
-    render_sidebar_menu,
-    render_analyst_table,
-    section_header,
-    shotmap_figure,
-    starting_location_map_figure,
-    throwin_origin_map_figure,
-    throwin_sequence_summary,
-    throwin_shooter_summary,
-    throwin_taker_summary,
-    throwin_zone_summary,
-)
+_PAGE_FILE = Path(__file__).resolve()
+_UTILS_FILE = _PAGE_FILE.parents[1] / "mm_setpieces" / "utils.py"
+_PAGE_GLOBALS = globals()
+_PAGE_GLOBALS["__file__"] = str(_UTILS_FILE)
+exec(_UTILS_FILE.read_text(), _PAGE_GLOBALS)
+_PAGE_GLOBALS["__file__"] = str(_PAGE_FILE)
 
 
 st.set_page_config(

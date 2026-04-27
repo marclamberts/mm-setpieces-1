@@ -1,8 +1,14 @@
 from __future__ import annotations
 
+from pathlib import Path
 import streamlit as st
 
-from mm_setpieces.utils import hero_block, inject_app_style, render_sidebar_menu, section_header
+_APP_FILE = Path(__file__).resolve()
+_UTILS_FILE = _APP_FILE.parent / "mm_setpieces" / "utils.py"
+_APP_GLOBALS = globals()
+_APP_GLOBALS["__file__"] = str(_UTILS_FILE)
+exec(_UTILS_FILE.read_text(), _APP_GLOBALS)
+_APP_GLOBALS["__file__"] = str(_APP_FILE)
 
 st.set_page_config(page_title="Michael Mackin Set Piece", page_icon="⚽", layout="wide", initial_sidebar_state="expanded")
 inject_app_style()

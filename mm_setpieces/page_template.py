@@ -1,39 +1,15 @@
 
 from __future__ import annotations
+from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from mm_setpieces.utils import (
-    build_summary_tables,
-    build_role_archetypes,
-    build_team_archetypes,
-    build_match_log,
-    build_pattern_library,
-    build_shooter_leaderboard,
-    build_taker_leaderboard,
-    build_team_leaderboard,
-    categorical_breakdown_figure,
-    dataframe_to_excel_bytes,
-    delivery_map_figure,
-    generate_set_piece_insights,
-    hero_block,
-    info_panel,
-    inject_app_style,
-    kpi_row,
-    load_sp_data,
-    minute_distribution_figure,
-    mplsoccer_delivery_figure,
-    mplsoccer_shot_figure,
-    prematch_report_pdf_bytes,
-    polish_plotly_figure,
-    prepare_sp_dataframe,
-    filter_by_sp_type,
-    render_sidebar_menu,
-    render_analyst_table,
-    section_header,
-    shotmap_figure,
-    starting_location_map_figure,
-)
+_TEMPLATE_FILE = Path(__file__).resolve()
+_UTILS_FILE = _TEMPLATE_FILE.with_name("utils.py")
+_TEMPLATE_GLOBALS = globals()
+_TEMPLATE_GLOBALS["__file__"] = str(_UTILS_FILE)
+exec(_UTILS_FILE.read_text(), _TEMPLATE_GLOBALS)
+_TEMPLATE_GLOBALS["__file__"] = str(_TEMPLATE_FILE)
 
 def _safe_sorted(values: pd.Series) -> list[str]:
     return sorted([str(v) for v in values.dropna().astype(str).unique().tolist() if str(v).strip()])

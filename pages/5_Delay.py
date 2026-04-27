@@ -1,18 +1,16 @@
 from __future__ import annotations
 
+from pathlib import Path
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from mm_setpieces.utils import (
-    dataframe_to_excel_bytes,
-    hero_block,
-    inject_app_style,
-    polish_plotly_figure,
-    render_analyst_table,
-    render_sidebar_menu,
-    section_header,
-)
+_PAGE_FILE = Path(__file__).resolve()
+_UTILS_FILE = _PAGE_FILE.parents[1] / "mm_setpieces" / "utils.py"
+_PAGE_GLOBALS = globals()
+_PAGE_GLOBALS["__file__"] = str(_UTILS_FILE)
+exec(_UTILS_FILE.read_text(), _PAGE_GLOBALS)
+_PAGE_GLOBALS["__file__"] = str(_PAGE_FILE)
 
 st.set_page_config(
     page_title="Michael Mackin Set Piece | Delay Analysis",
