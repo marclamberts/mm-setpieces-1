@@ -9,6 +9,13 @@ from mm_setpieces.utils import _read_excel_if_exists, _with_league
 
 
 APP_SECTIONS = ["Home", "Corners", "Freekicks", "Throw-ins", "HOPS", "Delay Analysis"]
+FILTER_PREFIXES = {
+    "Corners": "corners",
+    "Freekicks": "freekicks",
+    "Throw-ins": "throwins",
+    "HOPS": "hops",
+    "Delay Analysis": "delay",
+}
 
 
 st.set_page_config(
@@ -85,6 +92,16 @@ def set_section(section: str) -> None:
     st.rerun()
 
 
+def reset_current_filters(section: str) -> None:
+    prefix = FILTER_PREFIXES.get(section)
+    if prefix is None:
+        return
+    for key in list(st.session_state.keys()):
+        if key.startswith(f"{prefix}_"):
+            del st.session_state[key]
+    st.rerun()
+
+
 def render_single_app_sidebar() -> str:
     if "pending_section" in st.session_state:
         st.session_state["section_select"] = st.session_state.pop("pending_section")
@@ -102,6 +119,9 @@ def render_single_app_sidebar() -> str:
     st.session_state["section"] = section
     st.sidebar.markdown("---")
     st.sidebar.markdown(f"### {section} filters")
+    if section != "Home":
+        if st.sidebar.button("Reset filters", key=f"reset_{section}", use_container_width=True):
+            reset_current_filters(section)
     return section
 
 

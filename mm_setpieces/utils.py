@@ -885,6 +885,253 @@ def inject_app_style() -> None:
                     justify-content: flex-start;
                 }}
             }}
+
+            /* Modern single-file product layer */
+            .stApp {{
+                background:
+                    linear-gradient(180deg, #0b0f14 0, #0b0f14 7.25rem, #f4f6f8 7.25rem, #f4f6f8 100%) !important;
+                color: #0b0f14;
+            }}
+            .block-container {{
+                max-width: 1480px;
+                padding: 1rem 1.4rem 3rem;
+            }}
+            section[data-testid="stSidebar"],
+            section[data-testid="stSidebar"] > div,
+            div[data-testid="stSidebar"] {{
+                width: 17rem !important;
+                min-width: 17rem !important;
+                max-width: 17rem !important;
+            }}
+            div[data-testid="stSidebar"] {{
+                background: #ffffff !important;
+                border-right: 1px solid #e2e8f0;
+                box-shadow: 12px 0 36px rgba(15,23,42,0.05);
+            }}
+            div[data-testid="stSidebar"] h3 {{
+                font-size: .74rem;
+                letter-spacing: .12em;
+                text-transform: uppercase;
+                color: #64748b !important;
+                margin: .2rem 0 .45rem;
+            }}
+            div[data-testid="stSidebar"] [role="radiogroup"] {{
+                display: grid;
+                gap: .26rem;
+            }}
+            div[data-testid="stSidebar"] [role="radiogroup"] label {{
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                padding: .55rem .65rem;
+                min-height: 38px;
+                transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
+            }}
+            div[data-testid="stSidebar"] [role="radiogroup"] label:hover {{
+                background: #f1f5f9;
+                border-color: #cbd5e1;
+            }}
+            div[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) {{
+                background: #0b0f14;
+                border-color: #0b0f14;
+                box-shadow: inset 4px 0 0 #c1121f;
+            }}
+            div[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) span,
+            div[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) div {{
+                color: #ffffff !important;
+            }}
+            div[data-testid="stSidebar"] [data-baseweb="select"] > div,
+            div[data-testid="stSidebar"] [data-baseweb="input"] > div,
+            [data-baseweb="select"] > div,
+            [data-baseweb="input"] > div,
+            textarea {{
+                background: #ffffff !important;
+                border: 1px solid #d8dee8 !important;
+                border-radius: 8px !important;
+                box-shadow: 0 1px 0 rgba(15,23,42,0.03);
+            }}
+            div[data-testid="stSidebar"] [data-baseweb="select"] > div:focus-within,
+            div[data-testid="stSidebar"] [data-baseweb="input"] > div:focus-within,
+            [data-baseweb="select"] > div:focus-within,
+            [data-baseweb="input"] > div:focus-within,
+            textarea:focus {{
+                border-color: #c1121f !important;
+                box-shadow: 0 0 0 3px rgba(193,18,31,0.12) !important;
+            }}
+            div[data-testid="stSidebar"] [data-baseweb="tag"] {{
+                background: #111827 !important;
+                border-radius: 999px !important;
+            }}
+            div[data-testid="stSidebar"] [data-baseweb="tag"] span {{
+                color: #ffffff !important;
+            }}
+            .mm-hero {{
+                background: #0b0f14 !important;
+                border: 1px solid rgba(255,255,255,0.10);
+                border-radius: 8px;
+                box-shadow: 0 20px 60px rgba(2,6,23,0.20);
+                padding: 1.35rem 1.45rem;
+            }}
+            .mm-hero::before {{
+                height: 3px;
+                background: #c1121f;
+            }}
+            .mm-eyebrow {{
+                color: rgba(255,255,255,0.58) !important;
+                letter-spacing: .14em;
+            }}
+            .mm-title {{
+                font-size: clamp(1.9rem, 2.7vw, 2.9rem);
+                letter-spacing: 0;
+            }}
+            .mm-copy {{
+                color: rgba(248,250,252,0.78) !important;
+                max-width: 920px;
+            }}
+            .mm-feature-pill,
+            .mm-nav-card,
+            .mm-insight-card,
+            .mm-filter-summary,
+            .mm-command-panel,
+            .mm-workflow-card,
+            .mm-empty-state,
+            div[data-testid="stMetric"],
+            [data-testid="stDataFrameResizable"],
+            div[data-testid="stPlotlyChart"],
+            div[data-testid="stImage"],
+            div[data-testid="stPyplot"] {{
+                border-radius: 8px !important;
+                border: 1px solid #e1e7ef;
+                box-shadow: 0 10px 28px rgba(15,23,42,0.055);
+            }}
+            .mm-feature-pill,
+            .mm-nav-card,
+            .mm-insight-card,
+            .mm-workflow-card,
+            .mm-filter-summary,
+            div[data-testid="stMetric"],
+            [data-testid="stDataFrameResizable"],
+            div[data-testid="stPlotlyChart"],
+            div[data-testid="stImage"],
+            div[data-testid="stPyplot"] {{
+                background: #ffffff !important;
+            }}
+            .mm-feature-pill {{
+                border-left: 0;
+                border-top: 3px solid #0b0f14;
+            }}
+            .mm-nav-card {{
+                min-height: 188px;
+                padding: 1rem;
+            }}
+            .mm-nav-card::before {{
+                height: 3px;
+                background: #c1121f;
+            }}
+            .mm-nav-card:hover {{
+                transform: translateY(-2px);
+                border-color: rgba(193,18,31,0.35);
+                box-shadow: 0 16px 38px rgba(15,23,42,0.10);
+            }}
+            .mm-command-panel {{
+                background: #10151c !important;
+                border-color: rgba(255,255,255,0.10);
+            }}
+            .mm-section {{
+                margin: 1.25rem 0 .65rem;
+                padding: 0;
+            }}
+            .mm-section-title {{
+                font-size: .86rem;
+                letter-spacing: .11em;
+            }}
+            .mm-section-title::before {{
+                width: .45rem;
+                height: .45rem;
+                box-shadow: none;
+            }}
+            .mm-filter-summary {{
+                align-items: flex-start;
+                padding: .78rem .9rem;
+            }}
+            .mm-filter-count {{
+                font-size: .92rem;
+            }}
+            .mm-chip,
+            .mm-tiny {{
+                background: #f8fafc;
+                border-color: #e2e8f0;
+                border-radius: 999px;
+            }}
+            div[data-testid="stMetric"] {{
+                border-top: 3px solid #0b0f14;
+            }}
+            div[data-testid="stMetric"]::before {{
+                display: none;
+            }}
+            div[data-testid="stMetricValue"] {{
+                font-size: 1.42rem;
+            }}
+            div[data-testid="stTabs"] [role="tablist"] {{
+                border: 1px solid #e2e8f0;
+                box-shadow: none;
+            }}
+            div[data-testid="stTabs"] button[role="tab"] {{
+                border: 0 !important;
+                min-height: 34px;
+                text-transform: none;
+                letter-spacing: 0;
+                font-size: .84rem;
+                font-weight: 800;
+            }}
+            div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {{
+                background: #0b0f14 !important;
+                color: #ffffff !important;
+                box-shadow: inset 0 -3px 0 #c1121f;
+            }}
+            div.stButton > button,
+            div[data-testid="stDownloadButton"] > button {{
+                border-radius: 8px;
+                min-height: 38px;
+                letter-spacing: 0;
+                text-transform: none;
+                font-size: .84rem;
+                font-weight: 850;
+                background: #c1121f;
+                border-color: #c1121f;
+            }}
+            div.stButton > button[kind="secondary"],
+            div[data-testid="stDownloadButton"] > button[kind="secondary"] {{
+                background: #ffffff;
+                color: #0b0f14 !important;
+                border-color: #d8dee8;
+            }}
+            div.stButton > button:hover,
+            div[data-testid="stDownloadButton"] > button:hover {{
+                background: #991b1b;
+                border-color: #991b1b;
+            }}
+            .mm-table-note {{
+                color: #64748b;
+                font-size: .78rem;
+                letter-spacing: 0;
+                text-transform: none;
+            }}
+            @media (max-width: 760px) {{
+                .block-container {{
+                    padding: .75rem .85rem 2.2rem;
+                }}
+                section[data-testid="stSidebar"],
+                section[data-testid="stSidebar"] > div,
+                div[data-testid="stSidebar"] {{
+                    width: 100% !important;
+                    min-width: 100% !important;
+                    max-width: 100% !important;
+                }}
+                .mm-title {{
+                    font-size: 1.85rem;
+                }}
+            }}
         </style>
         """,
         unsafe_allow_html=True,
