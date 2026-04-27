@@ -40,6 +40,7 @@ if df.empty:
     st.warning("No freekick rows were found in Data/SWE SP.xlsx or Data/Czech SP.xlsx.")
     st.stop()
 
+leagues = ["All"] + _safe_sorted(df["League"]) if "League" in df.columns else ["All"]
 teams = ["All"] + _safe_sorted(df["Team"]) if "Team" in df.columns else ["All"]
 periods = ["All"] + _safe_sorted(df["game_period"]) if "game_period" in df.columns else ["All"]
 takers = _safe_sorted(df["Taker"]) if "Taker" in df.columns else []
@@ -47,6 +48,7 @@ shooters = _safe_sorted(df["Shooter"]) if "Shooter" in df.columns else []
 heights = _safe_sorted(df["Delivery height"]) if "Delivery height" in df.columns else []
 outcomes = _safe_sorted(df["Shot outcome"]) if "Shot outcome" in df.columns else []
 
+league = st.sidebar.selectbox("League", leagues)
 team = st.sidebar.selectbox("Team", teams)
 period = st.sidebar.selectbox("Game period", periods)
 sample = st.sidebar.radio("Sample", ["Total", "Last 10 games"], horizontal=False)
@@ -59,6 +61,8 @@ height_filter = st.sidebar.multiselect("Pass height", heights)
 outcome_filter = st.sidebar.multiselect("Shot outcome", outcomes)
 
 filtered = df.copy()
+if league != "All" and "League" in filtered.columns:
+    filtered = filtered[filtered["League"].eq(league)].copy()
 if team != "All" and "Team" in filtered.columns:
     filtered = filtered[filtered["Team"].eq(team)].copy()
 if period != "All" and "game_period" in filtered.columns:

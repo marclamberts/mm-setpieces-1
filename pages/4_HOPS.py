@@ -23,9 +23,19 @@ render_sidebar_menu("HOPS")
 
 @st.cache_data(show_spinner=False)
 def load_hops_data() -> pd.DataFrame:
-    df = _read_excel_if_exists("duel_hops_rating_summary.xlsx")
+    sources = [
+        _with_league(_read_excel_if_exists("SWE HOPS.xlsx"), "Allsvenskan"),
+        _with_league(_read_excel_if_exists("CZ HOPS.xlsx"), "Czech First League"),
+        _with_league(_read_excel_if_exists("duel_hops_rating_summary.xlsx"), "Unknown"),
+    ]
+    sources = [source for source in sources if not source.empty]
+    if not sources:
+        return pd.DataFrame(columns=["Player", "Team", "League", "Rating", "Percentile", "Tier"])
+
+    df = pd.concat(sources, ignore_index=True, sort=False)
     df["Player"] = df["Player"].fillna("Unknown")
     df["Team"] = df["Team"].fillna("Unknown")
+    df["League"] = df["League"].fillna("Unknown")
     df["Rating"] = pd.to_numeric(df["Rating"], errors="coerce")
     df = df.dropna(subset=["Rating"]).copy()
     df["Percentile"] = (df["Rating"].rank(pct=True) * 100).round(1)
@@ -44,11 +54,19 @@ hero_block(
     "Player and team duel profiles from the HOPS workbook, ranked by rating, percentile, and squad-level depth.",
 )
 
+if df.empty:
+    st.warning("No HOPS rows were found in Data/SWE HOPS.xlsx or Data/CZ HOPS.xlsx.")
+    st.stop()
+
+leagues = ["All"] + sorted(df["League"].dropna().astype(str).unique().tolist())
 teams = ["All"] + sorted(df["Team"].dropna().astype(str).unique().tolist())
+league = st.sidebar.selectbox("League", leagues)
 team = st.sidebar.selectbox("Team", teams)
 top_n = st.sidebar.slider("Show top / bottom players", min_value=5, max_value=30, value=10)
 
 filtered = df.copy()
+if league != "All":
+    filtered = filtered[filtered["League"] == league].copy()
 if team != "All":
     filtered = filtered[filtered["Team"] == team].copy()
 
@@ -87,7 +105,7 @@ c4.metric("Best rating", f"{best_rating:.3f}")
 c5.metric("Elite profiles", elite_count)
 
 team_summary = (
-    filtered.groupby("Team", dropna=False)
+    filtered.groupby(["League", "Team"], dropna=False)
     .agg(
         Players=("Player", "nunique"),
         Avg_Rating=("Rating", "mean"),
@@ -103,8 +121,8 @@ team_summary["Median_Rating"] = team_summary["Median_Rating"].round(3)
 team_summary["Best_Rating"] = team_summary["Best_Rating"].round(3)
 team_summary = team_summary.sort_values(["Avg_Rating", "Elite", "Strong_Plus"], ascending=False)
 
-top_players = filtered.nlargest(top_n, "Rating")[["Player", "Team", "Rating", "Percentile", "Tier"]].copy()
-bottom_players = filtered.nsmallest(top_n, "Rating")[["Player", "Team", "Rating", "Percentile", "Tier"]].copy()
+top_players = filtered.nlargest(top_n, "Rating")[["Player", "Team", "League", "Rating", "Percentile", "Tier"]].copy()
+bottom_players = filtered.nsmallest(top_n, "Rating")[["Player", "Team", "League", "Rating", "Percentile", "Tier"]].copy()
 
 overview_tab, charts_tab, data_tab = st.tabs(["Briefing", "Duel Evidence", "Player Log"])
 
@@ -181,6 +199,6 @@ with charts_tab:
 with data_tab:
     section_header("Player Log", f"{len(filtered):,} players")
     render_analyst_table(
-        filtered.sort_values("Rating", ascending=False)[["Player", "Team", "Rating", "Percentile", "Tier"]],
+        filtered.sort_values("Rating", ascending=False)[["Player", "Team", "League", "Rating", "Percentile", "Tier"]],
         height=620,
     )

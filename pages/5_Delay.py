@@ -29,6 +29,10 @@ def load_delay_workbook() -> dict[str, pd.DataFrame]:
 
 def _clean_delay_events(df: pd.DataFrame) -> pd.DataFrame:
     clean = df.copy()
+    if "League" not in clean.columns:
+        clean["League"] = "Unknown"
+    else:
+        clean["League"] = clean["League"].fillna("Unknown")
     for col in ["delay_sec", "out_time_sec", "corner_time_sec", "period", "out_value"]:
         if col in clean.columns:
             clean[col] = pd.to_numeric(clean[col], errors="coerce")
@@ -57,15 +61,19 @@ hero_block(
 if events.empty:
     st.warning("No delay events were found in corner_delays (1).xlsx.")
 else:
+    leagues = ["All"] + sorted(events["League"].dropna().astype(str).unique().tolist()) if "League" in events.columns else ["All"]
     matches = ["All"] + sorted(events["match"].dropna().astype(str).unique().tolist()) if "match" in events.columns else ["All"]
     periods = ["All"] + sorted(events["period"].dropna().astype(int).astype(str).unique().tolist()) if "period" in events.columns else ["All"]
     out_types = ["All"] + sorted(events["out_event_type"].dropna().astype(str).unique().tolist()) if "out_event_type" in events.columns else ["All"]
 
+    league = st.sidebar.selectbox("League", leagues)
     match = st.sidebar.selectbox("Match", matches)
     period = st.sidebar.selectbox("Period", periods)
     out_type = st.sidebar.selectbox("Exit event", out_types)
 
     filtered = events.copy()
+    if league != "All" and "League" in filtered.columns:
+        filtered = filtered[filtered["League"].astype(str).eq(league)].copy()
     if match != "All" and "match" in filtered.columns:
         filtered = filtered[filtered["match"].astype(str).eq(match)].copy()
     if period != "All" and "period" in filtered.columns:
