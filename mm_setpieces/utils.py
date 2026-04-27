@@ -978,14 +978,17 @@ def _fill_from_candidates(df: pd.DataFrame, target: str, candidates: list[str], 
     df[target] = df[target].fillna(default)
 
 def _cz_taker_team_map() -> dict[str, str]:
-    cz_sp = _read_csv_if_exists("CZ SP.csv")
-    if cz_sp.empty or "player.name" not in cz_sp.columns or "team.name" not in cz_sp.columns:
+    cz_sp = _read_excel_if_exists("Czech SP.xlsx")
+    if cz_sp.empty or "team.name" not in cz_sp.columns:
+        return {}
+    player_col = "player.name" if "player.name" in cz_sp.columns else "Taker" if "Taker" in cz_sp.columns else None
+    if player_col is None:
         return {}
     taker_team = (
-        cz_sp[["player.name", "team.name"]]
+        cz_sp[[player_col, "team.name"]]
         .dropna()
         .astype(str)
-        .groupby("player.name")["team.name"]
+        .groupby(player_col)["team.name"]
         .agg(lambda s: s.value_counts().idxmax())
     )
     return taker_team.to_dict()
@@ -1007,7 +1010,7 @@ def load_corner_data() -> pd.DataFrame:
 @st.cache_data(show_spinner=False)
 def load_swe_sp_data() -> pd.DataFrame:
     swe = _with_league(_read_excel_if_exists("SWE SP.xlsx"), "Allsvenskan")
-    cz = _with_league(_read_csv_if_exists("CZ SP.csv"), "Czech First League")
+    cz = _with_league(_read_excel_if_exists("Czech SP.xlsx"), "Czech First League")
     if not cz.empty and "SP_Type" not in cz.columns and "play_pattern.name" in cz.columns:
         cz["SP_Type"] = cz["play_pattern.name"]
     sources = [df for df in [swe, cz] if not df.empty]
