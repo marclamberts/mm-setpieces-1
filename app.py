@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from html import escape
 import pandas as pd
 import plotly.express as px
 import streamlit as st
@@ -87,6 +88,156 @@ def _clean_delay_events(df: pd.DataFrame) -> pd.DataFrame:
     return clean
 
 
+def _fmt_num(value: float, digits: int = 1) -> str:
+    if pd.isna(value):
+        value = 0
+    return f"{value:,.{digits}f}"
+
+
+def _mode_text(series: pd.Series) -> str:
+    values = series.dropna().astype(str)
+    values = values[values.str.strip().ne("") & values.str.lower().ne("unknown")]
+    if values.empty:
+        return "Unknown"
+    return values.value_counts().index[0]
+
+
+def _phase_snapshot(df: pd.DataFrame, phase: str, team: str) -> dict[str, object]:
+    if df.empty or "Team" not in df.columns:
+        return {"Phase": phase, "Rows": 0, "Set pieces": 0, "Shots": 0, "Goals": 0, "xG": 0.0, "Top taker": "Unknown", "Top shooter": "Unknown", "Shot rate %": 0.0}
+    part = df[df["Team"].astype(str).eq(team)].copy()
+    if part.empty:
+        return {"Phase": phase, "Rows": 0, "Set pieces": 0, "Shots": 0, "Goals": 0, "xG": 0.0, "Top taker": "Unknown", "Top shooter": "Unknown", "Shot rate %": 0.0}
+
+    if "possession" in part.columns:
+        set_pieces = int(part["possession"].nunique())
+        shot_part = part[part["is_shot"]] if "is_shot" in part.columns else part.iloc[0:0]
+        goal_part = part[part["is_goal"]] if "is_goal" in part.columns else part.iloc[0:0]
+        shots = int(shot_part["possession"].nunique()) if not shot_part.empty else 0
+        goals = int(goal_part["possession"].nunique()) if not goal_part.empty else 0
+    else:
+        set_pieces = int(len(part))
+        shots = int(part["is_shot"].sum()) if "is_shot" in part.columns else 0
+        goals = int(part["is_goal"].sum()) if "is_goal" in part.columns else 0
+
+    if set(["possession", "shot_x", "shot_y", "xg"]).issubset(part.columns):
+        xg_rows = part[part["shot_x"].notna()][["possession", "shot_x", "shot_y", "xg"]].drop_duplicates()
+        total_xg = float(xg_rows["xg"].fillna(0).sum()) if not xg_rows.empty else 0.0
+    else:
+        total_xg = float(part["xg"].fillna(0).sum()) if "xg" in part.columns else 0.0
+
+    return {
+        "Phase": phase,
+        "Rows": int(len(part)),
+        "Set pieces": set_pieces,
+        "Shots": shots,
+        "Goals": goals,
+        "xG": round(total_xg, 2),
+        "Top taker": _mode_text(part["Taker"]) if "Taker" in part.columns else "Unknown",
+        "Top shooter": _mode_text(part["Shooter"]) if "Shooter" in part.columns else "Unknown",
+        "Shot rate %": round((shots / set_pieces * 100) if set_pieces else 0, 1),
+    }
+
+
+@st.cache_data(show_spinner=False)
+def command_center_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    corners = load_prepared_sp_data("Corners")
+    freekicks = load_prepared_sp_data("Freekicks")
+    throwins = load_prepared_sp_data("Throw ins")
+    hops = load_hops_data()
+    return corners, freekicks, throwins, hops
+
+
+def _team_options(corners: pd.DataFrame, freekicks: pd.DataFrame, throwins: pd.DataFrame, hops: pd.DataFrame) -> list[str]:
+    teams: set[str] = set()
+    for df in [corners, freekicks, throwins, hops]:
+        if not df.empty and "Team" in df.columns:
+            teams.update(str(v) for v in df["Team"].dropna().unique() if str(v).strip() and str(v) != "Unknown")
+    return sorted(teams)
+
+
+def team_snapshot_table(team: str, corners: pd.DataFrame, freekicks: pd.DataFrame, throwins: pd.DataFrame) -> pd.DataFrame:
+    rows = [
+        _phase_snapshot(corners, "Corners", team),
+        _phase_snapshot(freekicks, "Freekicks", team),
+        _phase_snapshot(throwins, "Throw-ins", team),
+    ]
+    return pd.DataFrame(rows)
+
+
+def search_people(query: str, corners: pd.DataFrame, freekicks: pd.DataFrame, throwins: pd.DataFrame, hops: pd.DataFrame) -> pd.DataFrame:
+    query = query.strip().lower()
+    if len(query) < 2:
+        return pd.DataFrame()
+
+    rows: list[dict[str, object]] = []
+    for phase, df in [("Corners", corners), ("Freekicks", freekicks), ("Throw-ins", throwins)]:
+        if df.empty:
+            continue
+        for role, col in [("Taker", "Taker"), ("Shooter", "Shooter")]:
+            if col not in df.columns:
+                continue
+            matches = df[df[col].fillna("").astype(str).str.lower().str.contains(query, regex=False)]
+            if matches.empty:
+                continue
+            grouped = (
+                matches.groupby([col, "Team"], dropna=False)
+                .agg(Rows=(col, "size"), xG=("xg", "sum") if "xg" in matches.columns else (col, "size"))
+                .reset_index()
+                .sort_values(["Rows", "xG"], ascending=False)
+                .head(6)
+            )
+            for _, row in grouped.iterrows():
+                rows.append({
+                    "Name": row[col],
+                    "Team": row["Team"],
+                    "Role": role,
+                    "Dataset": phase,
+                    "Rows": int(row["Rows"]),
+                    "xG": round(float(row["xG"]), 2),
+                })
+
+    if not hops.empty and "Player" in hops.columns:
+        h = hops[hops["Player"].fillna("").astype(str).str.lower().str.contains(query, regex=False)]
+        for _, row in h.head(10).iterrows():
+            rows.append({
+                "Name": row["Player"],
+                "Team": row.get("Team", "Unknown"),
+                "Role": "HOPS profile",
+                "Dataset": "HOPS",
+                "Rows": 1,
+                "xG": np.nan,
+                "Rating": round(float(row.get("Rating", 0)), 3),
+                "Tier": row.get("Tier", ""),
+            })
+
+    return pd.DataFrame(rows)
+
+
+def selected_team_staff_read(team: str, snapshot: pd.DataFrame, hops: pd.DataFrame) -> tuple[str, str, str]:
+    if snapshot.empty or snapshot["Set pieces"].sum() == 0:
+        phase_read = "No restart volume found"
+        role_read = "No taker data found"
+    else:
+        best_phase = snapshot.sort_values(["xG", "Shots", "Set pieces"], ascending=False).iloc[0]
+        phase_read = f"{best_phase['Phase']} lead the threat profile: {_fmt_num(float(best_phase['xG']), 2)} xG from {int(best_phase['Shots'])} shots."
+        takers = snapshot["Top taker"].dropna().astype(str)
+        takers = takers[takers.ne("Unknown")]
+        role_read = f"Primary repeat name: {takers.value_counts().index[0]}." if not takers.empty else "No clear repeat taker yet."
+
+    if not hops.empty and "Team" in hops.columns:
+        team_hops = hops[hops["Team"].astype(str).eq(team)].sort_values("Rating", ascending=False)
+        if not team_hops.empty:
+            top = team_hops.iloc[0]
+            hops_read = f"{top['Player']} is the top HOPS profile ({float(top['Rating']):.3f}, {top.get('Tier', 'rated')})."
+        else:
+            hops_read = "No HOPS profile found for this team."
+    else:
+        hops_read = "No HOPS profile found for this team."
+
+    return phase_read, role_read, hops_read
+
+
 def set_section(section: str) -> None:
     st.session_state["pending_section"] = section
     st.rerun()
@@ -126,6 +277,9 @@ def render_single_app_sidebar() -> str:
 
 
 def render_home() -> None:
+    corners, freekicks, throwins, hops = command_center_data()
+    teams = _team_options(corners, freekicks, throwins, hops)
+
     hero_block(
         "Michael Mackin · Scouting Department",
         "Set-piece opposition desk",
@@ -193,6 +347,90 @@ def render_home() -> None:
         """,
         unsafe_allow_html=True,
     )
+
+    section_header("Command Center", "Fast team view, comparison, and player search")
+    if teams:
+        default_team = teams[0]
+        command_left, command_right = st.columns([1.05, .95])
+        with command_left:
+            selected_team = st.selectbox("Team snapshot", teams, index=teams.index(default_team), key="home_team_snapshot")
+            snapshot = team_snapshot_table(selected_team, corners, freekicks, throwins)
+            total_set_pieces = int(snapshot["Set pieces"].sum())
+            total_shots = int(snapshot["Shots"].sum())
+            total_goals = int(snapshot["Goals"].sum())
+            total_xg = float(snapshot["xG"].sum())
+            phase_read, role_read, hops_read = selected_team_staff_read(selected_team, snapshot, hops)
+            st.markdown(
+                f"""
+                <div class="mm-panel">
+                    <div class="mm-panel-title">{selected_team}</div>
+                    <div class="mm-panel-copy">All restart phases in one staff-ready snapshot.</div>
+                    <div class="mm-stat-grid">
+                        <div class="mm-stat-card">
+                            <div class="mm-stat-label">Set pieces</div>
+                            <div class="mm-stat-value">{total_set_pieces:,}</div>
+                        </div>
+                        <div class="mm-stat-card is-red">
+                            <div class="mm-stat-label">Shots</div>
+                            <div class="mm-stat-value">{total_shots:,}</div>
+                        </div>
+                        <div class="mm-stat-card">
+                            <div class="mm-stat-label">Goals</div>
+                            <div class="mm-stat-value">{total_goals:,}</div>
+                        </div>
+                        <div class="mm-stat-card is-red">
+                            <div class="mm-stat-label">Total xG</div>
+                            <div class="mm-stat-value">{_fmt_num(total_xg, 2)}</div>
+                        </div>
+                    </div>
+                    <div class="mm-profile-strip">
+                        <div class="mm-profile-card">
+                            <div class="mm-profile-title">Threat Read</div>
+                            <div class="mm-profile-copy">{escape(phase_read)}</div>
+                        </div>
+                        <div class="mm-profile-card">
+                            <div class="mm-profile-title">Role Read</div>
+                            <div class="mm-profile-copy">{escape(role_read)}</div>
+                        </div>
+                        <div class="mm-profile-card">
+                            <div class="mm-profile-title">Duel Read</div>
+                            <div class="mm-profile-copy">{escape(hops_read)}</div>
+                        </div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            render_analyst_table(snapshot, height=210)
+
+        with command_right:
+            compare_team = st.selectbox("Compare with", teams, index=min(1, len(teams) - 1), key="home_compare_team")
+            comparison = pd.concat(
+                [
+                    team_snapshot_table(selected_team, corners, freekicks, throwins).assign(Team=selected_team),
+                    team_snapshot_table(compare_team, corners, freekicks, throwins).assign(Team=compare_team),
+                ],
+                ignore_index=True,
+            )
+            fig = px.bar(
+                comparison,
+                x="Phase",
+                y="xG",
+                color="Team",
+                barmode="group",
+                color_discrete_sequence=["#0b0f14", "#c1121f"],
+                hover_data=["Set pieces", "Shots", "Goals", "Shot rate %"],
+            )
+            fig.update_layout(height=345, margin=dict(l=10, r=10, t=35, b=10), legend_title_text="")
+            st.plotly_chart(polish_plotly_figure(fig), use_container_width=True, key="home_team_compare")
+
+        search_query = st.text_input("Search player, taker, shooter, or HOPS profile", key="home_people_search", placeholder="Type at least 2 characters")
+        search_results = search_people(search_query, corners, freekicks, throwins, hops)
+        if not search_results.empty:
+            section_header("Search Results", "Across restarts and HOPS")
+            render_analyst_table(search_results, height=260)
+    else:
+        st.info("No team names were found in the bundled data.")
 
     section_header("Opposition Restart Desks", "Primary event analysis")
     cards = [

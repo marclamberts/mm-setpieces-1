@@ -792,6 +792,88 @@ def inject_app_style() -> None:
                 font-weight: 600;
                 line-height: 1.45;
             }}
+            .mm-command-center {{
+                display: grid;
+                grid-template-columns: minmax(0, 1.05fr) minmax(320px, .95fr);
+                gap: .85rem;
+                margin: .8rem 0 1.1rem;
+            }}
+            .mm-panel {{
+                background: #ffffff;
+                border: 1px solid #e1e7ef;
+                border-radius: 8px;
+                padding: .95rem;
+                box-shadow: 0 10px 28px rgba(15,23,42,0.055);
+            }}
+            .mm-panel-title {{
+                color: #0b0f14;
+                font-weight: 900;
+                font-size: .95rem;
+                margin-bottom: .2rem;
+            }}
+            .mm-panel-copy {{
+                color: #64748b;
+                font-weight: 600;
+                font-size: .82rem;
+                line-height: 1.42;
+                margin-bottom: .75rem;
+            }}
+            .mm-stat-grid {{
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: .55rem;
+                margin: .65rem 0 .85rem;
+            }}
+            .mm-stat-card {{
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-top: 3px solid #0b0f14;
+                border-radius: 8px;
+                padding: .72rem .78rem;
+            }}
+            .mm-stat-card.is-red {{
+                border-top-color: #c1121f;
+            }}
+            .mm-stat-label {{
+                color: #64748b;
+                font-size: .68rem;
+                font-weight: 850;
+                letter-spacing: .08em;
+                text-transform: uppercase;
+                margin-bottom: .18rem;
+            }}
+            .mm-stat-value {{
+                color: #0b0f14;
+                font-size: 1.25rem;
+                line-height: 1.1;
+                font-weight: 950;
+            }}
+            .mm-profile-strip {{
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: .55rem;
+                margin: .65rem 0;
+            }}
+            .mm-profile-card {{
+                background: #ffffff;
+                border: 1px solid #e2e8f0;
+                border-left: 3px solid #c1121f;
+                border-radius: 8px;
+                padding: .72rem .78rem;
+            }}
+            .mm-profile-title {{
+                color: #0b0f14;
+                font-weight: 900;
+                font-size: .86rem;
+                margin-bottom: .18rem;
+            }}
+            .mm-profile-copy {{
+                color: #64748b;
+                font-weight: 650;
+                font-size: .78rem;
+                line-height: 1.36;
+                overflow-wrap: anywhere;
+            }}
             .mm-scout-shell {{
                 display: grid;
                 grid-template-columns: minmax(0, 1.28fr) minmax(310px, .72fr);
@@ -874,7 +956,10 @@ def inject_app_style() -> None:
             }}
             @media (max-width: 980px) {{
                 .mm-scout-shell,
-                .mm-workflow-grid {{
+                .mm-workflow-grid,
+                .mm-command-center,
+                .mm-stat-grid,
+                .mm-profile-strip {{
                     grid-template-columns: 1fr;
                     align-items: flex-start;
                 }}
@@ -991,6 +1076,9 @@ def inject_app_style() -> None:
             .mm-feature-pill,
             .mm-nav-card,
             .mm-insight-card,
+            .mm-panel,
+            .mm-stat-card,
+            .mm-profile-card,
             .mm-filter-summary,
             .mm-command-panel,
             .mm-workflow-card,
@@ -1007,6 +1095,8 @@ def inject_app_style() -> None:
             .mm-feature-pill,
             .mm-nav-card,
             .mm-insight-card,
+            .mm-panel,
+            .mm-profile-card,
             .mm-workflow-card,
             .mm-filter-summary,
             div[data-testid="stMetric"],
