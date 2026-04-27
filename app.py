@@ -94,7 +94,7 @@ cards = [
         "Corners",
         "Corner delivery dossier",
         "Rank teams, takers, target zones, shot value, second-ball patterns, and match-ready delivery maps.",
-        "Allsvenskan - Corners 2025.xlsx",
+        "Data/Allsvenskan - Corners 2025.xlsx + Data/CZ - Corners 2025-2026.csv",
         "pages/1_Corners.py",
         "Open Corners",
     ),
@@ -102,7 +102,7 @@ cards = [
         "Freekicks",
         "Dead-ball origin dossier",
         "Free-kick origins, channel threat, taker tendencies, shooter value, and possession-level outcomes.",
-        "SWE SP.xlsx · From Free Kick",
+        "Data/SWE SP.xlsx + Data/CZ SP.csv · From Free Kick",
         "pages/2_Freekicks.py",
         "Open Freekicks",
     ),
@@ -110,7 +110,7 @@ cards = [
         "Throw ins",
         "Touchline restart dossier",
         "Territory, side bias, pressure profile, thrower output, and shot creation from throw-in sequences.",
-        "SWE SP.xlsx · From Throw In",
+        "Data/SWE SP.xlsx + Data/CZ SP.csv · From Throw In",
         "pages/3_Throw_ins.py",
         "Open Throw ins",
     ),
@@ -142,7 +142,7 @@ with s1:
             <div class="mm-card-kicker">Module · Duel model</div>
             <div class="mm-nav-title">HOPS</div>
             <div class="mm-nav-copy">Aerial/duel strength by player and team, with percentiles, tiers, elite profiles, and weak-side risk checks.</div>
-            <div class="mm-tiny">duel_hops_rating_summary.xlsx</div>
+            <div class="mm-tiny">Data/duel_hops_rating_summary.xlsx</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -157,7 +157,7 @@ with s2:
             <div class="mm-card-kicker">Module · Timing model</div>
             <div class="mm-nav-title">Delay Analysis</div>
             <div class="mm-nav-copy">Corner timing audit with delay bands, exit events, slow match profiles, and extraction reliability checks.</div>
-            <div class="mm-tiny">corner_delays (1).xlsx</div>
+            <div class="mm-tiny">Data/corner_delays (1).xlsx</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -189,4 +189,4 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-st.caption("Data routing: Corners use Allsvenskan - Corners 2025.xlsx. Freekicks and Throw ins use SWE SP.xlsx filtered by SP_Type.")
+st.caption("Data routing: source CSV/XLSX files live in Data/. Corners combine Allsvenskan and CZ corners; Freekicks and Throw ins combine SWE SP and CZ SP.")

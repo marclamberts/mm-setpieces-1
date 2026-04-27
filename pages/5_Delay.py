@@ -24,7 +24,7 @@ render_sidebar_menu("Delay Analysis")
 
 @st.cache_data(show_spinner=False)
 def load_delay_workbook() -> dict[str, pd.DataFrame]:
-    return pd.read_excel("corner_delays (1).xlsx", sheet_name=None)
+    return _read_excel_if_exists("corner_delays (1).xlsx", sheet_name=None)
 
 
 def _clean_delay_events(df: pd.DataFrame) -> pd.DataFrame:

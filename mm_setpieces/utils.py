@@ -15,6 +15,7 @@ PITCH_LENGTH = 120
 PITCH_WIDTH = 80
 HALF_START = 60
 BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR.parent / "Data"
 
 BLACK = "#0b0f14"
 RED = "#c1121f"
@@ -939,7 +940,7 @@ def minute_distribution_figure(df: pd.DataFrame, title: str) -> go.Figure:
     return polish_plotly_figure(fig)
 
 def _candidate_paths(filename: str) -> list[Path]:
-    return [BASE_DIR / filename, BASE_DIR.parent / filename, Path(filename)]
+    return [DATA_DIR / filename, BASE_DIR.parent / filename, BASE_DIR / filename, Path(filename)]
 
 def _read_excel_if_exists(filename: str, sheet_name=0) -> pd.DataFrame:
     for path in _candidate_paths(filename):
@@ -947,13 +948,39 @@ def _read_excel_if_exists(filename: str, sheet_name=0) -> pd.DataFrame:
             return pd.read_excel(path, sheet_name=sheet_name)
     return pd.DataFrame()
 
+def _read_csv_if_exists(filename: str) -> pd.DataFrame:
+    for path in _candidate_paths(filename):
+        if path.exists():
+            return pd.read_csv(path)
+    return pd.DataFrame()
+
+def _with_league(df: pd.DataFrame, league: str) -> pd.DataFrame:
+    if df.empty:
+        return df
+    df = df.copy()
+    if "League" not in df.columns:
+        df["League"] = league
+    else:
+        df["League"] = df["League"].fillna(league)
+    return df
+
 @st.cache_data(show_spinner=False)
 def load_corner_data() -> pd.DataFrame:
-    return _read_excel_if_exists("Allsvenskan - Corners 2025.xlsx").copy()
+    sources = [
+        _with_league(_read_excel_if_exists("Allsvenskan - Corners 2025.xlsx"), "Allsvenskan"),
+        _with_league(_read_csv_if_exists("CZ - Corners 2025-2026.csv"), "Czech First League"),
+    ]
+    sources = [df for df in sources if not df.empty]
+    return pd.concat(sources, ignore_index=True, sort=False) if sources else pd.DataFrame()
 
 @st.cache_data(show_spinner=False)
 def load_swe_sp_data() -> pd.DataFrame:
-    return _read_excel_if_exists("SWE SP.xlsx").copy()
+    swe = _with_league(_read_excel_if_exists("SWE SP.xlsx"), "Allsvenskan")
+    cz = _with_league(_read_csv_if_exists("CZ SP.csv"), "Czech First League")
+    if not cz.empty and "SP_Type" not in cz.columns and "play_pattern.name" in cz.columns:
+        cz["SP_Type"] = cz["play_pattern.name"]
+    sources = [df for df in [swe, cz] if not df.empty]
+    return pd.concat(sources, ignore_index=True, sort=False) if sources else pd.DataFrame()
 
 @st.cache_data(show_spinner=False)
 def load_sp_data(label: str) -> pd.DataFrame:
@@ -1006,10 +1033,10 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
         _ensure_column(df, "Match", ["Match"], "Unknown")
         _ensure_column(df, "minute", ["minute", "Minute"], 0)
         _ensure_column(df, "second", ["second", "Second"], 0)
-        _ensure_column(df, "Technique", ["Technique", "pass.technique.name"], "Unknown")
-        _ensure_column(df, "Delivery height", ["Delivery height", "pass.height.name"], "Unknown")
-        _ensure_column(df, "Delivery outcome", ["SP_outcome", "Delivery outcome", "pass.outcome.name"], "Unknown")
-        _ensure_column(df, "Shot outcome", ["Shot outcome", "shot.outcome.name"], "No shot")
+        _ensure_column(df, "Technique", ["Technique", "pass.technique.name", "pass_technique"], "Unknown")
+        _ensure_column(df, "Delivery height", ["Delivery height", "pass.height.name", "pass_height"], "Unknown")
+        _ensure_column(df, "Delivery outcome", ["SP_outcome", "Delivery outcome", "pass.outcome.name", "pass_outcome"], "Unknown")
+        _ensure_column(df, "Shot outcome", ["Shot outcome", "shot.outcome.name", "shot_outcome"], "No shot")
         _ensure_column(df, "Shooter", ["Shooter"], "Unknown")
         _ensure_column(df, "Taker", ["Taker"], "Unknown")
         _ensure_column(df, "League", ["League"], "Allsvenskan")
@@ -1062,9 +1089,9 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
 
     _ensure_column(df, "Team", ["Team", "team.name"], "Unknown")
     _ensure_column(df, "Match", ["Match"], "Unknown")
-    _ensure_column(df, "Technique", ["Technique", "type.name"], "Unknown")
+    _ensure_column(df, "Technique", ["Technique", "type.name", "pass.technique.name"], "Unknown")
     _ensure_column(df, "Delivery height", ["Delivery height", "pass.height.name"], "Unknown")
-    _ensure_column(df, "Delivery outcome", ["Delivery outcome", "Metrics"], "Unknown")
+    _ensure_column(df, "Delivery outcome", ["Delivery outcome", "Metrics", "pass.outcome.name"], "Unknown")
     _ensure_column(df, "Shot outcome", ["Shot outcome", "shot.outcome.name"], "No shot")
     _ensure_column(df, "Taker", ["Taker"], "Unknown")
     _ensure_column(df, "Shooter", ["Shooter"], "Unknown")

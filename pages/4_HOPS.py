@@ -23,7 +23,7 @@ render_sidebar_menu("HOPS")
 
 @st.cache_data(show_spinner=False)
 def load_hops_data() -> pd.DataFrame:
-    df = pd.read_excel("duel_hops_rating_summary.xlsx")
+    df = _read_excel_if_exists("duel_hops_rating_summary.xlsx")
     df["Player"] = df["Player"].fillna("Unknown")
     df["Team"] = df["Team"].fillna("Unknown")
     df["Rating"] = pd.to_numeric(df["Rating"], errors="coerce")
