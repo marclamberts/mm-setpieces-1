@@ -51,11 +51,18 @@ def inject_app_style() -> None:
                     linear-gradient(180deg, #eef1f5 0%, #f7f8fa 260px, #f6f7f9 100%);
                 color: var(--mm-black);
             }}
-            header[data-testid="stHeader"],
             footer,
             #MainMenu {{
                 visibility: hidden;
                 height: 0;
+            }}
+            header[data-testid="stHeader"] {{
+                visibility: visible !important;
+                background: transparent !important;
+                height: 2.6rem !important;
+            }}
+            header[data-testid="stHeader"]::before {{
+                background: transparent !important;
             }}
             html, body, [class*="css"] {{
                 font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
