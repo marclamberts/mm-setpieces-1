@@ -964,6 +964,31 @@ def _with_league(df: pd.DataFrame, league: str) -> pd.DataFrame:
         df["League"] = df["League"].fillna(league)
     return df
 
+def _canonical_sp_type(value: object) -> str:
+    text = str(value).strip()
+    lowered = text.lower()
+    if "free kick" in lowered or "freekick" in lowered:
+        return "From Free Kick"
+    if "throw in" in lowered or "throw-in" in lowered or "throwin" in lowered:
+        return "From Throw In"
+    if "corner" in lowered:
+        return "From Corner"
+    return text
+
+def _canonical_sp_type_series(series: pd.Series) -> pd.Series:
+    return series.map(_canonical_sp_type)
+
+def _load_czech_sp_data() -> pd.DataFrame:
+    cz = _read_excel_if_exists("Czech SP.xlsx")
+    if cz.empty:
+        return cz
+    cz = cz.copy()
+    if "SP_Type" not in cz.columns and "play_pattern.name" in cz.columns:
+        cz["SP_Type"] = cz["play_pattern.name"]
+    if "SP_Type" in cz.columns:
+        cz["SP_Type"] = _canonical_sp_type_series(cz["SP_Type"])
+    return cz
+
 def _fill_from_candidates(df: pd.DataFrame, target: str, candidates: list[str], default=np.nan) -> None:
     if target not in df.columns:
         df[target] = pd.Series(np.nan, index=df.index, dtype="object")
@@ -978,7 +1003,7 @@ def _fill_from_candidates(df: pd.DataFrame, target: str, candidates: list[str], 
     df[target] = df[target].fillna(default)
 
 def _cz_taker_team_map() -> dict[str, str]:
-    cz_sp = _read_excel_if_exists("Czech SP.xlsx")
+    cz_sp = _load_czech_sp_data()
     if cz_sp.empty or "team.name" not in cz_sp.columns:
         return {}
     player_col = "player.name" if "player.name" in cz_sp.columns else "Taker" if "Taker" in cz_sp.columns else None
@@ -1010,9 +1035,10 @@ def load_corner_data() -> pd.DataFrame:
 @st.cache_data(show_spinner=False)
 def load_swe_sp_data() -> pd.DataFrame:
     swe = _with_league(_read_excel_if_exists("SWE SP.xlsx"), "Allsvenskan")
-    cz = _with_league(_read_excel_if_exists("Czech SP.xlsx"), "Czech First League")
-    if not cz.empty and "SP_Type" not in cz.columns and "play_pattern.name" in cz.columns:
-        cz["SP_Type"] = cz["play_pattern.name"]
+    if not swe.empty and "SP_Type" in swe.columns:
+        swe = swe.copy()
+        swe["SP_Type"] = _canonical_sp_type_series(swe["SP_Type"])
+    cz = _with_league(_load_czech_sp_data(), "Czech First League")
     sources = [df for df in [swe, cz] if not df.empty]
     return pd.concat(sources, ignore_index=True, sort=False) if sources else pd.DataFrame()
 
@@ -1031,7 +1057,8 @@ def load_sp_data(label: str) -> pd.DataFrame:
     }
     sp_type = mapping.get(label)
     if sp_type:
-        return raw[raw["SP_Type"].astype(str).str.strip().eq(sp_type)].copy()
+        sp = _canonical_sp_type_series(raw["SP_Type"])
+        return raw[sp.eq(sp_type)].copy()
     return pd.DataFrame()
 
 
@@ -1045,7 +1072,7 @@ def filter_by_sp_type(df: pd.DataFrame, label: str) -> pd.DataFrame:
     wanted = mapping.get(label)
     if not wanted:
         return df
-    sp = df["SP_Type"].astype(str).str.strip()
+    sp = _canonical_sp_type_series(df["SP_Type"])
     return df[sp.eq(wanted)].copy()
 
 def _ensure_column(df: pd.DataFrame, target: str, candidates: list[str], default=np.nan):
