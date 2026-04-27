@@ -129,7 +129,7 @@ def render_page(label: str) -> None:
     if label == "Corners":
         st.caption("Corners use Data/Allsvenskan - Corners 2025.xlsx and Data/CZ - Corners 2025-2026.csv.")
     else:
-        st.caption(f"{label} use Data/SWE SP.xlsx and Data/CZ SP.csv filtered by SP_Type/play pattern.")
+        st.caption(f"{label} use Data/SWE SP.xlsx and Data/Czech SP.xlsx filtered by SP_Type/play pattern.")
 
     kpi_row(filtered)
     info_panel(filtered)

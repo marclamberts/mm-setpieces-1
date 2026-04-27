@@ -37,7 +37,7 @@ hero_block(
 )
 
 if df.empty:
-    st.warning("No throw-in rows were found in Data/SWE SP.xlsx or Data/CZ SP.csv.")
+    st.warning("No throw-in rows were found in Data/SWE SP.xlsx or Data/Czech SP.xlsx.")
     st.stop()
 
 teams = ["All"] + _safe_sorted(df["Team"]) if "Team" in df.columns else ["All"]
@@ -78,7 +78,7 @@ if outcome_filter and "Shot outcome" in filtered.columns:
 
 sequences = throwin_sequence_summary(filtered)
 
-st.caption("Source: Data/SWE SP.xlsx and Data/CZ SP.csv filtered to From Throw In. Sequence tables group rows by match_id, possession, and team.")
+st.caption("Source: Data/SWE SP.xlsx and Data/Czech SP.xlsx filtered to From Throw In. Sequence tables group rows by match_id, possession, and team.")
 kpi_row(filtered)
 
 seq_count = int(len(sequences))
