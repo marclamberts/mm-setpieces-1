@@ -892,14 +892,8 @@ def inject_app_style() -> None:
 
 
 def render_sidebar_menu(active: str = "Home", filters: list[tuple[str, str]] | None = None) -> None:
-    st.sidebar.markdown("### Pages")
-    st.sidebar.page_link("app.py", label="Home")
-    st.sidebar.page_link("pages/1_Corners.py", label="Corners")
-    st.sidebar.page_link("pages/2_Freekicks.py", label="Freekicks")
-    st.sidebar.page_link("pages/3_Throw_ins.py", label="Throw-ins")
-    st.sidebar.page_link("pages/4_HOPS.py", label="HOPS")
-    st.sidebar.page_link("pages/5_Delay.py", label="Delay Analysis")
-    st.sidebar.markdown("---")
+    st.sidebar.markdown("### Desk")
+    st.sidebar.caption("Use the single app selector in app.py to switch views.")
     st.sidebar.markdown(f"### {active} filters")
     if filters:
         for label, value in filters:
