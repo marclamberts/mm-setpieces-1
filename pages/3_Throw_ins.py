@@ -27,8 +27,7 @@ def _safe_sorted(values: pd.Series) -> list[str]:
     return sorted([str(v) for v in values.dropna().astype(str).unique().tolist() if str(v).strip()])
 
 
-raw = load_sp_data("Throw ins")
-df = filter_by_sp_type(prepare_sp_dataframe(raw, label="Throw ins"), "Throw ins")
+df = load_prepared_sp_data("Throw ins")
 
 hero_block(
     "Touchline restart intelligence",

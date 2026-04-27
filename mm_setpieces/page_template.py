@@ -85,8 +85,8 @@ def render_page(label: str) -> None:
     inject_app_style()
     render_sidebar_menu(label)
 
-    raw = load_sp_data(label)
-    if raw.empty:
+    df = load_prepared_sp_data(label)
+    if df.empty:
         hero_block(
             "Set piece analysis",
             label,
@@ -94,10 +94,7 @@ def render_page(label: str) -> None:
         )
         return
 
-    df = prepare_sp_dataframe(raw, label=label)
-    df = filter_by_sp_type(df, label)
     filtered = _filter_page_data(df, label)
-    filtered = filter_by_sp_type(filtered, label)
 
     hero_block(
         "Set-piece intelligence",

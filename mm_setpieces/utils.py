@@ -871,6 +871,7 @@ def polish_plotly_figure(fig: go.Figure) -> go.Figure:
     return fig
 
 
+@st.cache_data(show_spinner=False)
 def dataframe_to_excel_bytes(df: pd.DataFrame, sheet_name: str = "Data") -> bytes:
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
@@ -1231,6 +1232,12 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
         else:
             df["match_rank"] = 999
     return df
+
+
+@st.cache_data(show_spinner=False)
+def load_prepared_sp_data(label: str) -> pd.DataFrame:
+    raw = load_sp_data(label)
+    return filter_by_sp_type(prepare_sp_dataframe(raw, label=label), label)
 
 
 def _is_swe_sp_df(df: pd.DataFrame) -> bool:

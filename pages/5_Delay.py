@@ -27,6 +27,7 @@ def load_delay_workbook() -> dict[str, pd.DataFrame]:
     return _read_excel_if_exists("corner_delays (1).xlsx", sheet_name=None)
 
 
+@st.cache_data(show_spinner=False)
 def _clean_delay_events(df: pd.DataFrame) -> pd.DataFrame:
     clean = df.copy()
     if "League" not in clean.columns:

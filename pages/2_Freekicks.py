@@ -27,8 +27,7 @@ def _safe_sorted(values: pd.Series) -> list[str]:
     return sorted([str(v) for v in values.dropna().astype(str).unique().tolist() if str(v).strip()])
 
 
-raw = load_sp_data("Freekicks")
-df = filter_by_sp_type(prepare_sp_dataframe(raw, label="Freekicks"), "Freekicks")
+df = load_prepared_sp_data("Freekicks")
 
 hero_block(
     "Dead-ball intelligence",
