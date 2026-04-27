@@ -18,7 +18,7 @@ def _safe_sorted(values: pd.Series) -> list[str]:
 def _cached_report_pdf(df: pd.DataFrame, label: str, opponent: str) -> bytes:
     return prematch_report_pdf_bytes(df, label, opponent)
 
-def _filter_page_data(df: pd.DataFrame, label: str) -> pd.DataFrame:
+def _filter_page_data(df: pd.DataFrame, label: str) -> tuple[pd.DataFrame, list[tuple[str, object]]]:
     teams = ["All"] + _safe_sorted(df["Team"]) if "Team" in df.columns else ["All"]
     leagues = ["All"] + _safe_sorted(df["League"]) if "League" in df.columns else ["All"]
     sides = ["All"] + _safe_sorted(df["side"]) if "side" in df.columns else ["All"]
@@ -73,7 +73,20 @@ def _filter_page_data(df: pd.DataFrame, label: str) -> pd.DataFrame:
     if only_shots and "is_shot" in filtered.columns:
         filtered = filtered[filtered["is_shot"]]
 
-    return filtered
+    filters = [
+        ("Team", team),
+        ("League", league),
+        ("Sample", sample),
+        ("Side", side),
+        ("Period", time_in_game),
+        ("Minutes", f"{minute_range[0]}-{minute_range[1]}" if minute_range != (minute_min, minute_max) else "All"),
+        ("Taker", taker_filter),
+        ("Technique", technique_filter),
+        ("Height", height_filter),
+        ("Shot outcome", shot_outcome_filter),
+        ("Shot only", "Yes" if only_shots else "All"),
+    ]
+    return filtered, filters
 
 def render_page(label: str) -> None:
     st.set_page_config(
@@ -94,7 +107,7 @@ def render_page(label: str) -> None:
         )
         return
 
-    filtered = _filter_page_data(df, label)
+    filtered, filters = _filter_page_data(df, label)
 
     hero_block(
         "Set-piece intelligence",
@@ -127,6 +140,10 @@ def render_page(label: str) -> None:
         st.caption("Corners use Data/Allsvenskan - Corners 2025.xlsx and Data/CZ - Corners 2025-2026.csv.")
     else:
         st.caption(f"{label} use Data/SWE SP.xlsx and Data/Czech SP.xlsx filtered by SP_Type/play pattern.")
+
+    render_filter_summary(label, len(df), len(filtered), filters)
+    if filtered.empty:
+        render_empty_filter_state()
 
     kpi_row(filtered)
     info_panel(filtered)

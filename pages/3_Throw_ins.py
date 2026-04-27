@@ -80,8 +80,22 @@ if outcome_filter and "Shot outcome" in filtered.columns:
     filtered = filtered[filtered["Shot outcome"].isin(outcome_filter)].copy()
 
 sequences = throwin_sequence_summary(filtered)
+filters = [
+    ("League", league),
+    ("Team", team),
+    ("Period", period),
+    ("Sample", sample),
+    ("Minutes", f"{minute_range[0]}-{minute_range[1]}" if minute_range != (minute_min, minute_max) else "All"),
+    ("Thrower", taker_filter),
+    ("Shooter", shooter_filter),
+    ("Height", height_filter),
+    ("Shot outcome", outcome_filter),
+]
 
 st.caption("Source: Data/SWE SP.xlsx and Data/Czech SP.xlsx filtered to From Throw In. Sequence tables group rows by match_id, possession, and team.")
+render_filter_summary("Throw-ins", len(df), len(filtered), filters)
+if filtered.empty:
+    render_empty_filter_state()
 kpi_row(filtered)
 
 seq_count = int(len(sequences))

@@ -85,8 +85,12 @@ else:
     if not filtered.empty and "delay_sec" in filtered.columns:
         lo = float(filtered["delay_sec"].min())
         hi = float(filtered["delay_sec"].max())
+        full_delay_range = (lo, hi)
         delay_range = st.sidebar.slider("Delay range (seconds)", min_value=lo, max_value=hi, value=(lo, hi))
         filtered = filtered[filtered["delay_sec"].between(delay_range[0], delay_range[1])].copy()
+    else:
+        full_delay_range = None
+        delay_range = None
 
     nav_left, nav_mid, nav_right = st.columns([0.9, 1.1, 1.1])
     with nav_left:
@@ -109,6 +113,15 @@ else:
             use_container_width=True,
         )
 
+    filters = [
+        ("League", league),
+        ("Match", match),
+        ("Period", period),
+        ("Exit", out_type),
+        ("Delay", f"{delay_range[0]:.1f}-{delay_range[1]:.1f}s" if delay_range and delay_range != full_delay_range else "All"),
+    ]
+    render_filter_summary("Delay Analysis", len(events), len(filtered), filters)
+
     total_events = int(len(filtered))
     matches_count = int(filtered["match"].nunique()) if "match" in filtered.columns else 0
     avg_delay = float(filtered["delay_sec"].mean()) if "delay_sec" in filtered.columns and not filtered.empty else 0.0
@@ -123,7 +136,7 @@ else:
     c5.metric("90th percentile", f"{p90_delay:.1f}s")
 
     if filtered.empty:
-        st.warning("No rows match the active delay filters.")
+        render_empty_filter_state()
         st.stop()
 
     view = st.radio("View", ["Briefing", "Timing Evidence", "Audit", "Event Log"], horizontal=True)

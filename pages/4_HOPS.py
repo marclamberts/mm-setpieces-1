@@ -91,6 +91,15 @@ with nav_right:
         use_container_width=True,
     )
 
+render_filter_summary(
+    "HOPS",
+    len(df),
+    len(filtered),
+    [("League", league), ("Team", team), ("Rows", f"Top/bottom {top_n}")],
+)
+if filtered.empty:
+    render_empty_filter_state()
+
 player_count = int(filtered["Player"].nunique())
 team_count = int(filtered["Team"].nunique())
 avg_rating = float(filtered["Rating"].mean()) if not filtered.empty else 0.0

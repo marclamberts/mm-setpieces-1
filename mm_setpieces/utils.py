@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from io import BytesIO
+from html import escape
 import os
 import tempfile
 import textwrap
@@ -380,7 +381,7 @@ def inject_app_style() -> None:
                 border-radius: 6px;
                 border: 1px solid var(--mm-red);
                 background: var(--mm-red);
-                color: var(--mm-blue) !important;
+                color: #ffffff !important;
                 font-weight: 800;
                 padding: .58rem .9rem;
                 transition: none;
@@ -388,15 +389,15 @@ def inject_app_style() -> None:
             }}
             div.stButton > button:hover {{
                 border-color: var(--mm-red);
-                background: var(--mm-red);
-                color: var(--mm-blue) !important;
+                background: var(--mm-red-dark);
+                color: #ffffff !important;
                 transform: none;
             }}
             div[data-testid="stDownloadButton"] > button {{
                 border-radius: 6px;
                 background: var(--mm-red);
                 border-color: var(--mm-red);
-                color: var(--mm-blue) !important;
+                color: #ffffff !important;
                 font-weight: 800;
             }}
             div[data-testid="stMetric"] {{
@@ -440,12 +441,13 @@ def inject_app_style() -> None:
                 padding: .35rem .85rem;
                 background: var(--mm-red) !important;
                 border: 1px solid var(--mm-red) !important;
-                color: var(--mm-blue) !important;
+                color: #ffffff !important;
             }}
             div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {{
-                background: var(--mm-red) !important;
-                color: var(--mm-blue) !important;
-                box-shadow: 0 0 0 2px rgba(29,78,216,0.22) inset;
+                background: #0f172a !important;
+                border-color: #0f172a !important;
+                color: #ffffff !important;
+                box-shadow: 0 0 0 2px rgba(255,255,255,0.38) inset;
             }}
             div[data-testid="stPlotlyChart"],
             div[data-testid="stImage"],
@@ -669,9 +671,9 @@ def inject_app_style() -> None:
                 box-shadow: 0 14px 34px rgba(15,23,42,0.15);
             }}
             div[data-testid="stTabs"] button[role="tab"] {{
-                background: #c1121f !important;
-                border: 1px solid #c1121f !important;
-                color: #1d4ed8 !important;
+                background: #ffffff !important;
+                border: 1px solid #cbd5e1 !important;
+                color: #0f172a !important;
                 border-radius: 8px;
                 font-size: .86rem;
                 text-transform: uppercase;
@@ -680,15 +682,16 @@ def inject_app_style() -> None:
             }}
             div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {{
                 background: #c1121f !important;
-                color: #1d4ed8 !important;
-                box-shadow: 0 0 0 2px rgba(29,78,216,0.24) inset;
+                border-color: #c1121f !important;
+                color: #ffffff !important;
+                box-shadow: none;
             }}
             div[data-testid="stTabs"] button[role="tab"]:hover,
             div[data-testid="stTabs"] button[role="tab"]:focus,
             div[data-testid="stTabs"] button[role="tab"]:active {{
-                background: #c1121f !important;
-                border-color: #c1121f !important;
-                color: #1d4ed8 !important;
+                background: #f8fafc !important;
+                border-color: #94a3b8 !important;
+                color: #0f172a !important;
             }}
             div[data-testid="stPlotlyChart"],
             div[data-testid="stImage"],
@@ -705,7 +708,7 @@ def inject_app_style() -> None:
                 border-radius: 8px;
                 background: #c1121f;
                 border-color: #c1121f;
-                color: #1d4ed8 !important;
+                color: #ffffff !important;
                 text-transform: uppercase;
                 letter-spacing: .04em;
                 font-size: .78rem;
@@ -713,9 +716,9 @@ def inject_app_style() -> None:
             }}
             div.stButton > button:hover,
             div[data-testid="stDownloadButton"] > button:hover {{
-                background: #c1121f;
-                border-color: #c1121f;
-                color: #1d4ed8 !important;
+                background: #991b1b;
+                border-color: #991b1b;
+                color: #ffffff !important;
                 transform: none;
                 box-shadow: none;
             }}
@@ -725,8 +728,69 @@ def inject_app_style() -> None:
             div[data-testid="stDownloadButton"] > button:active {{
                 background: #c1121f !important;
                 border-color: #c1121f !important;
-                color: #1d4ed8 !important;
-                box-shadow: 0 0 0 3px rgba(29,78,216,0.18) !important;
+                color: #ffffff !important;
+                box-shadow: 0 0 0 3px rgba(193,18,31,0.18) !important;
+            }}
+            .mm-filter-summary {{
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: .85rem;
+                background: #ffffff;
+                border: 1px solid rgba(15,23,42,0.12);
+                border-radius: 10px;
+                padding: .8rem .9rem;
+                margin: .8rem 0 1rem;
+                box-shadow: 0 12px 30px rgba(15,23,42,0.06);
+            }}
+            .mm-filter-count {{
+                color: #0f172a;
+                font-size: .96rem;
+                font-weight: 900;
+                white-space: nowrap;
+            }}
+            .mm-filter-chips {{
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: flex-end;
+                gap: .38rem;
+            }}
+            .mm-chip {{
+                display: inline-flex;
+                align-items: center;
+                gap: .25rem;
+                max-width: 21rem;
+                color: #334155;
+                background: #f1f5f9;
+                border: 1px solid #dbe3ee;
+                border-radius: 999px;
+                padding: .28rem .55rem;
+                font-size: .72rem;
+                font-weight: 800;
+                line-height: 1.15;
+                overflow-wrap: anywhere;
+            }}
+            .mm-chip strong {{
+                color: #0f172a;
+            }}
+            .mm-empty-state {{
+                background: #ffffff;
+                border: 1px solid rgba(193,18,31,0.18);
+                border-left: 4px solid #c1121f;
+                border-radius: 10px;
+                padding: 1rem;
+                margin: .8rem 0 1rem;
+                color: #0f172a;
+                box-shadow: 0 12px 30px rgba(15,23,42,0.06);
+            }}
+            .mm-empty-title {{
+                font-weight: 900;
+                margin-bottom: .25rem;
+            }}
+            .mm-empty-copy {{
+                color: #475569;
+                font-weight: 600;
+                line-height: 1.45;
             }}
             .mm-scout-shell {{
                 display: grid;
@@ -812,6 +876,13 @@ def inject_app_style() -> None:
                 .mm-scout-shell,
                 .mm-workflow-grid {{
                     grid-template-columns: 1fr;
+                    align-items: flex-start;
+                }}
+                .mm-filter-summary {{
+                    flex-direction: column;
+                }}
+                .mm-filter-chips {{
+                    justify-content: flex-start;
                 }}
             }}
         </style>
@@ -830,6 +901,74 @@ def render_sidebar_menu(active: str = "Home", filters: list[tuple[str, str]] | N
     st.sidebar.page_link("pages/5_Delay.py", label="Delay Analysis")
     st.sidebar.markdown("---")
     st.sidebar.markdown(f"### {active} filters")
+    if filters:
+        for label, value in filters:
+            st.sidebar.markdown(
+                f"""
+                <div class="mm-filter-card">
+                    <div class="mm-filter-label">{escape(str(label))}</div>
+                    <div class="mm-filter-value">{escape(str(value))}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+
+def _format_filter_value(value: object) -> str:
+    if value is None:
+        return "All"
+    if isinstance(value, (list, tuple, set)):
+        cleaned = [str(v) for v in value if str(v).strip()]
+        if not cleaned:
+            return "All"
+        if len(cleaned) <= 2:
+            return ", ".join(cleaned)
+        return f"{', '.join(cleaned[:2])} +{len(cleaned) - 2}"
+    text = str(value).strip()
+    return text or "All"
+
+
+def render_filter_summary(
+    label: str,
+    source_rows: int,
+    filtered_rows: int,
+    filters: list[tuple[str, object]],
+) -> None:
+    active = [
+        (name, _format_filter_value(value))
+        for name, value in filters
+        if _format_filter_value(value) not in {"All", "Total", "0-95"}
+    ]
+    chips = "".join(
+        f"<span class='mm-chip'><strong>{escape(str(name))}:</strong>{escape(str(value))}</span>"
+        for name, value in active[:8]
+    )
+    if len(active) > 8:
+        chips += f"<span class='mm-chip'><strong>More</strong>{len(active) - 8} filters</span>"
+    if not chips:
+        chips = "<span class='mm-chip'><strong>Filters</strong>Full sample</span>"
+
+    st.markdown(
+        f"""
+        <div class="mm-filter-summary">
+            <div class="mm-filter-count">{escape(label)} · {filtered_rows:,} of {source_rows:,} rows</div>
+            <div class="mm-filter-chips">{chips}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_empty_filter_state() -> None:
+    st.markdown(
+        """
+        <div class="mm-empty-state">
+            <div class="mm-empty-title">No rows match these filters.</div>
+            <div class="mm-empty-copy">Widen the team, minute, player, or outcome filters in the sidebar to bring events back into the view.</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def hero_block(eyebrow: str, title: str, copy: str) -> None:
