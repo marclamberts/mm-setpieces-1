@@ -964,11 +964,42 @@ def _with_league(df: pd.DataFrame, league: str) -> pd.DataFrame:
         df["League"] = df["League"].fillna(league)
     return df
 
+def _fill_from_candidates(df: pd.DataFrame, target: str, candidates: list[str], default=np.nan) -> None:
+    if target not in df.columns:
+        df[target] = pd.Series(np.nan, index=df.index, dtype="object")
+    else:
+        df[target] = df[target].astype("object")
+    for cand in candidates:
+        if cand == target or cand not in df.columns:
+            continue
+        missing = df[target].isna()
+        if missing.any():
+            df.loc[missing, target] = df.loc[missing, cand]
+    df[target] = df[target].fillna(default)
+
+def _cz_taker_team_map() -> dict[str, str]:
+    cz_sp = _read_csv_if_exists("CZ SP.csv")
+    if cz_sp.empty or "player.name" not in cz_sp.columns or "team.name" not in cz_sp.columns:
+        return {}
+    taker_team = (
+        cz_sp[["player.name", "team.name"]]
+        .dropna()
+        .astype(str)
+        .groupby("player.name")["team.name"]
+        .agg(lambda s: s.value_counts().idxmax())
+    )
+    return taker_team.to_dict()
+
 @st.cache_data(show_spinner=False)
 def load_corner_data() -> pd.DataFrame:
+    cz_corners = _read_csv_if_exists("CZ - Corners 2025-2026.csv")
+    if not cz_corners.empty:
+        cz_corners = cz_corners.copy()
+        if "Team" not in cz_corners.columns and "Taker" in cz_corners.columns:
+            cz_corners["Team"] = cz_corners["Taker"].astype(str).map(_cz_taker_team_map())
     sources = [
         _with_league(_read_excel_if_exists("Allsvenskan - Corners 2025.xlsx"), "Allsvenskan"),
-        _with_league(_read_csv_if_exists("CZ - Corners 2025-2026.csv"), "Czech First League"),
+        _with_league(cz_corners, "Czech First League"),
     ]
     sources = [df for df in sources if not df.empty]
     return pd.concat(sources, ignore_index=True, sort=False) if sources else pd.DataFrame()
@@ -1015,13 +1046,7 @@ def filter_by_sp_type(df: pd.DataFrame, label: str) -> pd.DataFrame:
     return df[sp.eq(wanted)].copy()
 
 def _ensure_column(df: pd.DataFrame, target: str, candidates: list[str], default=np.nan):
-    if target in df.columns:
-        return
-    for cand in candidates:
-        if cand in df.columns:
-            df[target] = df[cand]
-            return
-    df[target] = default
+    _fill_from_candidates(df, target, candidates, default)
 
 def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
     df = df.copy()
