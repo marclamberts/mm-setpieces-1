@@ -96,11 +96,9 @@ c2.metric("Avg actions", f"{avg_actions:.1f}")
 c3.metric("Direct threat share", f"{direct_share:.1f}%")
 c4.metric("Best sequence xG", f"{best_seq_xg:.3f}")
 
-overview_tab, origin_tab, people_tab, visuals_tab, data_tab = st.tabs(
-    ["Briefing", "Origins", "Roles", "Pitch Evidence", "Event Log"]
-)
+view = st.radio("View", ["Briefing", "Origins", "Roles", "Pitch Evidence", "Event Log"], horizontal=True)
 
-with overview_tab:
+if view == "Briefing":
     top_left, top_right = st.columns([0.9, 1.35])
     with top_left:
         section_header("Freekick Brief", "Highest-signal notes")
@@ -120,11 +118,7 @@ with overview_tab:
         for insight in insights[:5]:
             st.markdown(f"<div class='mm-insight-card'>{insight}</div>", unsafe_allow_html=True)
     with top_right:
-        st.plotly_chart(
-            polish_plotly_figure(freekick_origin_map_figure(filtered)),
-            use_container_width=True,
-            key="freekicks_overview_origin_map",
-        )
+        render_analyst_table(freekick_zone_summary(filtered).head(12), height=310)
 
     left, right = st.columns([1.1, 1])
     with left:
@@ -141,7 +135,7 @@ with overview_tab:
         ] if not sequences.empty else sequences
         render_analyst_table(display.head(30), height=390)
 
-with origin_tab:
+elif view == "Origins":
     left, right = st.columns([1.55, 1])
     with left:
         section_header("Origin Map", "Free-kick starting points sized by possession xG")
@@ -169,7 +163,7 @@ with origin_tab:
         else:
             st.info("No channel data available.")
 
-with people_tab:
+elif view == "Roles":
     left, right = st.columns(2)
     with left:
         section_header("Taker Roles", "Free-kick sequences started, value created, and preferred zones")
@@ -178,27 +172,29 @@ with people_tab:
         section_header("Shot Targets", "Shooters receiving or taking the final freekick shot")
         render_analyst_table(freekick_shooter_summary(filtered), height=620)
 
-with visuals_tab:
-    left, right = st.columns(2)
-    with left:
-        section_header("Start Locations", "Where freekick possessions begin")
-        st.plotly_chart(
-            polish_plotly_figure(starting_location_map_figure(filtered, "Freekick start locations")),
-            use_container_width=True,
-            key="freekicks_visuals_start_locations",
-        )
-    with right:
-        section_header("Shot Map", "Shot quality generated from freekicks")
-        st.plotly_chart(
-            polish_plotly_figure(shotmap_figure(filtered, "Freekick shot map")),
-            use_container_width=True,
-            key="freekicks_visuals_shot_map",
-        )
+elif view == "Pitch Evidence":
+    visual_view = st.radio("Pitch visual", ["Interactive maps", "Report shot view"], horizontal=True)
+    if visual_view == "Interactive maps":
+        left, right = st.columns(2)
+        with left:
+            section_header("Start Locations", "Where freekick possessions begin")
+            st.plotly_chart(
+                polish_plotly_figure(starting_location_map_figure(filtered, "Freekick start locations")),
+                use_container_width=True,
+                key="freekicks_visuals_start_locations",
+            )
+        with right:
+            section_header("Shot Map", "Shot quality generated from freekicks")
+            st.plotly_chart(
+                polish_plotly_figure(shotmap_figure(filtered, "Freekick shot map")),
+                use_container_width=True,
+                key="freekicks_visuals_shot_map",
+            )
+    elif visual_view == "Report shot view":
+        section_header("Report Shot View", "Static mplsoccer shot-quality figure")
+        st.pyplot(mplsoccer_shot_figure(filtered, "Freekicks"), use_container_width=True)
 
-    section_header("Report Shot View", "Static mplsoccer shot-quality figure")
-    st.pyplot(mplsoccer_shot_figure(filtered, "Freekicks"), use_container_width=True)
-
-with data_tab:
+elif view == "Event Log":
     section_header("Sequence Log", "One row per match_id + possession + team")
     render_analyst_table(sequences, height=430)
     with st.expander("Event-level rows", expanded=False):

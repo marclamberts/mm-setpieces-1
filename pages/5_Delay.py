@@ -126,9 +126,9 @@ else:
         st.warning("No rows match the active delay filters.")
         st.stop()
 
-    overview_tab, charts_tab, audit_tab, data_tab = st.tabs(["Briefing", "Timing Evidence", "Audit", "Event Log"])
+    view = st.radio("View", ["Briefing", "Timing Evidence", "Audit", "Event Log"], horizontal=True)
 
-    with overview_tab:
+    if view == "Briefing":
         band_summary = (
             filtered.groupby("Delay band", dropna=False)
             .agg(
@@ -192,7 +192,7 @@ else:
         section_header("Slowest Match Profiles", "Highest average delay in the active filter")
         render_analyst_table(match_delay.head(30), height=430)
 
-    with charts_tab:
+    elif view == "Timing Evidence":
         chart_left, chart_right = st.columns(2)
         with chart_left:
             section_header("Delay Evidence")
@@ -223,7 +223,7 @@ else:
         match_fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False, xaxis_title="Average delay (s)", yaxis_title="")
         st.plotly_chart(polish_plotly_figure(match_fig), use_container_width=True, key="delay_match_comparison")
 
-    with audit_tab:
+    elif view == "Audit":
         section_header("Workbook Summary Sheet", "Match-level extraction performance")
         if not summary.empty:
             summary_view = summary.copy()
@@ -244,7 +244,7 @@ else:
             section_header("Skipped Files", "Files not included in the timing extraction")
             render_analyst_table(skipped, height=260)
 
-    with data_tab:
+    elif view == "Event Log":
         section_header("Matched Corner Event Log", f"{len(filtered):,} rows in the active filter")
         display_cols = [
             c for c in [

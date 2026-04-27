@@ -131,9 +131,9 @@ def render_page(label: str) -> None:
     kpi_row(filtered)
     info_panel(filtered)
 
-    overview_tab, visuals_tab, report_tab, data_tab = st.tabs(["Briefing", "Pitch Evidence", "PDF Brief", "Event Log"])
+    view = st.radio("View", ["Briefing", "Pitch Evidence", "PDF Brief", "Event Log"], horizontal=True)
 
-    with overview_tab:
+    if view == "Briefing":
         summary, technique_mix, outcome_mix = build_summary_tables(filtered)
 
         section_header("Scouting Brief", "Team output, delivery mix, and outcome mix")
@@ -177,22 +177,20 @@ def render_page(label: str) -> None:
             )
 
         section_header("Scouting Boards", "Workbook-derived rankings and tactical pattern reads")
-        teams_tab, takers_tab, shooters_tab, patterns_tab, matches_tab = st.tabs(
-            ["Team Threat", "Takers", "Shot Targets", "Patterns", "Match Log"]
-        )
-        with teams_tab:
+        board_view = st.radio("Scouting board", ["Team Threat", "Takers", "Shot Targets", "Patterns", "Match Log"], horizontal=True)
+        if board_view == "Team Threat":
             render_analyst_table(build_team_leaderboard(filtered), height=430)
-        with takers_tab:
+        elif board_view == "Takers":
             render_analyst_table(build_taker_leaderboard(filtered), height=430)
-        with shooters_tab:
+        elif board_view == "Shot Targets":
             render_analyst_table(build_shooter_leaderboard(filtered), height=430)
-        with patterns_tab:
+        elif board_view == "Patterns":
             st.markdown(
                 '<div class="mm-table-note">Pattern rows combine team, side, technique, height, target zone, and outcome.</div>',
                 unsafe_allow_html=True,
             )
             render_analyst_table(build_pattern_library(filtered), height=430)
-        with matches_tab:
+        elif board_view == "Match Log":
             render_analyst_table(build_match_log(filtered), height=430)
 
         section_header("Roles & Archetypes", "Condensed scouting labels for preparation")
@@ -202,37 +200,39 @@ def render_page(label: str) -> None:
         with role_right:
             render_analyst_table(build_team_archetypes(filtered).head(15), height=360)
 
-    with visuals_tab:
-        section_header("Interactive Pitch Evidence", "Shot locations and delivery/start locations")
-        left, right = st.columns(2)
-        with left:
-            st.plotly_chart(
-                polish_plotly_figure(shotmap_figure(filtered, f"{label} shotmap · vertical half pitch")),
-                use_container_width=True,
-                key=f"{label.lower()}_shotmap",
-            )
-        with right:
-            if label == "Corners":
+    elif view == "Pitch Evidence":
+        visual_view = st.radio("Pitch visual", ["Interactive maps", "Report visuals"], horizontal=True)
+        if visual_view == "Interactive maps":
+            section_header("Interactive Pitch Evidence", "Shot locations and delivery/start locations")
+            left, right = st.columns(2)
+            with left:
                 st.plotly_chart(
-                    polish_plotly_figure(delivery_map_figure(filtered, f"{label} delivery map · vertical half pitch")),
+                    polish_plotly_figure(shotmap_figure(filtered, f"{label} shotmap · vertical half pitch")),
                     use_container_width=True,
-                    key=f"{label.lower()}_delivery_map",
+                    key=f"{label.lower()}_shotmap",
                 )
-            else:
-                st.plotly_chart(
-                    polish_plotly_figure(starting_location_map_figure(filtered, f"{label} starting location map · vertical half pitch")),
-                    use_container_width=True,
-                    key=f"{label.lower()}_starting_location_map",
-                )
+            with right:
+                if label == "Corners":
+                    st.plotly_chart(
+                        polish_plotly_figure(delivery_map_figure(filtered, f"{label} delivery map · vertical half pitch")),
+                        use_container_width=True,
+                        key=f"{label.lower()}_delivery_map",
+                    )
+                else:
+                    st.plotly_chart(
+                        polish_plotly_figure(starting_location_map_figure(filtered, f"{label} starting location map · vertical half pitch")),
+                        use_container_width=True,
+                        key=f"{label.lower()}_starting_location_map",
+                    )
+        elif visual_view == "Report visuals":
+            section_header("Static Report Visuals", "Matplotlib / mplsoccer pitch views")
+            mpl_left, mpl_right = st.columns(2)
+            with mpl_left:
+                st.pyplot(mplsoccer_delivery_figure(filtered, label), use_container_width=True)
+            with mpl_right:
+                st.pyplot(mplsoccer_shot_figure(filtered, label), use_container_width=True)
 
-        section_header("Static Report Visuals", "Matplotlib / mplsoccer pitch views")
-        mpl_left, mpl_right = st.columns(2)
-        with mpl_left:
-            st.pyplot(mplsoccer_delivery_figure(filtered, label), use_container_width=True)
-        with mpl_right:
-            st.pyplot(mplsoccer_shot_figure(filtered, label), use_container_width=True)
-
-    with report_tab:
+    elif view == "PDF Brief":
         section_header("Pre-Match PDF", "Download a staff briefing from the current filters")
         report_left, report_right = st.columns([1, 1.2])
         with report_left:
@@ -249,7 +249,7 @@ def render_page(label: str) -> None:
                 use_container_width=True,
             )
 
-    with data_tab:
+    elif view == "Event Log":
         section_header("Event Log", f"{len(filtered):,} workbook rows in the current filter")
         display_cols = [c for c in [
             "Match", "Team", "SP_Type", "Taker", "Shooter", "side", "minute", "second",

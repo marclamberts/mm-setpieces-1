@@ -124,9 +124,9 @@ team_summary = team_summary.sort_values(["Avg_Rating", "Elite", "Strong_Plus"], 
 top_players = filtered.nlargest(top_n, "Rating")[["Player", "Team", "League", "Rating", "Percentile", "Tier"]].copy()
 bottom_players = filtered.nsmallest(top_n, "Rating")[["Player", "Team", "League", "Rating", "Percentile", "Tier"]].copy()
 
-overview_tab, charts_tab, data_tab = st.tabs(["Briefing", "Duel Evidence", "Player Log"])
+view = st.radio("View", ["Briefing", "Duel Evidence", "Player Log"], horizontal=True)
 
-with overview_tab:
+if view == "Briefing":
     left, right = st.columns([1.15, 1])
     with left:
         section_header("Team Duel Board", "Average rating and high-end profiles by squad")
@@ -165,7 +165,7 @@ with overview_tab:
             key="hops_quick_percentile_spread",
         )
 
-with charts_tab:
+elif view == "Duel Evidence":
     chart_left, chart_right = st.columns(2)
 
     with chart_left:
@@ -196,7 +196,7 @@ with charts_tab:
         )
         st.plotly_chart(polish_plotly_figure(hist), use_container_width=True, key="hops_rating_distribution")
 
-with data_tab:
+elif view == "Player Log":
     section_header("Player Log", f"{len(filtered):,} players")
     render_analyst_table(
         filtered.sort_values("Rating", ascending=False)[["Player", "Team", "League", "Rating", "Percentile", "Tier"]],
