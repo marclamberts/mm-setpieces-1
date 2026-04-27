@@ -1,16 +1,10 @@
 from __future__ import annotations
 
-from pathlib import Path
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-_PAGE_FILE = Path(__file__).resolve()
-_UTILS_FILE = _PAGE_FILE.parents[1] / "mm_setpieces" / "utils.py"
-_PAGE_GLOBALS = globals()
-_PAGE_GLOBALS["__file__"] = str(_UTILS_FILE)
-exec(_UTILS_FILE.read_text(), _PAGE_GLOBALS)
-_PAGE_GLOBALS["__file__"] = str(_PAGE_FILE)
+from mm_setpieces.utils import *
 
 
 st.set_page_config(

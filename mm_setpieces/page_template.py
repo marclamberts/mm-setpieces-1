@@ -1,15 +1,9 @@
 
 from __future__ import annotations
-from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-_TEMPLATE_FILE = Path(__file__).resolve()
-_UTILS_FILE = _TEMPLATE_FILE.with_name("utils.py")
-_TEMPLATE_GLOBALS = globals()
-_TEMPLATE_GLOBALS["__file__"] = str(_UTILS_FILE)
-exec(_UTILS_FILE.read_text(), _TEMPLATE_GLOBALS)
-_TEMPLATE_GLOBALS["__file__"] = str(_TEMPLATE_FILE)
+from mm_setpieces.utils import *
 
 def _safe_sorted(values: pd.Series) -> list[str]:
     return sorted([str(v) for v in values.dropna().astype(str).unique().tolist() if str(v).strip()])
@@ -115,26 +109,12 @@ def render_page(label: str) -> None:
         "Scout team patterns, taker roles, shot output, and match-level set-piece value from the connected event workbooks.",
     )
 
-    nav_left, nav_mid, nav_right = st.columns([0.9, 1.1, 1.1])
+    nav_left, nav_right = st.columns([0.9, 2.2])
     with nav_left:
         if st.button("Back to Home", use_container_width=True):
             st.switch_page("app.py")
-    with nav_mid:
-        st.download_button(
-            "Export filtered CSV",
-            data=filtered.to_csv(index=False).encode("utf-8"),
-            file_name=f"{label.lower().replace(' ', '_')}_filtered.csv",
-            mime="text/csv",
-            use_container_width=True,
-        )
     with nav_right:
-        st.download_button(
-            "Export filtered Excel",
-            data=dataframe_to_excel_bytes(filtered, sheet_name=label[:31] or "Data"),
-            file_name=f"{label.lower().replace(' ', '_')}_filtered.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
-        )
+        render_export_controls(filtered, label, label)
 
     if label == "Corners":
         st.caption("Corners use Data/Allsvenskan - Corners 2025.xlsx and Data/CZ - Corners 2025-2026.csv.")
@@ -256,15 +236,17 @@ def render_page(label: str) -> None:
             opponent = st.text_input("Opponent / report label", value="")
             st.caption("The PDF uses the active sidebar filters, role classifications, archetypes, insights, and mplsoccer visuals.")
         with report_right:
-            pdf_bytes = _cached_report_pdf(filtered, label, opponent.strip())
             safe_name = (opponent.strip() or label).lower().replace(" ", "_").replace("/", "-")
-            st.download_button(
-                "Download pre-match PDF",
-                data=pdf_bytes,
-                file_name=f"{safe_name}_set_piece_report.pdf",
-                mime="application/pdf",
-                use_container_width=True,
-            )
+            st.markdown('<div class="mm-table-note">PDF generation is prepared on demand because pitch images are heavier than tables.</div>', unsafe_allow_html=True)
+            if st.checkbox("Prepare PDF brief", key=f"{label.lower()}_prepare_pdf"):
+                pdf_bytes = _cached_report_pdf(filtered, label, opponent.strip())
+                st.download_button(
+                    "Download pre-match PDF",
+                    data=pdf_bytes,
+                    file_name=f"{safe_name}_set_piece_report.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                )
 
     elif view == "Event Log":
         section_header("Event Log", f"{len(filtered):,} workbook rows in the current filter")

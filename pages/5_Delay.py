@@ -1,16 +1,11 @@
 from __future__ import annotations
 
-from pathlib import Path
 import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-_PAGE_FILE = Path(__file__).resolve()
-_UTILS_FILE = _PAGE_FILE.parents[1] / "mm_setpieces" / "utils.py"
-_PAGE_GLOBALS = globals()
-_PAGE_GLOBALS["__file__"] = str(_UTILS_FILE)
-exec(_UTILS_FILE.read_text(), _PAGE_GLOBALS)
-_PAGE_GLOBALS["__file__"] = str(_PAGE_FILE)
+from mm_setpieces.utils import *
+from mm_setpieces.utils import _read_excel_if_exists
 
 st.set_page_config(
     page_title="Michael Mackin Set Piece | Delay Analysis",
@@ -92,26 +87,12 @@ else:
         full_delay_range = None
         delay_range = None
 
-    nav_left, nav_mid, nav_right = st.columns([0.9, 1.1, 1.1])
+    nav_left, nav_right = st.columns([0.9, 2.2])
     with nav_left:
         if st.button("Back to Home", use_container_width=True):
             st.switch_page("app.py")
-    with nav_mid:
-        st.download_button(
-            "Export filtered CSV",
-            data=filtered.to_csv(index=False).encode("utf-8"),
-            file_name="delay_filtered.csv",
-            mime="text/csv",
-            use_container_width=True,
-        )
     with nav_right:
-        st.download_button(
-            "Export filtered Excel",
-            data=dataframe_to_excel_bytes(filtered, sheet_name="Delay"),
-            file_name="delay_filtered.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
-        )
+        render_export_controls(filtered, "delay", "Delay")
 
     filters = [
         ("League", league),

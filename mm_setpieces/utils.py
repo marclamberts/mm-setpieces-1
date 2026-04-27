@@ -1018,6 +1018,31 @@ def dataframe_to_excel_bytes(df: pd.DataFrame, sheet_name: str = "Data") -> byte
     return output.getvalue()
 
 
+def render_export_controls(df: pd.DataFrame, slug: str, sheet_name: str = "Data") -> None:
+    st.markdown('<div class="mm-table-note">Exports are prepared only when needed to keep page reruns fast.</div>', unsafe_allow_html=True)
+    if not st.checkbox("Prepare export files", key=f"{slug}_prepare_exports"):
+        return
+
+    csv_col, excel_col = st.columns(2)
+    safe_slug = slug.lower().replace(" ", "_").replace("/", "-")
+    with csv_col:
+        st.download_button(
+            "Download CSV",
+            data=df.to_csv(index=False).encode("utf-8"),
+            file_name=f"{safe_slug}_filtered.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
+    with excel_col:
+        st.download_button(
+            "Download Excel",
+            data=dataframe_to_excel_bytes(df, sheet_name=sheet_name[:31] or "Data"),
+            file_name=f"{safe_slug}_filtered.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True,
+        )
+
+
 def categorical_breakdown_figure(
     df: pd.DataFrame,
     column: str,
@@ -1082,12 +1107,14 @@ def minute_distribution_figure(df: pd.DataFrame, title: str) -> go.Figure:
 def _candidate_paths(filename: str) -> list[Path]:
     return [DATA_DIR / filename, BASE_DIR.parent / filename, BASE_DIR / filename, Path(filename)]
 
+@st.cache_data(show_spinner=False)
 def _read_excel_if_exists(filename: str, sheet_name=0) -> pd.DataFrame:
     for path in _candidate_paths(filename):
         if path.exists():
             return pd.read_excel(path, sheet_name=sheet_name)
     return pd.DataFrame()
 
+@st.cache_data(show_spinner=False)
 def _read_csv_if_exists(filename: str) -> pd.DataFrame:
     for path in _candidate_paths(filename):
         if path.exists():
@@ -1118,6 +1145,7 @@ def _canonical_sp_type(value: object) -> str:
 def _canonical_sp_type_series(series: pd.Series) -> pd.Series:
     return series.map(_canonical_sp_type)
 
+@st.cache_data(show_spinner=False)
 def _load_czech_sp_data() -> pd.DataFrame:
     cz = _read_excel_if_exists("Czech SP.xlsx")
     if cz.empty:
@@ -1142,6 +1170,7 @@ def _fill_from_candidates(df: pd.DataFrame, target: str, candidates: list[str], 
             df.loc[missing, target] = df.loc[missing, cand]
     df[target] = df[target].fillna(default)
 
+@st.cache_data(show_spinner=False)
 def _cz_taker_team_map() -> dict[str, str]:
     cz_sp = _load_czech_sp_data()
     if cz_sp.empty or "team.name" not in cz_sp.columns:
@@ -1871,12 +1900,16 @@ def build_match_log(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows).sort_values(["Match", "Total xG"], ascending=[True, False])
 
 
-def render_analyst_table(df: pd.DataFrame, *, height: int = 360) -> None:
+def render_analyst_table(df: pd.DataFrame, *, height: int = 360, max_rows: int = 2500) -> None:
     if df.empty:
         st.info("No rows available for this view.")
         return
+    display_df = df
+    if len(df) > max_rows:
+        display_df = df.head(max_rows)
+        st.caption(f"Showing the first {max_rows:,} of {len(df):,} rows for faster rendering. Use exports for the full table.")
     st.dataframe(
-        df,
+        display_df,
         use_container_width=True,
         hide_index=True,
         height=height,
