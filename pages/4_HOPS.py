@@ -54,8 +54,6 @@ hero_block(
     "Player and team duel profiles from the HOPS workbook, ranked by rating, percentile, and squad-level depth.",
 )
 
-st.sidebar.header("HOPS filters")
-st.sidebar.caption("Filters are hard-coded to the full sample.")
 team = "All"
 top_n = 10
 

@@ -43,9 +43,6 @@ def _cached_report_pdf(df: pd.DataFrame, label: str, opponent: str) -> bytes:
     return prematch_report_pdf_bytes(df, label, opponent)
 
 def _filter_page_data(df: pd.DataFrame, label: str) -> pd.DataFrame:
-    st.sidebar.header(f"{label} filters")
-    st.sidebar.caption("Filters are hard-coded to the full sample.")
-
     team = "All"
     league = "All"
     sample = "Total"

@@ -67,8 +67,6 @@ hero_block(
 if events.empty:
     st.warning("No delay events were found in corner_delays (1).xlsx.")
 else:
-    st.sidebar.header("Delay filters")
-    st.sidebar.caption("Filters are hard-coded to the full sample.")
     match = "All"
     period = "All"
     out_type = "All"

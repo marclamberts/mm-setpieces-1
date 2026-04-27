@@ -66,8 +66,6 @@ if df.empty:
     st.warning("No freekick rows were found in SWE SP.xlsx.")
     st.stop()
 
-st.sidebar.header("Freekick filters")
-st.sidebar.caption("Filters are hard-coded to the full sample.")
 team = "All"
 period = "All"
 sample = "Total"

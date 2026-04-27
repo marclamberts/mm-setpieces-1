@@ -66,8 +66,6 @@ if df.empty:
     st.warning("No throw-in rows were found in SWE SP.xlsx.")
     st.stop()
 
-st.sidebar.header("Throw-in filters")
-st.sidebar.caption("Filters are hard-coded to the full sample.")
 team = "All"
 period = "All"
 sample = "Total"
