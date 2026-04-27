@@ -21,15 +21,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 inject_app_style()
-render_sidebar_menu(
-    "Delay Analysis",
-    [
-        ("Match", "All"),
-        ("Period", "All"),
-        ("Exit event", "All"),
-        ("Delay range", "0-120 seconds"),
-    ],
-)
+render_sidebar_menu("Delay Analysis")
 
 
 @st.cache_data(show_spinner=False)
@@ -67,9 +59,13 @@ hero_block(
 if events.empty:
     st.warning("No delay events were found in corner_delays (1).xlsx.")
 else:
-    match = "All"
-    period = "All"
-    out_type = "All"
+    matches = ["All"] + sorted(events["match"].dropna().astype(str).unique().tolist()) if "match" in events.columns else ["All"]
+    periods = ["All"] + sorted(events["period"].dropna().astype(int).astype(str).unique().tolist()) if "period" in events.columns else ["All"]
+    out_types = ["All"] + sorted(events["out_event_type"].dropna().astype(str).unique().tolist()) if "out_event_type" in events.columns else ["All"]
+
+    match = st.sidebar.selectbox("Match", matches)
+    period = st.sidebar.selectbox("Period", periods)
+    out_type = st.sidebar.selectbox("Exit event", out_types)
 
     filtered = events.copy()
     if match != "All" and "match" in filtered.columns:
@@ -80,7 +76,9 @@ else:
         filtered = filtered[filtered["out_event_type"].astype(str).eq(out_type)].copy()
 
     if not filtered.empty and "delay_sec" in filtered.columns:
-        delay_range = (0.0, 120.0)
+        lo = float(filtered["delay_sec"].min())
+        hi = float(filtered["delay_sec"].max())
+        delay_range = st.sidebar.slider("Delay range (seconds)", min_value=lo, max_value=hi, value=(lo, hi))
         filtered = filtered[filtered["delay_sec"].between(delay_range[0], delay_range[1])].copy()
 
     nav_left, nav_mid, nav_right = st.columns([0.9, 1.1, 1.1])

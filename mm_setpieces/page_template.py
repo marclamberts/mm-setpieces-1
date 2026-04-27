@@ -43,17 +43,34 @@ def _cached_report_pdf(df: pd.DataFrame, label: str, opponent: str) -> bytes:
     return prematch_report_pdf_bytes(df, label, opponent)
 
 def _filter_page_data(df: pd.DataFrame, label: str) -> pd.DataFrame:
-    team = "All"
-    league = "All"
-    sample = "Total"
-    side = "All"
-    time_in_game = "All"
-    minute_range = (0, 95)
-    taker_filter: list[str] = []
-    technique_filter: list[str] = []
-    height_filter: list[str] = []
-    shot_outcome_filter: list[str] = []
-    only_shots = False
+    teams = ["All"] + _safe_sorted(df["Team"]) if "Team" in df.columns else ["All"]
+    leagues = ["All"] + _safe_sorted(df["League"]) if "League" in df.columns else ["All"]
+    sides = ["All"] + _safe_sorted(df["side"]) if "side" in df.columns else ["All"]
+    periods = ["All"] + _safe_sorted(df["game_period"]) if "game_period" in df.columns else ["All"]
+    techniques = _safe_sorted(df["Technique"]) if "Technique" in df.columns else []
+    heights = _safe_sorted(df["Delivery height"]) if "Delivery height" in df.columns else []
+    takers = _safe_sorted(df["Taker"]) if "Taker" in df.columns else []
+    shot_outcomes = _safe_sorted(df["Shot outcome"]) if "Shot outcome" in df.columns else []
+
+    team = st.sidebar.selectbox("Team", teams)
+    league = st.sidebar.selectbox("League", leagues)
+    sample = st.sidebar.radio("Sample", ["Total", "Last 10 games"], horizontal=False)
+    side = st.sidebar.radio("Side", sides, horizontal=False)
+    time_in_game = st.sidebar.selectbox("Time in the game", periods)
+
+    minute_min = 0
+    minute_max = 95
+    if "minute" in df.columns and not df["minute"].dropna().empty:
+        minute_values = pd.to_numeric(df["minute"], errors="coerce").dropna()
+        if not minute_values.empty:
+            minute_min = int(min(0, minute_values.min()))
+            minute_max = max(95, int(minute_values.max()))
+    minute_range = st.sidebar.slider("Minute range", minute_min, minute_max, (minute_min, minute_max))
+    taker_filter = st.sidebar.multiselect("Taker", takers)
+    technique_filter = st.sidebar.multiselect("Delivery technique", techniques)
+    height_filter = st.sidebar.multiselect("Delivery height", heights)
+    shot_outcome_filter = st.sidebar.multiselect("Shot outcome", shot_outcomes)
+    only_shots = st.sidebar.checkbox(f"Only {label.lower()} ending with a shot", value=False)
 
     filtered = df.copy()
     if team != "All" and "Team" in filtered.columns:
@@ -90,20 +107,7 @@ def render_page(label: str) -> None:
         initial_sidebar_state="expanded",
     )
     inject_app_style()
-    render_sidebar_menu(
-        label,
-        [
-            ("Team", "All"),
-            ("League", "All"),
-            ("Sample", "Total"),
-            ("Side", "All"),
-            ("Time", "All"),
-            ("Minute range", "0-95"),
-            ("Takers", "All"),
-            ("Delivery", "All techniques and heights"),
-            ("Shot outcome", "All"),
-        ],
-    )
+    render_sidebar_menu(label)
 
     raw = load_sp_data(label)
     if raw.empty:

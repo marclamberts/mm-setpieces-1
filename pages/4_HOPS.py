@@ -22,14 +22,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 inject_app_style()
-render_sidebar_menu(
-    "HOPS",
-    [
-        ("Team", "All"),
-        ("Board size", "Top 10 and bottom 10"),
-        ("Rating rows", "All players"),
-    ],
-)
+render_sidebar_menu("HOPS")
 
 @st.cache_data(show_spinner=False)
 def load_hops_data() -> pd.DataFrame:
@@ -54,8 +47,9 @@ hero_block(
     "Player and team duel profiles from the HOPS workbook, ranked by rating, percentile, and squad-level depth.",
 )
 
-team = "All"
-top_n = 10
+teams = ["All"] + sorted(df["Team"].dropna().astype(str).unique().tolist())
+team = st.sidebar.selectbox("Team", teams)
+top_n = st.sidebar.slider("Show top / bottom players", min_value=5, max_value=30, value=10)
 
 filtered = df.copy()
 if team != "All":

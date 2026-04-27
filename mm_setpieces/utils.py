@@ -94,33 +94,36 @@ def inject_app_style() -> None:
                 width: 15rem !important;
             }}
             div[data-testid="stSidebar"] {{
-                background: #0b1118;
-                border-right: 1px solid rgba(255,255,255,0.08);
+                background: #ffffff;
+                border-right: 1px solid #dbe3ee;
                 min-width: 15rem !important;
                 width: 15rem !important;
+            }}
+            div[data-testid="stSidebar"] [data-testid="stSidebarNav"] {{
+                display: none !important;
             }}
             div[data-testid="stSidebar"] *,
             div[data-testid="stSidebar"] span,
             div[data-testid="stSidebar"] div,
             div[data-testid="stSidebar"] button,
             div[data-testid="stSidebar"] a {{
-                color: rgba(255,255,255,0.88) !important;
+                color: #111827 !important;
             }}
             div[data-testid="stSidebar"] h2,
             div[data-testid="stSidebar"] h3 {{
-                color: #ffffff !important;
+                color: #0b0f14 !important;
                 font-weight: 800;
             }}
             div[data-testid="stSidebar"] label,
             div[data-testid="stSidebar"] p {{
-                color: rgba(255,255,255,0.78) !important;
+                color: #111827 !important;
                 font-weight: 650;
             }}
             div[data-testid="stSidebar"] [data-testid="stSidebarNav"] a,
             div[data-testid="stSidebar"] [data-testid="stSidebarNav"] span,
             div[data-testid="stSidebar"] [data-testid="stExpander"] summary,
             div[data-testid="stSidebar"] [data-testid="stExpander"] summary * {{
-                color: #ffffff !important;
+                color: #111827 !important;
             }}
             div[data-testid="stSidebar"] .st-emotion-cache-ue6h4q,
             div[data-testid="stSidebar"] .st-emotion-cache-16idsys p {{
@@ -128,8 +131,8 @@ def inject_app_style() -> None:
             }}
             div[data-testid="stSidebar"] [data-baseweb="select"] > div,
             div[data-testid="stSidebar"] [data-baseweb="input"] > div {{
-                background: rgba(255,255,255,0.075) !important;
-                border-color: rgba(255,255,255,0.16) !important;
+                background: #f8fafc !important;
+                border-color: #cfd6e1 !important;
                 border-radius: 6px;
                 min-height: 38px;
             }}
@@ -137,30 +140,30 @@ def inject_app_style() -> None:
             div[data-testid="stSidebar"] [data-baseweb="select"] span,
             div[data-testid="stSidebar"] [data-baseweb="tag"] span,
             div[data-testid="stSidebar"] [data-baseweb="input"] input {{
-                color: #ffffff !important;
-                -webkit-text-fill-color: #ffffff !important;
+                color: #111827 !important;
+                -webkit-text-fill-color: #111827 !important;
             }}
             div[data-testid="stSidebar"] [data-baseweb="tag"] {{
-                background: rgba(255,255,255,0.14) !important;
+                background: #e2e8f0 !important;
             }}
             div[data-testid="stSidebar"] [role="radiogroup"] label,
             div[data-testid="stSidebar"] [role="radiogroup"] span,
             div[data-testid="stSidebar"] [data-testid="stCheckbox"] label,
             div[data-testid="stSidebar"] [data-testid="stCheckbox"] span {{
-                color: rgba(255,255,255,0.86) !important;
+                color: #111827 !important;
             }}
             div[data-testid="stSidebar"] hr {{
-                border-color: rgba(255,255,255,0.12);
+                border-color: #dbe3ee;
             }}
             .mm-filter-card {{
-                background: rgba(255,255,255,0.075);
-                border: 1px solid rgba(255,255,255,0.12);
+                background: #f8fafc;
+                border: 1px solid #dbe3ee;
                 border-radius: 6px;
                 padding: .46rem .5rem;
                 margin: .28rem 0;
             }}
             .mm-filter-label {{
-                color: rgba(255,255,255,0.56);
+                color: #64748b;
                 font-size: .56rem;
                 font-weight: 850;
                 letter-spacing: .07em;
@@ -168,22 +171,22 @@ def inject_app_style() -> None:
                 margin-bottom: .18rem;
             }}
             .mm-filter-value {{
-                color: #ffffff;
+                color: #111827;
                 font-size: .72rem;
                 font-weight: 850;
                 line-height: 1.25;
                 overflow-wrap: anywhere;
             }}
             div[data-testid="stSidebar"] [data-testid="stPageLink"] a {{
-                background: rgba(255,255,255,0.075);
-                border: 1px solid rgba(255,255,255,0.12);
+                background: #f8fafc;
+                border: 1px solid #dbe3ee;
                 border-radius: 6px;
                 padding: .55rem .7rem;
                 margin: .18rem 0;
             }}
             div[data-testid="stSidebar"] [data-testid="stPageLink"] a:hover {{
-                background: rgba(255,255,255,0.14);
-                border-color: rgba(255,255,255,0.22);
+                background: #eef2f7;
+                border-color: #cbd5e1;
             }}
             div[data-baseweb="popover"] ul,
             div[data-baseweb="popover"] [role="listbox"] {{
@@ -802,8 +805,7 @@ def inject_app_style() -> None:
                 font-weight: 550;
             }}
             div[data-testid="stSidebar"] {{
-                background:
-                    linear-gradient(180deg, #050a10 0%, #0b1118 46%, #111827 100%) !important;
+                background: #ffffff !important;
             }}
             @media (max-width: 980px) {{
                 .mm-scout-shell,
@@ -818,21 +820,6 @@ def inject_app_style() -> None:
 
 
 def render_sidebar_menu(active: str = "Home", filters: list[tuple[str, str]] | None = None) -> None:
-    filters = filters or [("Scope", "Full sample"), ("Selection", "All rows")]
-    st.sidebar.markdown(f"### {active} filters")
-    st.sidebar.caption("Fixed to full-sample defaults")
-    for label, value in filters:
-        st.sidebar.markdown(
-            f"""
-            <div class="mm-filter-card">
-                <div class="mm-filter-label">{label}</div>
-                <div class="mm-filter-value">{value}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    st.sidebar.markdown("---")
     st.sidebar.markdown("### Pages")
     st.sidebar.page_link("app.py", label="Home")
     st.sidebar.page_link("pages/1_Corners.py", label="Corners")
@@ -840,6 +827,8 @@ def render_sidebar_menu(active: str = "Home", filters: list[tuple[str, str]] | N
     st.sidebar.page_link("pages/3_Throw_ins.py", label="Throw-ins")
     st.sidebar.page_link("pages/4_HOPS.py", label="HOPS")
     st.sidebar.page_link("pages/5_Delay.py", label="Delay Analysis")
+    st.sidebar.markdown("---")
+    st.sidebar.markdown(f"### {active} filters")
 
 
 def hero_block(eyebrow: str, title: str, copy: str) -> None:

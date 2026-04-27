@@ -34,19 +34,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 inject_app_style()
-render_sidebar_menu(
-    "Throw-ins",
-    [
-        ("Team", "All"),
-        ("Game period", "All"),
-        ("Sample", "Total"),
-        ("Minute range", "0-95"),
-        ("Thrower", "All"),
-        ("Shooter", "All"),
-        ("Initial pass height", "All"),
-        ("Shot outcome", "All"),
-    ],
-)
+render_sidebar_menu("Throw-ins")
 
 
 def _safe_sorted(values: pd.Series) -> list[str]:
@@ -66,14 +54,23 @@ if df.empty:
     st.warning("No throw-in rows were found in SWE SP.xlsx.")
     st.stop()
 
-team = "All"
-period = "All"
-sample = "Total"
-minute_range = (0, 95)
-taker_filter: list[str] = []
-shooter_filter: list[str] = []
-height_filter: list[str] = []
-outcome_filter: list[str] = []
+teams = ["All"] + _safe_sorted(df["Team"]) if "Team" in df.columns else ["All"]
+periods = ["All"] + _safe_sorted(df["game_period"]) if "game_period" in df.columns else ["All"]
+takers = _safe_sorted(df["Taker"]) if "Taker" in df.columns else []
+shooters = _safe_sorted(df["Shooter"]) if "Shooter" in df.columns else []
+heights = _safe_sorted(df["Delivery height"]) if "Delivery height" in df.columns else []
+outcomes = _safe_sorted(df["Shot outcome"]) if "Shot outcome" in df.columns else []
+
+team = st.sidebar.selectbox("Team", teams)
+period = st.sidebar.selectbox("Game period", periods)
+sample = st.sidebar.radio("Sample", ["Total", "Last 10 games"], horizontal=False)
+minute_min = int(pd.to_numeric(df["minute"], errors="coerce").fillna(0).min()) if "minute" in df.columns else 0
+minute_max = max(95, int(pd.to_numeric(df["minute"], errors="coerce").fillna(95).max())) if "minute" in df.columns else 95
+minute_range = st.sidebar.slider("Minute range", minute_min, minute_max, (minute_min, minute_max))
+taker_filter = st.sidebar.multiselect("Thrower / sequence starter", takers)
+shooter_filter = st.sidebar.multiselect("Shooter", shooters)
+height_filter = st.sidebar.multiselect("Initial pass height", heights)
+outcome_filter = st.sidebar.multiselect("Shot outcome", outcomes)
 
 filtered = df.copy()
 if team != "All" and "Team" in filtered.columns:
