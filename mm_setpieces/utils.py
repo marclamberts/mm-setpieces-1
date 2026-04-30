@@ -1869,11 +1869,20 @@ def _candidate_paths(filename: str) -> list[Path]:
     return [DATA_DIR / filename, BASE_DIR.parent / filename, BASE_DIR / filename, Path(filename)]
 
 @st.cache_data(show_spinner=False)
-def _read_excel_if_exists(filename: str, sheet_name=0) -> pd.DataFrame:
+def _read_excel_if_exists(filename: str, sheet_name=0):
     for path in _candidate_paths(filename):
         if path.exists():
-            return pd.read_excel(path, sheet_name=sheet_name)
-    return pd.DataFrame()
+            try:
+                return pd.read_excel(path, sheet_name=sheet_name, engine="openpyxl")
+            except ImportError:
+                if sheet_name is None:
+                    return {}
+                return pd.DataFrame()
+            except Exception:
+                if sheet_name is None:
+                    return {}
+                return pd.DataFrame()
+    return {} if sheet_name is None else pd.DataFrame()
 
 @st.cache_data(show_spinner=False)
 def _read_csv_if_exists(filename: str) -> pd.DataFrame:
