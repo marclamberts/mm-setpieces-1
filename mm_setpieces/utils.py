@@ -393,6 +393,50 @@ def inject_app_style() -> None:
                 color: #ffffff !important;
                 transform: none;
             }}
+            .mm-landing-shell {{
+                min-height: calc(100vh - 3.2rem);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 2rem;
+                padding: 2rem 1rem 4rem;
+            }}
+            .mm-landing-shell div[data-testid="stImage"] {{
+                background: transparent;
+                border: 0;
+                border-radius: 0;
+                padding: 0;
+                box-shadow: none;
+                width: min(680px, 88vw);
+            }}
+            .mm-landing-shell div[data-testid="stImage"] img {{
+                display: block;
+                width: 100%;
+                height: auto;
+            }}
+            .mm-landing-action {{
+                width: min(320px, 82vw);
+            }}
+            .mm-landing-action div.stButton > button {{
+                min-height: 3.25rem;
+                border-radius: 6px;
+                font-size: 1rem;
+                letter-spacing: 0;
+                box-shadow: 0 16px 34px rgba(193, 18, 31, 0.2);
+            }}
+            .mm-landing-wordmark {{
+                font-size: clamp(3rem, 11vw, 8rem);
+                line-height: .9;
+                font-weight: 900;
+                letter-spacing: 0;
+            }}
+            .mm-landing-wordmark span {{
+                color: #20232b;
+            }}
+            .mm-landing-wordmark strong {{
+                color: var(--mm-red);
+            }}
             div[data-testid="stDownloadButton"] > button {{
                 border-radius: 6px;
                 background: var(--mm-red);

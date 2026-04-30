@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from html import escape
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -11,6 +12,7 @@ from mm_setpieces.utils import _read_excel_if_exists, _with_league
 
 
 APP_SECTIONS = ["Home", "Corners", "Freekicks", "Throw-ins", "HOPS", "Delay Analysis"]
+LOGO_PATH = Path(__file__).resolve().parent / "assets" / "setplaypro-logo.jpg"
 FILTER_PREFIXES = {
     "Corners": "corners",
     "Freekicks": "freekicks",
@@ -278,6 +280,35 @@ def render_single_app_sidebar() -> str:
         if st.sidebar.button("Reset filters", key=f"reset_{section}", width="stretch"):
             reset_current_filters(section)
     return section
+
+
+def render_landing() -> None:
+    st.markdown(
+        """
+        <style>
+            section[data-testid="stSidebar"] {
+                display: none !important;
+            }
+            .block-container {
+                max-width: 980px;
+                padding-top: 0 !important;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown('<div class="mm-landing-shell">', unsafe_allow_html=True)
+    if LOGO_PATH.exists():
+        st.image(str(LOGO_PATH), width=680)
+    else:
+        st.markdown('<div class="mm-landing-wordmark"><span>SetPlay</span><strong>Pro</strong></div>', unsafe_allow_html=True)
+    st.markdown('<div class="mm-landing-action">', unsafe_allow_html=True)
+    if st.button("Continue to playform", key="continue_to_playform", width="stretch"):
+        st.session_state["show_playform"] = True
+        st.session_state["section"] = "Home"
+        st.session_state["section_select"] = "Home"
+        st.rerun()
+    st.markdown("</div></div>", unsafe_allow_html=True)
 
 
 def render_home() -> None:
@@ -1116,16 +1147,19 @@ def render_delay() -> None:
         render_analyst_table(filtered[display_cols], height=620)
 
 
-section = render_single_app_sidebar()
-if section == "Home":
-    render_home()
-elif section == "Corners":
-    render_corners()
-elif section == "Freekicks":
-    render_sequence_page("Freekicks")
-elif section == "Throw-ins":
-    render_sequence_page("Throw-ins")
-elif section == "HOPS":
-    render_hops()
-elif section == "Delay Analysis":
-    render_delay()
+if not st.session_state.get("show_playform", False):
+    render_landing()
+else:
+    section = render_single_app_sidebar()
+    if section == "Home":
+        render_home()
+    elif section == "Corners":
+        render_corners()
+    elif section == "Freekicks":
+        render_sequence_page("Freekicks")
+    elif section == "Throw-ins":
+        render_sequence_page("Throw-ins")
+    elif section == "HOPS":
+        render_hops()
+    elif section == "Delay Analysis":
+        render_delay()
