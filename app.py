@@ -4,7 +4,7 @@ from html import escape
 from pathlib import Path
 import numpy as np
 import pandas as pd
-import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 from mm_setpieces.utils import *
@@ -378,6 +378,44 @@ def render_mpl_visual(fig, label: str, key: str) -> None:
     render_matplotlib_png_download(fig, label, key)
 
 
+def _plot_colors() -> list[str]:
+    return ["#111827", "#c1121f", "#1d4ed8", "#15803d", "#b45309", "#7c3aed", "#64748b"]
+
+
+def bar_chart(df: pd.DataFrame, x: str, y: str, title: str = "", color: str | None = None, orientation: str = "v", barmode: str = "relative") -> go.Figure:
+    fig = go.Figure()
+    colors = _plot_colors()
+    groups = [(None, df)] if not color or color not in df.columns else list(df.groupby(color, dropna=False))
+    for idx, (name, part) in enumerate(groups):
+        trace_name = str(name) if name is not None else y
+        if orientation == "h":
+            fig.add_bar(x=part[x], y=part[y], name=trace_name, orientation="h", marker_color=colors[idx % len(colors)])
+        else:
+            fig.add_bar(x=part[x], y=part[y], name=trace_name, marker_color=colors[idx % len(colors)])
+    fig.update_layout(title=title, barmode=barmode, legend_title_text="", xaxis_title=x, yaxis_title=y)
+    return fig
+
+
+def histogram_chart(df: pd.DataFrame, column: str, title: str = "", color: str | None = None, nbins: int = 20) -> go.Figure:
+    fig = go.Figure()
+    colors = _plot_colors()
+    groups = [(None, df)] if not color or color not in df.columns else list(df.groupby(color, dropna=False))
+    for idx, (name, part) in enumerate(groups):
+        fig.add_histogram(x=part[column], nbinsx=nbins, name=str(name) if name is not None else column, marker_color=colors[idx % len(colors)])
+    fig.update_layout(title=title, barmode="overlay", legend_title_text="", xaxis_title=column, yaxis_title="Count")
+    fig.update_traces(opacity=0.82)
+    return fig
+
+
+def box_chart(df: pd.DataFrame, x: str, y: str, title: str = "") -> go.Figure:
+    fig = go.Figure()
+    colors = _plot_colors()
+    for idx, (name, part) in enumerate(df.groupby(x, dropna=False)):
+        fig.add_box(y=part[y], name=str(name), marker_color=colors[idx % len(colors)], boxmean=True)
+    fig.update_layout(title=title, legend_title_text="", xaxis_title=x, yaxis_title=y, showlegend=False)
+    return fig
+
+
 def render_home() -> None:
     corners, freekicks, throwins, hops = command_center_data()
     teams = _team_options(corners, freekicks, throwins, hops)
@@ -524,15 +562,7 @@ def render_home() -> None:
                 ],
                 ignore_index=True,
             )
-            fig = px.bar(
-                comparison,
-                x="Phase",
-                y="xG",
-                color="Team",
-                barmode="group",
-                color_discrete_sequence=["#0b0f14", "#c1121f"],
-                hover_data=["Set pieces", "Shots", "Goals", "Shot rate %", "xG / 100", "xG / shot"],
-            )
+            fig = bar_chart(comparison, x="Phase", y="xG", color="Team", barmode="group")
             fig.update_layout(height=345, margin=dict(l=10, r=10, t=35, b=10), legend_title_text="")
             render_plotly_visual(polish_plotly_figure(fig), "Home team comparison", "home_team_comparison_png")
 
@@ -930,14 +960,14 @@ def render_sequence_page(label: str) -> None:
             section_header("Zone Mix" if is_freekick else "Territory Mix", "Volume by restart territory")
             zone_mix = sequences.groupby(mix_col, dropna=False).size().reset_index(name="Sequences") if not sequences.empty else pd.DataFrame()
             if not zone_mix.empty:
-                fig = px.bar(zone_mix.sort_values("Sequences", ascending=False), x=mix_col, y="Sequences", color=mix_col, color_discrete_sequence=["#111827", "#c1121f", "#1d4ed8", "#15803d", "#b45309"])
+                fig = bar_chart(zone_mix.sort_values("Sequences", ascending=False), x=mix_col, y="Sequences", color=mix_col)
                 fig.update_layout(showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
                 render_plotly_visual(polish_plotly_figure(fig), f"{readable} zone mix", f"{key}_zone_mix_png")
             section_header("Channel Mix" if is_freekick else "Profile Mix", "How teams use the restart")
             group_col = "Channel" if is_freekick else "Profile"
             group_mix = sequences.groupby(group_col, dropna=False).size().reset_index(name="Sequences") if not sequences.empty else pd.DataFrame()
             if not group_mix.empty:
-                fig = px.bar(group_mix.sort_values("Sequences", ascending=False), x=group_col, y="Sequences", color=group_col, color_discrete_sequence=["#111827", "#c1121f", "#1d4ed8", "#15803d", "#b45309"])
+                fig = bar_chart(group_mix.sort_values("Sequences", ascending=False), x=group_col, y="Sequences", color=group_col)
                 fig.update_layout(showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
                 render_plotly_visual(polish_plotly_figure(fig), f"{readable} channel profile mix", f"{key}_channel_profile_mix_png")
 
@@ -1048,12 +1078,12 @@ def render_hops() -> None:
         with chart_left:
             section_header("Top Rating Evidence")
             chart_df = filtered.nlargest(min(15, len(filtered)), "Rating").sort_values("Rating")
-            fig = px.bar(chart_df, x="Rating", y="Player", color="Team", orientation="h", color_discrete_sequence=["#111827", "#c1121f", "#1d4ed8", "#15803d", "#b45309"])
+            fig = bar_chart(chart_df, x="Rating", y="Player", color="Team", orientation="h")
             fig.update_layout(height=520, margin=dict(l=10, r=10, t=30, b=10), legend_title_text="")
             render_plotly_visual(polish_plotly_figure(fig), "HOPS top rating evidence", "hops_top_rating_evidence_png")
         with chart_right:
             section_header("Rating Distribution")
-            hist = px.histogram(filtered, x="Rating", color="Tier", nbins=20, color_discrete_sequence=["#94a3b8", "#64748b", "#1d4ed8", "#c1121f"])
+            hist = histogram_chart(filtered, "Rating", color="Tier", nbins=20)
             hist.update_layout(height=520, margin=dict(l=10, r=10, t=30, b=10), legend_title_text="")
             render_plotly_visual(polish_plotly_figure(hist), "HOPS rating distribution", "hops_rating_distribution_png")
 
@@ -1173,18 +1203,18 @@ def render_delay() -> None:
         chart_left, chart_right = st.columns(2)
         with chart_left:
             section_header("Delay Evidence")
-            fig = px.histogram(filtered, x="delay_sec", nbins=24, color_discrete_sequence=["#111827"])
+            fig = histogram_chart(filtered, "delay_sec", nbins=24)
             fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False, xaxis_title="Delay seconds", yaxis_title="Corners")
             render_plotly_visual(polish_plotly_figure(fig), "Delay evidence", "delay_evidence_png")
         with chart_right:
             section_header("Exit Event Evidence")
-            box = px.box(filtered, x="out_event_type", y="delay_sec", color="out_event_type", color_discrete_sequence=["#111827", "#c1121f", "#1d4ed8", "#15803d", "#b45309"])
+            box = box_chart(filtered, x="out_event_type", y="delay_sec")
             box.update_layout(margin=dict(l=10, r=10, t=30, b=10), legend_title_text="", xaxis_title="", yaxis_title="Delay seconds")
             render_plotly_visual(polish_plotly_figure(box), "Delay exit event evidence", "delay_exit_event_evidence_png")
 
         section_header("Match Comparison", "Average delay by match")
         avg_by_match = filtered.groupby("match", dropna=False)["delay_sec"].mean().reset_index(name="Avg delay").sort_values("Avg delay", ascending=False).head(20)
-        match_fig = px.bar(avg_by_match.sort_values("Avg delay"), x="Avg delay", y="match", orientation="h", color_discrete_sequence=["#c1121f"])
+        match_fig = bar_chart(avg_by_match.sort_values("Avg delay"), x="Avg delay", y="match", orientation="h")
         match_fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False, xaxis_title="Average delay (s)", yaxis_title="")
         render_plotly_visual(polish_plotly_figure(match_fig), "Delay match comparison", "delay_match_comparison_png")
 
