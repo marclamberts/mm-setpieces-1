@@ -1550,12 +1550,103 @@ def add_logo_to_png_bytes(png_bytes: bytes) -> bytes:
     return output.getvalue()
 
 
-def plotly_figure_png_bytes(fig: go.Figure, width: int = 1400, height: int | None = None) -> bytes:
-    import plotly.io as pio
+def _coerce_plot_values(values) -> list:
+    if values is None:
+        return []
+    if hasattr(values, "tolist"):
+        values = values.tolist()
+    return list(values)
 
+
+def _plotly_matplotlib_fallback_png_bytes(fig: go.Figure, width: int, height: int) -> bytes:
+    import matplotlib.pyplot as plt
+
+    fig_dict = fig.to_dict()
+    data = fig_dict.get("data", [])
+    layout = fig_dict.get("layout", {})
+    title = layout.get("title", {}).get("text") if isinstance(layout.get("title"), dict) else layout.get("title", "")
+    title = title or "SetPlayPro visual"
+
+    mpl_fig, ax = plt.subplots(figsize=(width / 180, height / 180), dpi=180)
+    mpl_fig.patch.set_facecolor("white")
+    ax.set_facecolor("white")
+
+    drew_trace = False
+    box_values = []
+    box_labels = []
+    for idx, trace in enumerate(data):
+        trace_type = trace.get("type", "scatter")
+        name = str(trace.get("name") or trace_type.title())
+        x = _coerce_plot_values(trace.get("x"))
+        y = _coerce_plot_values(trace.get("y"))
+        marker = trace.get("marker", {}) or {}
+        color = marker.get("color") if isinstance(marker.get("color"), str) else None
+        color = color or [RED, BLACK, "#2563eb", "#16a34a", "#f59e0b", "#7c3aed", "#64748b"][idx % 7]
+
+        if trace_type == "bar" and x and y:
+            if trace.get("orientation") == "h":
+                ax.barh(y, x, label=name, color=color, alpha=0.88)
+            else:
+                ax.bar(x, y, label=name, color=color, alpha=0.88)
+            drew_trace = True
+        elif trace_type in {"scatter", "scattergl"} and x and y:
+            mode = trace.get("mode", "markers")
+            if "lines" in mode:
+                ax.plot(x, y, label=name, color=color, linewidth=1.8, alpha=0.86)
+            if "markers" in mode or mode == "markers":
+                raw_size = marker.get("size", 42)
+                if hasattr(raw_size, "tolist"):
+                    raw_size = raw_size.tolist()
+                if isinstance(raw_size, list):
+                    sizes = [max(18, min(180, float(v or 18))) for v in raw_size]
+                else:
+                    sizes = max(24, min(120, float(raw_size or 42)))
+                ax.scatter(x, y, s=sizes, label=name, color=color, alpha=0.78, edgecolors="white", linewidths=0.5)
+            drew_trace = True
+        elif trace_type == "histogram" and x:
+            ax.hist(x, bins=min(30, max(8, int(len(x) ** 0.5) if x else 8)), label=name, color=color, alpha=0.86)
+            drew_trace = True
+        elif trace_type == "box" and y:
+            box_values.append(y)
+            box_labels.append(name)
+            drew_trace = True
+
+    if box_values:
+        ax.boxplot(box_values, labels=box_labels, patch_artist=True)
+
+    if not drew_trace:
+        ax.text(0.5, 0.5, "No visual data available", ha="center", va="center", transform=ax.transAxes, color=MUTED)
+
+    x_title = layout.get("xaxis", {}).get("title", {}).get("text", "") if isinstance(layout.get("xaxis"), dict) else ""
+    y_title = layout.get("yaxis", {}).get("title", {}).get("text", "") if isinstance(layout.get("yaxis"), dict) else ""
+    ax.set_title(title, color=BLACK, fontweight="bold", pad=14)
+    ax.set_xlabel(x_title)
+    ax.set_ylabel(y_title)
+    ax.grid(True, color="#e5e7eb", linewidth=0.7)
+    if len(data) > 1:
+        ax.legend(loc="best", fontsize=7)
+    mpl_fig.tight_layout(rect=[0, 0, 0.9, 0.96])
+
+    output = BytesIO()
+    mpl_fig.savefig(output, format="png", dpi=180, facecolor="white")
+    plt.close(mpl_fig)
+    return add_logo_to_png_bytes(output.getvalue())
+
+
+def plotly_figure_png_bytes(fig: go.Figure, width: int = 1400, height: int | None = None) -> bytes:
     export_height = height or int(fig.layout.height or 820)
-    png_bytes = pio.to_image(fig, format="png", width=width, height=export_height, scale=2)
-    return add_logo_to_png_bytes(png_bytes)
+    export_fig = go.Figure(fig)
+    export_fig.update_layout(
+        paper_bgcolor="#ffffff",
+        plot_bgcolor="#ffffff",
+        margin=dict(
+            l=int(fig.layout.margin.l or 40) if fig.layout.margin else 40,
+            r=max(int(fig.layout.margin.r or 40) if fig.layout.margin else 40, 170),
+            t=max(int(fig.layout.margin.t or 50) if fig.layout.margin else 50, 70),
+            b=int(fig.layout.margin.b or 40) if fig.layout.margin else 40,
+        ),
+    )
+    return _plotly_matplotlib_fallback_png_bytes(export_fig, width, export_height)
 
 
 def matplotlib_figure_png_bytes(fig) -> bytes:
@@ -1577,12 +1668,9 @@ def add_logo_to_matplotlib_figure(fig) -> None:
 
 
 def render_plotly_png_download(fig: go.Figure, label: str, key: str) -> None:
-    prepare_key = f"{key}_prepare_png"
-    if not st.checkbox("Prepare PNG", key=prepare_key):
-        return
     try:
         st.download_button(
-            "Download PNG",
+            "Download PNG with logo",
             data=plotly_figure_png_bytes(fig),
             file_name=f"{_safe_file_stem(label)}.png",
             mime="image/png",
@@ -1590,14 +1678,12 @@ def render_plotly_png_download(fig: go.Figure, label: str, key: str) -> None:
             width="stretch",
         )
     except Exception as exc:
-        st.warning(f"PNG export is not available yet: {exc}")
+        st.error(f"PNG export failed. Streamlit Cloud may still be installing the export dependency. Details: {exc}")
 
 
 def render_matplotlib_png_download(fig, label: str, key: str) -> None:
-    if not st.checkbox("Prepare PNG", key=f"{key}_prepare_png"):
-        return
     st.download_button(
-        "Download PNG",
+        "Download PNG with logo",
         data=matplotlib_figure_png_bytes(fig),
         file_name=f"{_safe_file_stem(label)}.png",
         mime="image/png",
