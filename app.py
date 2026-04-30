@@ -286,16 +286,69 @@ def render_landing() -> None:
     st.markdown(
         """
         <style>
+            :root {
+                --mm-landing-logo: min(340px, 66vw);
+            }
+            html,
+            body,
+            .stApp,
+            [data-testid="stAppViewContainer"],
+            [data-testid="stMain"],
+            .main {
+                background: #ffffff !important;
+                overflow: hidden !important;
+            }
+            header[data-testid="stHeader"],
+            [data-testid="stDecoration"],
+            footer,
+            #MainMenu {
+                display: none !important;
+                visibility: hidden !important;
+                height: 0 !important;
+            }
             section[data-testid="stSidebar"] {
                 display: none !important;
             }
-            html, body, .stApp {
+            .block-container {
+                width: 100vw !important;
+                max-width: 100vw !important;
+                height: 100vh !important;
+                min-height: 100vh !important;
+                padding: 0 !important;
+                padding-bottom: 0 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: .9rem !important;
+                background: #ffffff !important;
                 overflow: hidden !important;
             }
-            .block-container {
-                max-width: 760px;
-                padding-top: 0 !important;
-                padding-bottom: 0 !important;
+            .block-container > div {
+                width: min(380px, 76vw) !important;
+            }
+            div[data-testid="stImage"] {
+                width: var(--mm-landing-logo) !important;
+                max-width: var(--mm-landing-logo) !important;
+                margin: 0 auto !important;
+                background: transparent !important;
+                border: 0 !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+            }
+            div[data-testid="stImage"] img {
+                width: var(--mm-landing-logo) !important;
+                max-width: var(--mm-landing-logo) !important;
+                height: auto !important;
+                display: block !important;
+            }
+            div.stButton {
+                width: min(260px, 68vw) !important;
+                margin: 0 auto !important;
+            }
+            div.stButton > button {
+                min-height: 2.75rem !important;
+                box-shadow: none !important;
             }
         </style>
         """,
@@ -303,7 +356,7 @@ def render_landing() -> None:
     )
     st.markdown('<div class="mm-landing-shell">', unsafe_allow_html=True)
     if LOGO_PATH.exists():
-        st.image(str(LOGO_PATH), width=460)
+        st.image(str(LOGO_PATH), width=340)
     else:
         st.markdown('<div class="mm-landing-wordmark"><span>SetPlay</span><strong>Pro</strong></div>', unsafe_allow_html=True)
     st.markdown('<div class="mm-landing-action">', unsafe_allow_html=True)

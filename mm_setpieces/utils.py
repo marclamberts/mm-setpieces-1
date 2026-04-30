@@ -394,14 +394,15 @@ def inject_app_style() -> None:
                 transform: none;
             }}
             .mm-landing-shell {{
-                height: calc(100vh - 2.6rem);
+                height: auto;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                gap: 1.15rem;
-                padding: 0 1rem 1.4rem;
+                gap: .9rem;
+                padding: 0;
                 overflow: hidden;
+                background: #ffffff;
             }}
             .mm-landing-shell div[data-testid="stImage"] {{
                 background: transparent;
@@ -409,7 +410,7 @@ def inject_app_style() -> None:
                 border-radius: 0;
                 padding: 0;
                 box-shadow: none;
-                width: min(460px, 76vw);
+                width: min(340px, 66vw);
             }}
             .mm-landing-shell div[data-testid="stImage"] img {{
                 display: block;
@@ -417,7 +418,7 @@ def inject_app_style() -> None:
                 height: auto;
             }}
             .mm-landing-action {{
-                width: min(300px, 76vw);
+                width: min(260px, 68vw);
             }}
             .mm-landing-action div.stButton > button {{
                 min-height: 2.9rem;
