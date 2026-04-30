@@ -17,6 +17,7 @@ PITCH_WIDTH = 80
 HALF_START = 60
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR.parent / "Data"
+LOGO_PATH = BASE_DIR.parent / "assets" / "setplaypro-logo.jpg"
 
 BLACK = "#0b0f14"
 RED = "#c1121f"
@@ -1524,6 +1525,85 @@ def polish_plotly_figure(fig: go.Figure) -> go.Figure:
     fig.update_xaxes(showgrid=True, gridcolor="rgba(15,23,42,0.08)", zeroline=False)
     fig.update_yaxes(showgrid=True, gridcolor="rgba(15,23,42,0.08)", zeroline=False)
     return fig
+
+
+def _safe_file_stem(value: str) -> str:
+    cleaned = "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in value.strip().lower())
+    return "_".join(part for part in cleaned.split("_") if part) or "setplaypro"
+
+
+def add_logo_to_png_bytes(png_bytes: bytes) -> bytes:
+    from PIL import Image
+
+    if not LOGO_PATH.exists():
+        return png_bytes
+
+    image = Image.open(BytesIO(png_bytes)).convert("RGBA")
+    logo = Image.open(LOGO_PATH).convert("RGBA")
+    logo_width = max(84, min(180, int(image.width * 0.13)))
+    logo.thumbnail((logo_width, logo_width), Image.LANCZOS)
+    margin = max(18, int(image.width * 0.018))
+    image.alpha_composite(logo, (image.width - logo.width - margin, margin))
+
+    output = BytesIO()
+    image.convert("RGB").save(output, format="PNG", optimize=True)
+    return output.getvalue()
+
+
+def plotly_figure_png_bytes(fig: go.Figure, width: int = 1400, height: int | None = None) -> bytes:
+    import plotly.io as pio
+
+    export_height = height or int(fig.layout.height or 820)
+    png_bytes = pio.to_image(fig, format="png", width=width, height=export_height, scale=2)
+    return add_logo_to_png_bytes(png_bytes)
+
+
+def matplotlib_figure_png_bytes(fig) -> bytes:
+    output = BytesIO()
+    fig.savefig(output, format="png", dpi=180, bbox_inches="tight", facecolor="white")
+    return add_logo_to_png_bytes(output.getvalue())
+
+
+def add_logo_to_matplotlib_figure(fig) -> None:
+    if not LOGO_PATH.exists():
+        return
+
+    import matplotlib.image as mpimg
+
+    logo = mpimg.imread(LOGO_PATH)
+    ax = fig.add_axes([0.82, 0.91, 0.12, 0.055], anchor="NE", zorder=20)
+    ax.imshow(logo)
+    ax.axis("off")
+
+
+def render_plotly_png_download(fig: go.Figure, label: str, key: str) -> None:
+    prepare_key = f"{key}_prepare_png"
+    if not st.checkbox("Prepare PNG", key=prepare_key):
+        return
+    try:
+        st.download_button(
+            "Download PNG",
+            data=plotly_figure_png_bytes(fig),
+            file_name=f"{_safe_file_stem(label)}.png",
+            mime="image/png",
+            key=f"{key}_download_png",
+            width="stretch",
+        )
+    except Exception as exc:
+        st.warning(f"PNG export is not available yet: {exc}")
+
+
+def render_matplotlib_png_download(fig, label: str, key: str) -> None:
+    if not st.checkbox("Prepare PNG", key=f"{key}_prepare_png"):
+        return
+    st.download_button(
+        "Download PNG",
+        data=matplotlib_figure_png_bytes(fig),
+        file_name=f"{_safe_file_stem(label)}.png",
+        mime="image/png",
+        key=f"{key}_download_png",
+        width="stretch",
+    )
 
 
 @st.cache_data(show_spinner=False)
@@ -3286,14 +3366,17 @@ def prematch_report_pdf_bytes(df: pd.DataFrame, label: str = "", opponent: str =
                 y -= 0.024
                 if y < 0.08:
                     break
+        add_logo_to_matplotlib_figure(fig)
         pdf.savefig(fig, bbox_inches="tight")
         plt.close(fig)
 
         fig = mplsoccer_delivery_figure(df, label)
+        add_logo_to_matplotlib_figure(fig)
         pdf.savefig(fig, bbox_inches="tight")
         plt.close(fig)
 
         fig = mplsoccer_shot_figure(df, label)
+        add_logo_to_matplotlib_figure(fig)
         pdf.savefig(fig, bbox_inches="tight")
         plt.close(fig)
 

@@ -6,3 +6,5 @@ openpyxl
 matplotlib
 mplsoccer
 reportlab
+kaleido==0.2.1
+pillow
