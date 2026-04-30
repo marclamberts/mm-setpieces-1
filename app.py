@@ -277,7 +277,7 @@ def render_single_app_sidebar() -> str:
     st.sidebar.markdown("---")
     st.sidebar.markdown(f"### {section} filters")
     if section != "Home":
-        if st.sidebar.button("Reset filters", key=f"reset_{section}", width="stretch"):
+        if st.sidebar.button("Reset filters", key=f"reset_{section}", use_container_width=True):
             reset_current_filters(section)
     return section
 
@@ -360,7 +360,7 @@ def render_landing() -> None:
     else:
         st.markdown('<div class="mm-landing-wordmark"><span>SetPlay</span><strong>Pro</strong></div>', unsafe_allow_html=True)
     st.markdown('<div class="mm-landing-action">', unsafe_allow_html=True)
-    if st.button("Continue to playform", key="continue_to_playform", width="stretch"):
+    if st.button("Continue to playform", key="continue_to_playform", use_container_width=True):
         st.session_state["show_playform"] = True
         st.session_state["section"] = "Home"
         st.session_state["section_select"] = "Home"
@@ -370,14 +370,14 @@ def render_landing() -> None:
 
 def render_plotly_visual(fig, label: str, key: str) -> None:
     if PLOTLY_AVAILABLE:
-        st.plotly_chart(fig, width="stretch", config={"displaylogo": False, "modeBarButtonsToRemove": ["toImage"]})
+        st.plotly_chart(fig, use_container_width=True, config={"displaylogo": False, "modeBarButtonsToRemove": ["toImage"]})
     else:
         st.image(plotly_figure_png_bytes(fig), use_container_width=True)
     render_plotly_png_download(fig, label, key)
 
 
 def render_mpl_visual(fig, label: str, key: str) -> None:
-    st.pyplot(fig, width="stretch")
+    st.pyplot(fig, use_container_width=True)
     render_matplotlib_png_download(fig, label, key)
 
 
@@ -817,7 +817,7 @@ def render_corners() -> None:
             safe_name = (opponent.strip() or label).lower().replace(" ", "_").replace("/", "-")
             st.markdown('<div class="mm-table-note">PDF generation is prepared on demand because pitch images are heavier than tables.</div>', unsafe_allow_html=True)
             if st.checkbox("Prepare PDF brief", key="corners_prepare_pdf"):
-                st.download_button("Download pre-match PDF", data=_cached_report_pdf(filtered, label, opponent.strip()), file_name=f"{safe_name}_set_piece_report.pdf", mime="application/pdf", width="stretch")
+                st.download_button("Download pre-match PDF", data=_cached_report_pdf(filtered, label, opponent.strip()), file_name=f"{safe_name}_set_piece_report.pdf", mime="application/pdf", use_container_width=True)
 
     elif view == "Event Log":
         section_header("Event Log", f"{len(filtered):,} workbook rows in the current filter")
