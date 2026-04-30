@@ -394,13 +394,14 @@ def inject_app_style() -> None:
                 transform: none;
             }}
             .mm-landing-shell {{
-                min-height: calc(100vh - 3.2rem);
+                height: calc(100vh - 2.6rem);
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                gap: 2rem;
-                padding: 2rem 1rem 4rem;
+                gap: 1.15rem;
+                padding: 0 1rem 1.4rem;
+                overflow: hidden;
             }}
             .mm-landing-shell div[data-testid="stImage"] {{
                 background: transparent;
@@ -408,7 +409,7 @@ def inject_app_style() -> None:
                 border-radius: 0;
                 padding: 0;
                 box-shadow: none;
-                width: min(680px, 88vw);
+                width: min(460px, 76vw);
             }}
             .mm-landing-shell div[data-testid="stImage"] img {{
                 display: block;
@@ -416,12 +417,12 @@ def inject_app_style() -> None:
                 height: auto;
             }}
             .mm-landing-action {{
-                width: min(320px, 82vw);
+                width: min(300px, 76vw);
             }}
             .mm-landing-action div.stButton > button {{
-                min-height: 3.25rem;
+                min-height: 2.9rem;
                 border-radius: 6px;
-                font-size: 1rem;
+                font-size: .95rem;
                 letter-spacing: 0;
                 box-shadow: 0 16px 34px rgba(193, 18, 31, 0.2);
             }}

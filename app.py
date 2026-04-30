@@ -289,9 +289,13 @@ def render_landing() -> None:
             section[data-testid="stSidebar"] {
                 display: none !important;
             }
+            html, body, .stApp {
+                overflow: hidden !important;
+            }
             .block-container {
-                max-width: 980px;
+                max-width: 760px;
                 padding-top: 0 !important;
+                padding-bottom: 0 !important;
             }
         </style>
         """,
@@ -299,7 +303,7 @@ def render_landing() -> None:
     )
     st.markdown('<div class="mm-landing-shell">', unsafe_allow_html=True)
     if LOGO_PATH.exists():
-        st.image(str(LOGO_PATH), width=680)
+        st.image(str(LOGO_PATH), width=460)
     else:
         st.markdown('<div class="mm-landing-wordmark"><span>SetPlay</span><strong>Pro</strong></div>', unsafe_allow_html=True)
     st.markdown('<div class="mm-landing-action">', unsafe_allow_html=True)
