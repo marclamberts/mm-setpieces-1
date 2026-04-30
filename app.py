@@ -4,7 +4,6 @@ from html import escape
 from pathlib import Path
 import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
 import streamlit as st
 
 from mm_setpieces.utils import *
@@ -369,7 +368,10 @@ def render_landing() -> None:
 
 
 def render_plotly_visual(fig, label: str, key: str) -> None:
-    st.plotly_chart(fig, width="stretch", config={"displaylogo": False, "modeBarButtonsToRemove": ["toImage"]})
+    if PLOTLY_AVAILABLE:
+        st.plotly_chart(fig, width="stretch", config={"displaylogo": False, "modeBarButtonsToRemove": ["toImage"]})
+    else:
+        st.image(plotly_figure_png_bytes(fig), use_container_width=True)
     render_plotly_png_download(fig, label, key)
 
 

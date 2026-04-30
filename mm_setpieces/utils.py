@@ -9,8 +9,87 @@ import tempfile
 import textwrap
 import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
 import streamlit as st
+
+PLOTLY_AVAILABLE = True
+try:
+    import plotly.graph_objects as go
+except Exception:
+    PLOTLY_AVAILABLE = False
+
+    class _PlotlyLayout(dict):
+        def __getattr__(self, name):
+            value = self.get(name)
+            if isinstance(value, dict):
+                return _PlotlyLayout(value)
+            return value
+
+    class _FallbackFigure:
+        def __init__(self, other=None, *_, **__):
+            if hasattr(other, "to_dict"):
+                payload = other.to_dict()
+                self.data = list(payload.get("data", []))
+                self.layout = _PlotlyLayout(payload.get("layout", {}))
+            else:
+                self.data = []
+                self.layout = _PlotlyLayout()
+
+        def add_trace(self, trace):
+            self.data.append(dict(trace))
+            return self
+
+        def add_bar(self, **kwargs):
+            return self.add_trace({"type": "bar", **kwargs})
+
+        def add_histogram(self, **kwargs):
+            return self.add_trace({"type": "histogram", **kwargs})
+
+        def add_box(self, **kwargs):
+            return self.add_trace({"type": "box", **kwargs})
+
+        def add_annotation(self, **kwargs):
+            self.layout.setdefault("annotations", []).append(kwargs)
+            return self
+
+        def update_layout(self, **kwargs):
+            for key, value in kwargs.items():
+                if isinstance(value, dict) and isinstance(self.layout.get(key), dict):
+                    self.layout[key].update(value)
+                else:
+                    self.layout[key] = value
+            return self
+
+        def update_xaxes(self, **kwargs):
+            self.layout.setdefault("xaxis", {}).update(kwargs)
+            return self
+
+        def update_yaxes(self, **kwargs):
+            self.layout.setdefault("yaxis", {}).update(kwargs)
+            return self
+
+        def to_dict(self):
+            return {"data": self.data, "layout": dict(self.layout)}
+
+    class _FallbackGraphObjects:
+        Figure = _FallbackFigure
+
+        @staticmethod
+        def Bar(**kwargs):
+            return {"type": "bar", **kwargs}
+
+        @staticmethod
+        def Scatter(**kwargs):
+            return {"type": "scatter", **kwargs}
+
+        @staticmethod
+        def Histogram(**kwargs):
+            return {"type": "histogram", **kwargs}
+
+        @staticmethod
+        def Box(**kwargs):
+            return {"type": "box", **kwargs}
+
+    go = _FallbackGraphObjects()
 
 PITCH_LENGTH = 120
 PITCH_WIDTH = 80
