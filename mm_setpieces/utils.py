@@ -1927,6 +1927,18 @@ def _load_czech_sp_data() -> pd.DataFrame:
         cz["SP_Type"] = _canonical_sp_type_series(cz["SP_Type"])
     return cz
 
+@st.cache_data(show_spinner=False)
+def _load_bundesliga_sp_data() -> pd.DataFrame:
+    bundesliga = _read_excel_if_exists("Bundesliga SP.xlsx")
+    if bundesliga.empty:
+        return bundesliga
+    bundesliga = bundesliga.copy()
+    if "SP_Type" not in bundesliga.columns and "play_pattern.name" in bundesliga.columns:
+        bundesliga["SP_Type"] = bundesliga["play_pattern.name"]
+    if "SP_Type" in bundesliga.columns:
+        bundesliga["SP_Type"] = _canonical_sp_type_series(bundesliga["SP_Type"])
+    return bundesliga
+
 def _fill_from_candidates(df: pd.DataFrame, target: str, candidates: list[str], default=np.nan) -> None:
     if target not in df.columns:
         df[target] = pd.Series(np.nan, index=df.index, dtype="object")
@@ -1966,6 +1978,7 @@ def load_corner_data() -> pd.DataFrame:
             cz_corners["Team"] = cz_corners["Taker"].astype(str).map(_cz_taker_team_map())
     sources = [
         _with_league(_read_excel_if_exists("Allsvenskan - Corners 2025.xlsx"), "Allsvenskan"),
+        _with_league(_read_excel_if_exists("Bundesliga - Corners 2025-2026.xlsx"), "Bundesliga"),
         _with_league(cz_corners, "Czech First League"),
     ]
     sources = [df for df in sources if not df.empty]
@@ -1977,8 +1990,9 @@ def load_swe_sp_data() -> pd.DataFrame:
     if not swe.empty and "SP_Type" in swe.columns:
         swe = swe.copy()
         swe["SP_Type"] = _canonical_sp_type_series(swe["SP_Type"])
+    bundesliga = _with_league(_load_bundesliga_sp_data(), "Bundesliga")
     cz = _with_league(_load_czech_sp_data(), "Czech First League")
-    sources = [df for df in [swe, cz] if not df.empty]
+    sources = [df for df in [swe, bundesliga, cz] if not df.empty]
     return pd.concat(sources, ignore_index=True, sort=False) if sources else pd.DataFrame()
 
 @st.cache_data(show_spinner=False)

@@ -43,6 +43,7 @@ def _cached_report_pdf(df: pd.DataFrame, label: str, opponent: str) -> bytes:
 def load_hops_data() -> pd.DataFrame:
     sources = [
         _with_league(_read_excel_if_exists("SWE HOPS.xlsx"), "Allsvenskan"),
+        _with_league(_read_excel_if_exists("GER HOPS.xlsx"), "Bundesliga"),
         _with_league(_read_excel_if_exists("CZ HOPS.xlsx"), "Czech First League"),
         _with_league(_read_excel_if_exists("duel_hops_rating_summary.xlsx"), "Unknown"),
     ]
