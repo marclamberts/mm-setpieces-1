@@ -97,6 +97,7 @@ HALF_START = 60
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR.parent / "Data"
 LOGO_PATH = BASE_DIR.parent / "assets" / "setplaypro-logo.jpg"
+DATA_VERSION = "bundesliga_sources_v2"
 
 BLACK = "#0b0f14"
 RED = "#c1121f"
@@ -1928,7 +1929,7 @@ def _load_czech_sp_data() -> pd.DataFrame:
     return cz
 
 @st.cache_data(show_spinner=False)
-def _load_bundesliga_sp_data() -> pd.DataFrame:
+def _load_bundesliga_sp_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
     bundesliga = _read_excel_if_exists("Bundesliga SP.xlsx")
     if bundesliga.empty:
         return bundesliga
@@ -1953,7 +1954,7 @@ def _fill_from_candidates(df: pd.DataFrame, target: str, candidates: list[str], 
     df[target] = df[target].fillna(default)
 
 @st.cache_data(show_spinner=False)
-def _cz_taker_team_map() -> dict[str, str]:
+def _cz_taker_team_map(_data_version: str = DATA_VERSION) -> dict[str, str]:
     cz_sp = _load_czech_sp_data()
     if cz_sp.empty or "team.name" not in cz_sp.columns:
         return {}
@@ -1970,7 +1971,7 @@ def _cz_taker_team_map() -> dict[str, str]:
     return taker_team.to_dict()
 
 @st.cache_data(show_spinner=False)
-def load_corner_data() -> pd.DataFrame:
+def load_corner_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
     cz_corners = _read_csv_if_exists("CZ - Corners 2025-2026.csv")
     if not cz_corners.empty:
         cz_corners = cz_corners.copy()
@@ -1985,7 +1986,7 @@ def load_corner_data() -> pd.DataFrame:
     return pd.concat(sources, ignore_index=True, sort=False) if sources else pd.DataFrame()
 
 @st.cache_data(show_spinner=False)
-def load_swe_sp_data() -> pd.DataFrame:
+def load_swe_sp_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
     swe = _with_league(_read_excel_if_exists("SWE SP.xlsx"), "Allsvenskan")
     if not swe.empty and "SP_Type" in swe.columns:
         swe = swe.copy()
@@ -1996,7 +1997,7 @@ def load_swe_sp_data() -> pd.DataFrame:
     return pd.concat(sources, ignore_index=True, sort=False) if sources else pd.DataFrame()
 
 @st.cache_data(show_spinner=False)
-def load_sp_data(label: str) -> pd.DataFrame:
+def load_sp_data(label: str, _data_version: str = DATA_VERSION) -> pd.DataFrame:
     if label == "Corners":
         return load_corner_data().copy()
 
@@ -2187,7 +2188,7 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
 
 
 @st.cache_data(show_spinner=False)
-def load_prepared_sp_data(label: str) -> pd.DataFrame:
+def load_prepared_sp_data(label: str, _data_version: str = DATA_VERSION) -> pd.DataFrame:
     raw = load_sp_data(label)
     return filter_by_sp_type(prepare_sp_dataframe(raw, label=label), label)
 

@@ -40,7 +40,7 @@ def _cached_report_pdf(df: pd.DataFrame, label: str, opponent: str) -> bytes:
 
 
 @st.cache_data(show_spinner=False)
-def load_hops_data() -> pd.DataFrame:
+def load_hops_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
     sources = [
         _with_league(_read_excel_if_exists("SWE HOPS.xlsx"), "Allsvenskan"),
         _with_league(_read_excel_if_exists("GER HOPS.xlsx"), "Bundesliga"),
@@ -146,7 +146,7 @@ def _phase_snapshot(df: pd.DataFrame, phase: str, team: str) -> dict[str, object
 
 
 @st.cache_data(show_spinner=False)
-def command_center_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def command_center_data(_data_version: str = DATA_VERSION) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     corners = load_prepared_sp_data("Corners")
     freekicks = load_prepared_sp_data("Freekicks")
     throwins = load_prepared_sp_data("Throw ins")
