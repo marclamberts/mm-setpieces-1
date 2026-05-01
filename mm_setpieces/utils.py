@@ -97,7 +97,7 @@ HALF_START = 60
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR.parent / "Data"
 LOGO_PATH = BASE_DIR.parent / "assets" / "setplaypro-logo.jpg"
-DATA_VERSION = "bundesliga_sources_v2"
+DATA_VERSION = "bundesliga_sources_v3"
 
 BLACK = "#0b0f14"
 RED = "#c1121f"
@@ -1971,7 +1971,29 @@ def _cz_taker_team_map(_data_version: str = DATA_VERSION) -> dict[str, str]:
     return taker_team.to_dict()
 
 @st.cache_data(show_spinner=False)
+def _bundesliga_taker_team_map(_data_version: str = DATA_VERSION) -> dict[str, str]:
+    bundesliga = _load_bundesliga_sp_data()
+    if bundesliga.empty or "team.name" not in bundesliga.columns:
+        return {}
+    player_col = "Taker" if "Taker" in bundesliga.columns else "player.name" if "player.name" in bundesliga.columns else None
+    if player_col is None:
+        return {}
+    taker_team = (
+        bundesliga[[player_col, "team.name"]]
+        .dropna()
+        .astype(str)
+        .groupby(player_col)["team.name"]
+        .agg(lambda s: s.value_counts().idxmax())
+    )
+    return taker_team.to_dict()
+
+@st.cache_data(show_spinner=False)
 def load_corner_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
+    bundesliga_corners = _read_excel_if_exists("Bundesliga - Corners 2025-2026.xlsx")
+    if not bundesliga_corners.empty:
+        bundesliga_corners = bundesliga_corners.copy()
+        if "Team" not in bundesliga_corners.columns and "Taker" in bundesliga_corners.columns:
+            bundesliga_corners["Team"] = bundesliga_corners["Taker"].astype(str).map(_bundesliga_taker_team_map())
     cz_corners = _read_csv_if_exists("CZ - Corners 2025-2026.csv")
     if not cz_corners.empty:
         cz_corners = cz_corners.copy()
@@ -1979,7 +2001,7 @@ def load_corner_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
             cz_corners["Team"] = cz_corners["Taker"].astype(str).map(_cz_taker_team_map())
     sources = [
         _with_league(_read_excel_if_exists("Allsvenskan - Corners 2025.xlsx"), "Allsvenskan"),
-        _with_league(_read_excel_if_exists("Bundesliga - Corners 2025-2026.xlsx"), "Bundesliga"),
+        _with_league(bundesliga_corners, "Bundesliga"),
         _with_league(cz_corners, "Czech First League"),
     ]
     sources = [df for df in sources if not df.empty]
