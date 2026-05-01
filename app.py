@@ -7,7 +7,7 @@ import pandas as pd
 import streamlit as st
 
 from mm_setpieces.utils import *
-from mm_setpieces.utils import _read_excel_if_exists, _with_league
+from mm_setpieces.utils import DATA_VERSION, _read_excel_if_exists, _with_league
 
 
 APP_SECTIONS = ["Home", "Corners", "Freekicks", "Throw-ins", "HOPS", "Delay Analysis"]
