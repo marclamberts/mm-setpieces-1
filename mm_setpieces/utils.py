@@ -97,7 +97,7 @@ HALF_START = 60
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR.parent / "Data"
 LOGO_PATH = BASE_DIR.parent / "assets" / "setplaypro-logo.jpg"
-DATA_VERSION = "bundesliga_sources_v3"
+DATA_VERSION = "uae_sources_v1"
 
 BLACK = "#0b0f14"
 RED = "#c1121f"
@@ -1940,6 +1940,16 @@ def _load_bundesliga_sp_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
         bundesliga["SP_Type"] = _canonical_sp_type_series(bundesliga["SP_Type"])
     return bundesliga
 
+@st.cache_data(show_spinner=False)
+def _load_uae_sp_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
+    uae = _read_excel_if_exists("UAE SP.xlsx")
+    if uae.empty:
+        return uae
+    uae = uae.copy()
+    if "SP_Type" in uae.columns:
+        uae["SP_Type"] = _canonical_sp_type_series(uae["SP_Type"])
+    return uae
+
 def _fill_from_candidates(df: pd.DataFrame, target: str, candidates: list[str], default=np.nan) -> None:
     if target not in df.columns:
         df[target] = pd.Series(np.nan, index=df.index, dtype="object")
@@ -2003,6 +2013,7 @@ def load_corner_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
         _with_league(_read_excel_if_exists("Allsvenskan - Corners 2025.xlsx"), "Allsvenskan"),
         _with_league(bundesliga_corners, "Bundesliga"),
         _with_league(cz_corners, "Czech First League"),
+        _with_league(_read_excel_if_exists("UAE - Corners 2025-2026.xlsx"), "UAE Pro League"),
     ]
     sources = [df for df in sources if not df.empty]
     return pd.concat(sources, ignore_index=True, sort=False) if sources else pd.DataFrame()
@@ -2015,7 +2026,8 @@ def load_swe_sp_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
         swe["SP_Type"] = _canonical_sp_type_series(swe["SP_Type"])
     bundesliga = _with_league(_load_bundesliga_sp_data(), "Bundesliga")
     cz = _with_league(_load_czech_sp_data(), "Czech First League")
-    sources = [df for df in [swe, bundesliga, cz] if not df.empty]
+    uae = _with_league(_load_uae_sp_data(), "UAE Pro League")
+    sources = [df for df in [swe, bundesliga, cz, uae] if not df.empty]
     return pd.concat(sources, ignore_index=True, sort=False) if sources else pd.DataFrame()
 
 @st.cache_data(show_spinner=False)
@@ -2081,7 +2093,7 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
             fill = "Allsvenskan" if col == "League" else ("No shot" if col == "Shot outcome" else "Unknown")
             df[col] = df[col].fillna(fill)
 
-        for col in ["minute", "second", "match_id", "shot_x", "shot_y", "delivery_end_x", "delivery_end_y", "xg"]:
+        for col in ["minute", "second", "shot_x", "shot_y", "delivery_end_x", "delivery_end_y", "xg"]:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors="coerce")
 
@@ -2109,10 +2121,12 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
                     df[["match_id"]]
                     .dropna()
                     .drop_duplicates()
-                    .sort_values("match_id", ascending=False)
+                    .assign(_match_id_sort=lambda x: x["match_id"].astype(str))
+                    .sort_values("_match_id_sort", ascending=False)
                     .reset_index(drop=True)
                 )
                 match_order["match_rank"] = range(1, len(match_order) + 1)
+                match_order = match_order.drop(columns=["_match_id_sort"])
                 df = df.merge(match_order, on="match_id", how="left")
             else:
                 df["match_rank"] = 999
@@ -2178,7 +2192,7 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
         else:
             df["second"] = 0
 
-    for col in ["minute", "second", "match_id", "shot_x", "shot_y", "delivery_end_x", "delivery_end_y", "xg"]:
+    for col in ["minute", "second", "shot_x", "shot_y", "delivery_end_x", "delivery_end_y", "xg"]:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
 
@@ -2199,10 +2213,12 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
                 df[["match_id"]]
                 .dropna()
                 .drop_duplicates()
-                .sort_values("match_id", ascending=False)
+                .assign(_match_id_sort=lambda x: x["match_id"].astype(str))
+                .sort_values("_match_id_sort", ascending=False)
                 .reset_index(drop=True)
             )
             order["match_rank"] = range(1, len(order) + 1)
+            order = order.drop(columns=["_match_id_sort"])
             df = df.merge(order, on="match_id", how="left")
         else:
             df["match_rank"] = 999

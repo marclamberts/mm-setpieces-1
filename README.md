@@ -8,5 +8,9 @@ The app runs from a single Streamlit entry file. Use the sidebar selector inside
 `app.py` to switch between Home, Corners, Freekicks, Throw-ins, HOPS, and Delay
 Analysis.
 
+Bundled restart data lives in `Data/` and includes Allsvenskan, Bundesliga,
+Czech First League, and UAE Pro League workbooks for the Corners, Freekicks, and
+Throw-ins desks.
+
 Exports and PDF reports are prepared on demand so normal filtering and view
 switching stay lighter.

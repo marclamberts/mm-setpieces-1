@@ -583,19 +583,19 @@ def render_home() -> None:
             "Corners",
             "Corner delivery dossier",
             "Rank teams, takers, target zones, shot value, second-ball patterns, and match-ready delivery maps.",
-            "Data/Allsvenskan - Corners 2025.xlsx + Data/CZ - Corners 2025-2026.csv",
+            "Data/Allsvenskan + Bundesliga + CZ + UAE corner files",
         ),
         (
             "Freekicks",
             "Dead-ball origin dossier",
             "Free-kick origins, channel threat, taker tendencies, shooter value, and possession-level outcomes.",
-            "Data/SWE SP.xlsx + Data/Czech SP.xlsx · From Free Kick",
+            "Data/SWE + Bundesliga + Czech + UAE SP files · From Free Kick",
         ),
         (
             "Throw-ins",
             "Touchline restart dossier",
             "Territory, side bias, pressure profile, thrower output, and shot creation from throw-in sequences.",
-            "Data/SWE SP.xlsx + Data/Czech SP.xlsx · From Throw In",
+            "Data/SWE + Bundesliga + Czech + UAE SP files · From Throw In",
         ),
     ]
 
@@ -733,7 +733,7 @@ def render_corners() -> None:
     render_workflow_rail()
     filtered, filters = filter_sp_page_data(df, label, "corners")
     render_export_controls(filtered, label, label)
-    st.caption("Corners use Data/Allsvenskan - Corners 2025.xlsx and Data/CZ - Corners 2025-2026.csv.")
+    st.caption("Corners use Data/Allsvenskan - Corners 2025.xlsx, Data/Bundesliga - Corners 2025-2026.xlsx, Data/CZ - Corners 2025-2026.csv, and Data/UAE - Corners 2025-2026.xlsx.")
     render_filter_summary(label, len(df), len(filtered), filters)
     if filtered.empty:
         render_empty_filter_state()
@@ -842,7 +842,7 @@ def render_sequence_page(label: str) -> None:
         "Specialist view for throw-in territory, touchline pressure, taker profiles, shot creation, and possession-level output.",
     )
     if df.empty:
-        st.warning(f"No {readable.lower()} rows were found in Data/SWE SP.xlsx or Data/Czech SP.xlsx.")
+        st.warning(f"No {readable.lower()} rows were found in the bundled SP workbooks.")
         return
 
     render_workflow_rail()
@@ -897,9 +897,9 @@ def render_sequence_page(label: str) -> None:
 
     render_export_controls(filtered, key, readable)
     st.caption(
-        "Source: Data/SWE SP.xlsx and Data/Czech SP.xlsx filtered to From Free Kick. Sequence tables group rows by match_id, possession, and team."
+        "Source: Data/SWE SP.xlsx, Data/Bundesliga SP.xlsx, Data/Czech SP.xlsx, and Data/UAE SP.xlsx filtered to From Free Kick. Sequence tables group rows by match_id, possession, and team."
         if is_freekick else
-        "Source: Data/SWE SP.xlsx and Data/Czech SP.xlsx filtered to From Throw In. Sequence tables group rows by match_id, possession, and team."
+        "Source: Data/SWE SP.xlsx, Data/Bundesliga SP.xlsx, Data/Czech SP.xlsx, and Data/UAE SP.xlsx filtered to From Throw In. Sequence tables group rows by match_id, possession, and team."
     )
     render_filter_summary(readable, len(df), len(filtered), filters)
     if filtered.empty:
