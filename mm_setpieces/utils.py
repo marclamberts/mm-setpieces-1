@@ -100,7 +100,7 @@ OPTA_HALF_START = 50
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR.parent / "Data"
 LOGO_PATH = BASE_DIR.parent / "assets" / "setplaypro-logo.jpg"
-DATA_VERSION = "uae_sources_v2_statsbomb_pitch"
+DATA_VERSION = "foldered_sources_v1"
 
 BLACK = "#0b0f14"
 RED = "#c1121f"
@@ -1869,23 +1869,86 @@ def minute_distribution_figure(df: pd.DataFrame, title: str) -> go.Figure:
     fig.update_layout(title=title, height=340, margin=dict(l=10, r=10, t=45, b=10), showlegend=False)
     return polish_plotly_figure(fig)
 
+DATA_SUBFOLDERS = {
+    "Corners": DATA_DIR / "Corners",
+    "SP": DATA_DIR / "SP",
+    "HOPS": DATA_DIR / "HOPS",
+}
+
+
+def _folder_from_filename(path: Path) -> str:
+    name = path.name.lower()
+    if "delay" in name:
+        return ""
+    if "hops" in name:
+        return "HOPS"
+    if "sp" in name and "corner" not in name:
+        return "SP"
+    if "corner" in name:
+        return "Corners"
+    return ""
+
+
 def _candidate_paths(filename: str) -> list[Path]:
-    return [DATA_DIR / filename, BASE_DIR.parent / filename, BASE_DIR / filename, Path(filename)]
+    return [
+        DATA_DIR / filename,
+        *(folder / filename for folder in DATA_SUBFOLDERS.values()),
+        BASE_DIR.parent / filename,
+        BASE_DIR / filename,
+        Path(filename),
+    ]
+
+
+def _data_files(folder: str, suffixes: tuple[str, ...]) -> list[Path]:
+    paths: list[Path] = []
+    subdir = DATA_SUBFOLDERS.get(folder, DATA_DIR / folder)
+    if subdir.exists():
+        paths.extend(
+            path
+            for path in subdir.iterdir()
+            if path.is_file()
+            and not path.name.startswith("~$")
+            and path.suffix.lower() in suffixes
+        )
+    paths.extend(
+        path
+        for path in DATA_DIR.iterdir()
+        if path.is_file()
+        and not path.name.startswith("~$")
+        and path.suffix.lower() in suffixes
+        and _folder_from_filename(path) == folder
+    )
+    return sorted(set(paths), key=lambda path: path.name.lower())
+
+
+def _league_from_filename(path: Path) -> str:
+    name = path.stem.lower()
+    if "serie a" in name or "italy" in name:
+        return "Serie A"
+    if "bundesliga" in name or name.startswith("ger ") or name.startswith("ger_"):
+        return "Bundesliga"
+    if "allsvenskan" in name or name.startswith("swe ") or name.startswith("swe_"):
+        return "Allsvenskan"
+    if "czech" in name or name.startswith("cz ") or name.startswith("cz_") or name.startswith("cz -"):
+        return "Czech First League"
+    if "uae" in name:
+        return "UAE Pro League"
+    return "Unknown"
+
+
+def _read_excel_path(path: Path, sheet_name=0):
+    try:
+        return pd.read_excel(path, sheet_name=sheet_name, engine="openpyxl")
+    except ImportError:
+        return {} if sheet_name is None else pd.DataFrame()
+    except Exception:
+        return {} if sheet_name is None else pd.DataFrame()
 
 @st.cache_data(show_spinner=False)
 def _read_excel_if_exists(filename: str, sheet_name=0):
     for path in _candidate_paths(filename):
         if path.exists():
-            try:
-                return pd.read_excel(path, sheet_name=sheet_name, engine="openpyxl")
-            except ImportError:
-                if sheet_name is None:
-                    return {}
-                return pd.DataFrame()
-            except Exception:
-                if sheet_name is None:
-                    return {}
-                return pd.DataFrame()
+            return _read_excel_path(path, sheet_name=sheet_name)
     return {} if sheet_name is None else pd.DataFrame()
 
 @st.cache_data(show_spinner=False)
@@ -1902,7 +1965,9 @@ def _with_league(df: pd.DataFrame, league: str) -> pd.DataFrame:
     if "League" not in df.columns:
         df["League"] = league
     else:
-        df["League"] = df["League"].fillna(league)
+        league_text = df["League"].astype("object")
+        missing = league_text.isna() | league_text.astype(str).str.strip().isin(["", "Unknown"])
+        df.loc[missing, "League"] = league
     return df
 
 def _canonical_sp_type(value: object) -> str:
@@ -1953,6 +2018,17 @@ def _load_uae_sp_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
         uae["SP_Type"] = _canonical_sp_type_series(uae["SP_Type"])
     return uae
 
+
+def _normalise_sp_source(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return df
+    df = df.copy()
+    if "SP_Type" not in df.columns and "play_pattern.name" in df.columns:
+        df["SP_Type"] = df["play_pattern.name"]
+    if "SP_Type" in df.columns:
+        df["SP_Type"] = _canonical_sp_type_series(df["SP_Type"])
+    return df
+
 def _fill_from_candidates(df: pd.DataFrame, target: str, candidates: list[str], default=np.nan) -> None:
     if target not in df.columns:
         df[target] = pd.Series(np.nan, index=df.index, dtype="object")
@@ -2000,37 +2076,62 @@ def _bundesliga_taker_team_map(_data_version: str = DATA_VERSION) -> dict[str, s
     )
     return taker_team.to_dict()
 
+
+@st.cache_data(show_spinner=False)
+def _sp_taker_team_map(league: str, _data_version: str = DATA_VERSION) -> dict[str, str]:
+    sources = []
+    for path in _data_files("SP", (".xlsx", ".xlsm", ".xls")):
+        if _league_from_filename(path) != league:
+            continue
+        source = _normalise_sp_source(_with_league(_read_excel_path(path), league))
+        if not source.empty:
+            sources.append(source)
+    if not sources:
+        return {}
+    sp = pd.concat(sources, ignore_index=True, sort=False)
+    player_col = "Taker" if "Taker" in sp.columns else "player.name" if "player.name" in sp.columns else None
+    team_col = "Team" if "Team" in sp.columns else "team.name" if "team.name" in sp.columns else None
+    if player_col is None or team_col is None:
+        return {}
+    taker_team = (
+        sp[[player_col, team_col]]
+        .dropna()
+        .astype(str)
+        .groupby(player_col)[team_col]
+        .agg(lambda s: s.value_counts().idxmax())
+    )
+    return taker_team.to_dict()
+
 @st.cache_data(show_spinner=False)
 def load_corner_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
-    bundesliga_corners = _read_excel_if_exists("Bundesliga - Corners 2025-2026.xlsx")
-    if not bundesliga_corners.empty:
-        bundesliga_corners = bundesliga_corners.copy()
-        if "Team" not in bundesliga_corners.columns and "Taker" in bundesliga_corners.columns:
-            bundesliga_corners["Team"] = bundesliga_corners["Taker"].astype(str).map(_bundesliga_taker_team_map())
-    cz_corners = _read_csv_if_exists("CZ - Corners 2025-2026.csv")
-    if not cz_corners.empty:
-        cz_corners = cz_corners.copy()
-        if "Team" not in cz_corners.columns and "Taker" in cz_corners.columns:
-            cz_corners["Team"] = cz_corners["Taker"].astype(str).map(_cz_taker_team_map())
-    sources = [
-        _with_league(_read_excel_if_exists("Allsvenskan - Corners 2025.xlsx"), "Allsvenskan"),
-        _with_league(bundesliga_corners, "Bundesliga"),
-        _with_league(cz_corners, "Czech First League"),
-        _with_league(_read_excel_if_exists("UAE - Corners 2025-2026.xlsx"), "UAE Pro League"),
-    ]
+    sources = []
+    for path in _data_files("Corners", (".xlsx", ".xlsm", ".xls")):
+        league = _league_from_filename(path)
+        corners = _with_league(_read_excel_path(path), league)
+        if not corners.empty and "Team" not in corners.columns and "Taker" in corners.columns:
+            corners = corners.copy()
+            corners["Team"] = corners["Taker"].astype(str).map(_sp_taker_team_map(league))
+        sources.append(corners)
+
+    for path in _data_files("Corners", (".csv",)):
+        league = _league_from_filename(path)
+        corners = _with_league(pd.read_csv(path), league)
+        if not corners.empty and "Team" not in corners.columns and "Taker" in corners.columns:
+            corners = corners.copy()
+            corners["Team"] = corners["Taker"].astype(str).map(_sp_taker_team_map(league))
+        sources.append(corners)
+
     sources = [df for df in sources if not df.empty]
     return pd.concat(sources, ignore_index=True, sort=False) if sources else pd.DataFrame()
 
 @st.cache_data(show_spinner=False)
 def load_swe_sp_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
-    swe = _with_league(_read_excel_if_exists("SWE SP.xlsx"), "Allsvenskan")
-    if not swe.empty and "SP_Type" in swe.columns:
-        swe = swe.copy()
-        swe["SP_Type"] = _canonical_sp_type_series(swe["SP_Type"])
-    bundesliga = _with_league(_load_bundesliga_sp_data(), "Bundesliga")
-    cz = _with_league(_load_czech_sp_data(), "Czech First League")
-    uae = _with_league(_load_uae_sp_data(), "UAE Pro League")
-    sources = [df for df in [swe, bundesliga, cz, uae] if not df.empty]
+    sources = []
+    for path in _data_files("SP", (".xlsx", ".xlsm", ".xls")):
+        league = _league_from_filename(path)
+        source = _normalise_sp_source(_with_league(_read_excel_path(path), league))
+        sources.append(source)
+    sources = [df for df in sources if not df.empty]
     return pd.concat(sources, ignore_index=True, sort=False) if sources else pd.DataFrame()
 
 @st.cache_data(show_spinner=False)

@@ -7,7 +7,7 @@ import pandas as pd
 import streamlit as st
 
 from mm_setpieces.utils import *
-from mm_setpieces.utils import DATA_VERSION, _read_excel_if_exists, _with_league
+from mm_setpieces.utils import DATA_VERSION, _data_files, _league_from_filename, _read_excel_if_exists, _read_excel_path, _with_league
 
 
 APP_SECTIONS = ["Home", "Corners", "Freekicks", "Throw-ins", "HOPS", "Delay Analysis"]
@@ -42,10 +42,8 @@ def _cached_report_pdf(df: pd.DataFrame, label: str, opponent: str) -> bytes:
 @st.cache_data(show_spinner=False)
 def load_hops_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
     sources = [
-        _with_league(_read_excel_if_exists("SWE HOPS.xlsx"), "Allsvenskan"),
-        _with_league(_read_excel_if_exists("GER HOPS.xlsx"), "Bundesliga"),
-        _with_league(_read_excel_if_exists("CZ HOPS.xlsx"), "Czech First League"),
-        _with_league(_read_excel_if_exists("duel_hops_rating_summary.xlsx"), "Unknown"),
+        _with_league(_read_excel_path(path), _league_from_filename(path))
+        for path in _data_files("HOPS", (".xlsx", ".xlsm", ".xls"))
     ]
     sources = [source for source in sources if not source.empty]
     if not sources:
@@ -583,19 +581,19 @@ def render_home() -> None:
             "Corners",
             "Corner delivery dossier",
             "Rank teams, takers, target zones, shot value, second-ball patterns, and match-ready delivery maps.",
-            "Data/Allsvenskan + Bundesliga + CZ + UAE corner files",
+            "Data/Corners workbooks",
         ),
         (
             "Freekicks",
             "Dead-ball origin dossier",
             "Free-kick origins, channel threat, taker tendencies, shooter value, and possession-level outcomes.",
-            "Data/SWE + Bundesliga + Czech + UAE SP files · From Free Kick",
+            "Data/SP workbooks · From Free Kick",
         ),
         (
             "Throw-ins",
             "Touchline restart dossier",
             "Territory, side bias, pressure profile, thrower output, and shot creation from throw-in sequences.",
-            "Data/SWE + Bundesliga + Czech + UAE SP files · From Throw In",
+            "Data/SP workbooks · From Throw In",
         ),
     ]
 
@@ -624,7 +622,7 @@ def render_home() -> None:
                 <div class="mm-card-kicker">Module · Duel model</div>
                 <div class="mm-nav-title">HOPS</div>
                 <div class="mm-nav-copy">Aerial/duel strength by player and team, with percentiles, tiers, elite profiles, and weak-side risk checks.</div>
-                <div class="mm-tiny">Data/SWE HOPS.xlsx + Data/CZ HOPS.xlsx</div>
+                <div class="mm-tiny">Data/HOPS workbooks</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -733,7 +731,7 @@ def render_corners() -> None:
     render_workflow_rail()
     filtered, filters = filter_sp_page_data(df, label, "corners")
     render_export_controls(filtered, label, label)
-    st.caption("Corners use Data/Allsvenskan - Corners 2025.xlsx, Data/Bundesliga - Corners 2025-2026.xlsx, Data/CZ - Corners 2025-2026.csv, and Data/UAE - Corners 2025-2026.xlsx.")
+    st.caption("Corners use every Excel workbook in Data/Corners, plus any corner CSV files in the same folder.")
     render_filter_summary(label, len(df), len(filtered), filters)
     if filtered.empty:
         render_empty_filter_state()
@@ -897,9 +895,9 @@ def render_sequence_page(label: str) -> None:
 
     render_export_controls(filtered, key, readable)
     st.caption(
-        "Source: Data/SWE SP.xlsx, Data/Bundesliga SP.xlsx, Data/Czech SP.xlsx, and Data/UAE SP.xlsx filtered to From Free Kick. Sequence tables group rows by match_id, possession, and team."
+        "Source: every Excel workbook in Data/SP filtered to From Free Kick. Sequence tables group rows by match_id, possession, and team."
         if is_freekick else
-        "Source: Data/SWE SP.xlsx, Data/Bundesliga SP.xlsx, Data/Czech SP.xlsx, and Data/UAE SP.xlsx filtered to From Throw In. Sequence tables group rows by match_id, possession, and team."
+        "Source: every Excel workbook in Data/SP filtered to From Throw In. Sequence tables group rows by match_id, possession, and team."
     )
     render_filter_summary(readable, len(df), len(filtered), filters)
     if filtered.empty:
@@ -1013,7 +1011,7 @@ def render_hops() -> None:
     df = load_hops_data()
     hero_block("Duel intelligence", "HOPS", "Player and team duel profiles from the HOPS workbook, ranked by rating, percentile, and squad-level depth.")
     if df.empty:
-        st.warning("No HOPS rows were found in Data/SWE HOPS.xlsx or Data/CZ HOPS.xlsx.")
+        st.warning("No HOPS rows were found in Data/HOPS.")
         return
 
     leagues = ["All"] + sorted(df["League"].dropna().astype(str).unique().tolist())
