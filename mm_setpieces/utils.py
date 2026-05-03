@@ -100,7 +100,7 @@ OPTA_HALF_START = 50
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR.parent / "Data"
 LOGO_PATH = BASE_DIR.parent / "assets" / "setplaypro-logo.jpg"
-DATA_VERSION = "uae_sources_v1"
+DATA_VERSION = "uae_sources_v2_statsbomb_pitch"
 
 BLACK = "#0b0f14"
 RED = "#c1121f"
@@ -2269,19 +2269,20 @@ def uses_opta_pitch(df: pd.DataFrame) -> bool:
     return bool(leagues) and leagues.issubset({"UAE Pro League"})
 
 def pitch_dimensions(df: pd.DataFrame | None = None) -> dict[str, object]:
-    if df is not None and uses_opta_pitch(df):
-        return {
-            "name": "opta",
-            "length": OPTA_PITCH_LENGTH,
-            "width": OPTA_PITCH_WIDTH,
-            "half_start": OPTA_HALF_START,
-        }
     return {
         "name": "statsbomb",
         "length": PITCH_LENGTH,
         "width": PITCH_WIDTH,
         "half_start": HALF_START,
     }
+
+def coords_to_statsbomb(df: pd.DataFrame, x_col: str, y_col: str) -> tuple[pd.Series, pd.Series]:
+    x = pd.to_numeric(df[x_col], errors="coerce")
+    y = pd.to_numeric(df[y_col], errors="coerce")
+    if "League" not in df.columns:
+        return x, y
+    is_uae = df["League"].astype(str).str.strip().eq("UAE Pro League")
+    return x.where(~is_uae, x * (PITCH_LENGTH / OPTA_PITCH_LENGTH)), y.where(~is_uae, y * (PITCH_WIDTH / OPTA_PITCH_WIDTH))
 
 def vertical_coords_from_statsbomb(x: pd.Series, y: pd.Series) -> tuple[pd.Series, pd.Series]:
     return pd.to_numeric(y, errors="coerce"), pd.to_numeric(x, errors="coerce")
@@ -2394,14 +2395,16 @@ def shotmap_figure(df: pd.DataFrame, title: str) -> go.Figure:
         fig.add_annotation(text="No data available", x=pitch_width / 2, y=(half_start + pitch_length) / 2, showarrow=False, font=dict(size=18, color="#64748b"))
         return add_half_vertical_pitch_layout(fig, title, source_df=df)
 
-    shots = unique_shot_events(df)
-    shots = shots[pd.to_numeric(shots["shot_x"], errors="coerce") >= half_start]
+    shots = unique_shot_events(df).copy()
+    if not shots.empty:
+        shots["plot_x"], shots["plot_y"] = coords_to_statsbomb(shots, "shot_x", "shot_y")
+    shots = shots[shots["plot_x"] >= half_start] if not shots.empty else shots
 
     if shots.empty:
         fig.add_annotation(text="No shots for current filter", x=pitch_width / 2, y=(half_start + pitch_length) / 2, showarrow=False, font=dict(size=18, color="#64748b"))
         return add_half_vertical_pitch_layout(fig, title, source_df=df)
 
-    shots["vx"], shots["vy"] = vertical_coords_from_pitch(shots["shot_x"], shots["shot_y"], pitch)
+    shots["vx"], shots["vy"] = vertical_coords_from_pitch(shots["plot_x"], shots["plot_y"], pitch)
     shots["Result"] = np.where(shots["is_goal"], "Goal", "Shot")
     color_map = {"Shot": "#2563eb", "Goal": "#16a34a"}
 
@@ -2457,10 +2460,12 @@ def delivery_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
             deliveries = deliveries[sp_values.eq("From Throw In")]
 
     deliveries = deliveries[deliveries["delivery_end_x"].notna() & deliveries["delivery_end_y"].notna()].copy()
+    if not deliveries.empty:
+        deliveries["plot_end_x"], deliveries["plot_end_y"] = coords_to_statsbomb(deliveries, "delivery_end_x", "delivery_end_y")
 
     # Corners use the dedicated half-pitch cutoff; SWE SP freekicks/throw-ins should show all deliveries.
     if "SP_Type" not in deliveries.columns:
-        deliveries = deliveries[pd.to_numeric(deliveries["delivery_end_x"], errors="coerce") >= half_start]
+        deliveries = deliveries[deliveries["plot_end_x"] >= half_start]
 
     if deliveries.empty:
         fig.add_annotation(text="No deliveries with end locations for current filter", x=pitch_width / 2, y=(half_start + pitch_length) / 2, showarrow=False, font=dict(size=18, color="#64748b"))
@@ -2470,7 +2475,7 @@ def delivery_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
     if len(sample) > 250:
         sample = sample.sample(250, random_state=7)
 
-    sample["vx_end"], sample["vy_end"] = vertical_coords_from_pitch(sample["delivery_end_x"], sample["delivery_end_y"], pitch)
+    sample["vx_end"], sample["vy_end"] = vertical_coords_from_pitch(sample["plot_end_x"], sample["plot_end_y"], pitch)
 
     color_map = {
         "Inswinging": "#2563eb",
@@ -2551,6 +2556,9 @@ def starting_location_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
             if pass_xy.shape[1] >= 2:
                 starts["pass_x"] = pd.to_numeric(pass_xy[0].str.strip(), errors="coerce")
                 starts["pass_y"] = pd.to_numeric(pass_xy[1].str.strip(), errors="coerce")
+        if "pass_x" not in starts.columns or "pass_y" not in starts.columns:
+            fig.add_annotation(text="No start locations for current filter", x=pitch_width / 2, y=(half_start + pitch_length) / 2, showarrow=False, font=dict(size=18, color="#64748b"))
+            return add_half_vertical_pitch_layout(fig, title, source_df=df)
 
     starts = starts[starts["pass_x"].notna() & starts["pass_y"].notna()].copy()
     starts = unique_start_events(starts)
@@ -2559,7 +2567,8 @@ def starting_location_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
         fig.add_annotation(text="No start locations for current filter", x=pitch_width / 2, y=(half_start + pitch_length) / 2, showarrow=False, font=dict(size=18, color="#64748b"))
         return add_half_vertical_pitch_layout(fig, title, source_df=df)
 
-    starts["vx"], starts["vy"] = vertical_coords_from_pitch(starts["pass_x"], starts["pass_y"], pitch)
+    starts["plot_x"], starts["plot_y"] = coords_to_statsbomb(starts, "pass_x", "pass_y")
+    starts["vx"], starts["vy"] = vertical_coords_from_pitch(starts["plot_x"], starts["plot_y"], pitch)
 
     color_map = {
         "From Free Kick": "#2563eb",
@@ -2988,6 +2997,7 @@ def freekick_sequence_summary(df: pd.DataFrame) -> pd.DataFrame:
         record.update(
             {
                 "Match": first.get("Match", record.get("match_id", "Unknown")),
+                "League": first.get("League", ""),
                 "Minute": int(first.get("minute", 0)) if pd.notna(first.get("minute", np.nan)) else 0,
                 "Origin x": round(float(first.get("pass_x", np.nan)), 1) if pd.notna(first.get("pass_x", np.nan)) else np.nan,
                 "Origin y": round(float(first.get("pass_y", np.nan)), 1) if pd.notna(first.get("pass_y", np.nan)) else np.nan,
@@ -3104,11 +3114,13 @@ def freekick_origin_map_figure(df: pd.DataFrame, title: str = "Freekick origins"
         "Deep restart": "#64748b",
         "Unknown": "#94a3b8",
     }
+    seq = seq.copy()
+    seq["Plot x"], seq["Plot y"] = coords_to_statsbomb(seq, "Origin x", "Origin y")
     for zone, part in seq.groupby("Zone", dropna=False):
         fig.add_trace(
             go.Scatter(
-                x=part["Origin x"],
-                y=part["Origin y"],
+                x=part["Plot x"],
+                y=part["Plot y"],
                 mode="markers",
                 name=str(zone),
                 marker=dict(
@@ -3199,6 +3211,7 @@ def throwin_sequence_summary(df: pd.DataFrame) -> pd.DataFrame:
         record.update(
             {
                 "Match": first.get("Match", record.get("match_id", "Unknown")),
+                "League": first.get("League", ""),
                 "Minute": int(first.get("minute", 0)) if pd.notna(first.get("minute", np.nan)) else 0,
                 "Origin x": round(float(origin_x), 1) if pd.notna(origin_x) else np.nan,
                 "Origin y": round(float(origin_y), 1) if pd.notna(origin_y) else np.nan,
@@ -3311,11 +3324,13 @@ def throwin_origin_map_figure(df: pd.DataFrame, title: str = "Throw-in origins")
         "Defensive throw": "#64748b",
         "Unknown": "#94a3b8",
     }
+    seq = seq.copy()
+    seq["Plot x"], seq["Plot y"] = coords_to_statsbomb(seq, "Origin x", "Origin y")
     for zone, part in seq.groupby("Zone", dropna=False):
         fig.add_trace(
             go.Scatter(
-                x=part["Origin x"],
-                y=part["Origin y"],
+                x=part["Plot x"],
+                y=part["Plot y"],
                 mode="markers",
                 name=str(zone),
                 marker=dict(
@@ -3400,8 +3415,7 @@ def add_delivery_zones(df: pd.DataFrame) -> pd.DataFrame:
     return enriched
 
 def mplsoccer_pitch_xy(df: pd.DataFrame, x_col: str, y_col: str, pitch: dict[str, object]) -> tuple[pd.Series, pd.Series]:
-    length_coord = pd.to_numeric(df[x_col], errors="coerce")
-    width_coord = pd.to_numeric(df[y_col], errors="coerce")
+    length_coord, width_coord = coords_to_statsbomb(df, x_col, y_col)
     margin = 0.7
     length_coord = length_coord.clip(lower=float(pitch["half_start"]) + margin, upper=float(pitch["length"]) - margin)
     width_coord = width_coord.clip(lower=margin, upper=float(pitch["width"]) - margin)
@@ -3564,11 +3578,7 @@ def mplsoccer_delivery_figure(df: pd.DataFrame, label: str = ""):
     base = add_delivery_zones(unique_start_events(df))
     pitch = pitch_dimensions(df)
     fig, ax = plt.subplots(figsize=(5.8, 8), dpi=140)
-    pitch_plot = (
-        VerticalPitch(pitch_type="custom", pitch_length=OPTA_PITCH_LENGTH, pitch_width=OPTA_PITCH_WIDTH, half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
-        if pitch["name"] == "opta"
-        else VerticalPitch(pitch_type="statsbomb", half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
-    )
+    pitch_plot = VerticalPitch(pitch_type="statsbomb", half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
     pitch_plot.draw(ax=ax)
     ax.set_title(f"{label} delivery map", fontsize=14, fontweight="bold", color=BLACK, pad=10)
 
@@ -3622,11 +3632,7 @@ def mplsoccer_shot_figure(df: pd.DataFrame, label: str = ""):
     pitch = pitch_dimensions(df)
     half_start = float(pitch["half_start"])
     fig, ax = plt.subplots(figsize=(5.8, 8), dpi=140)
-    pitch_plot = (
-        VerticalPitch(pitch_type="custom", pitch_length=OPTA_PITCH_LENGTH, pitch_width=OPTA_PITCH_WIDTH, half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
-        if pitch["name"] == "opta"
-        else VerticalPitch(pitch_type="statsbomb", half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
-    )
+    pitch_plot = VerticalPitch(pitch_type="statsbomb", half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
     pitch_plot.draw(ax=ax)
     ax.set_title(f"{label} shot quality", fontsize=14, fontweight="bold", color=BLACK, pad=10)
 
@@ -3635,7 +3641,8 @@ def mplsoccer_shot_figure(df: pd.DataFrame, label: str = ""):
         return fig
 
     shots = shots.dropna(subset=["shot_x", "shot_y"]).copy()
-    shots = shots[pd.to_numeric(shots["shot_x"], errors="coerce") >= half_start]
+    shots["plot_x"], shots["plot_y"] = coords_to_statsbomb(shots, "shot_x", "shot_y")
+    shots = shots[shots["plot_x"] >= half_start]
     if shots.empty:
         ax.text(*mplsoccer_center_xy(pitch), "No shots in current filter", ha="center", va="center", color=MUTED, fontsize=12)
         return fig
