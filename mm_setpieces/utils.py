@@ -94,6 +94,9 @@ except Exception:
 PITCH_LENGTH = 120
 PITCH_WIDTH = 80
 HALF_START = 60
+OPTA_PITCH_LENGTH = 100
+OPTA_PITCH_WIDTH = 68
+OPTA_HALF_START = 50
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR.parent / "Data"
 LOGO_PATH = BASE_DIR.parent / "assets" / "setplaypro-logo.jpg"
@@ -2100,7 +2103,9 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
         if "side" not in df.columns:
             if "pass_location_y" in df.columns:
                 py = pd.to_numeric(df["pass_location_y"], errors="coerce")
-                df["side"] = np.where(py <= 40, "Left", "Right")
+                league_series = df["League"] if "League" in df.columns else pd.Series("", index=df.index)
+                threshold = np.where(league_series.astype(str).eq("UAE Pro League"), OPTA_PITCH_WIDTH / 2, PITCH_WIDTH / 2)
+                df["side"] = np.where(py <= threshold, "Left", "Right")
             else:
                 df["side"] = "Unknown"
 
@@ -2158,7 +2163,9 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
 
     if "side" not in df.columns:
         if "pass_y" in df.columns:
-            df["side"] = np.where(df["pass_y"] <= 40, "Left", "Right")
+            league_series = df["League"] if "League" in df.columns else pd.Series("", index=df.index)
+            threshold = np.where(league_series.astype(str).eq("UAE Pro League"), OPTA_PITCH_WIDTH / 2, PITCH_WIDTH / 2)
+            df["side"] = np.where(df["pass_y"] <= threshold, "Left", "Right")
         else:
             df["side"] = "Unknown"
 
@@ -2255,43 +2262,83 @@ def unique_start_events(df: pd.DataFrame) -> pd.DataFrame:
             return df.drop_duplicates(subset=keys)
     return df
 
+def uses_opta_pitch(df: pd.DataFrame) -> bool:
+    if df.empty or "League" not in df.columns:
+        return False
+    leagues = set(df["League"].dropna().astype(str).str.strip())
+    return bool(leagues) and leagues.issubset({"UAE Pro League"})
+
+def pitch_dimensions(df: pd.DataFrame | None = None) -> dict[str, object]:
+    if df is not None and uses_opta_pitch(df):
+        return {
+            "name": "opta",
+            "length": OPTA_PITCH_LENGTH,
+            "width": OPTA_PITCH_WIDTH,
+            "half_start": OPTA_HALF_START,
+        }
+    return {
+        "name": "statsbomb",
+        "length": PITCH_LENGTH,
+        "width": PITCH_WIDTH,
+        "half_start": HALF_START,
+    }
+
 def vertical_coords_from_statsbomb(x: pd.Series, y: pd.Series) -> tuple[pd.Series, pd.Series]:
     return pd.to_numeric(y, errors="coerce"), pd.to_numeric(x, errors="coerce")
 
-def restart_origin_xy(side: str) -> tuple[float, float]:
-    return (0.0, 120.0) if str(side).lower() == "left" else (80.0, 120.0)
+def vertical_coords_from_pitch(x: pd.Series, y: pd.Series, _pitch: dict[str, object]) -> tuple[pd.Series, pd.Series]:
+    return pd.to_numeric(y, errors="coerce"), pd.to_numeric(x, errors="coerce")
 
-def add_half_vertical_pitch_layout(fig: go.Figure, title: str, pitch_color: str = "white", height: int = 620) -> go.Figure:
-    fig.update_xaxes(range=[0, PITCH_WIDTH], visible=False)
-    fig.update_yaxes(range=[HALF_START, PITCH_LENGTH], visible=False, scaleanchor="x", scaleratio=1)
+def restart_origin_xy(side: str, pitch: dict[str, object] | None = None) -> tuple[float, float]:
+    pitch = pitch or pitch_dimensions()
+    return (0.0, float(pitch["length"])) if str(side).lower() == "left" else (float(pitch["width"]), float(pitch["length"]))
 
-    penalty_left = (PITCH_WIDTH / 2) - 22
-    penalty_right = (PITCH_WIDTH / 2) + 22
-    six_left = (PITCH_WIDTH / 2) - 10
-    six_right = (PITCH_WIDTH / 2) + 10
+def add_half_vertical_pitch_layout(fig: go.Figure, title: str, pitch_color: str = "white", height: int = 620, source_df: pd.DataFrame | None = None) -> go.Figure:
+    pitch = pitch_dimensions(source_df)
+    pitch_width = float(pitch["width"])
+    pitch_length = float(pitch["length"])
+    half_start = float(pitch["half_start"])
+    sx = pitch_width / PITCH_WIDTH
+    sy = pitch_length / PITCH_LENGTH
+
+    fig.update_xaxes(range=[0, pitch_width], visible=False)
+    fig.update_yaxes(range=[half_start, pitch_length], visible=False, scaleanchor="x", scaleratio=1)
+
+    penalty_left = (pitch_width / 2) - (22 * sx)
+    penalty_right = (pitch_width / 2) + (22 * sx)
+    six_left = (pitch_width / 2) - (10 * sx)
+    six_right = (pitch_width / 2) + (10 * sx)
+    goal_left = (pitch_width / 2) - (4 * sx)
+    goal_right = (pitch_width / 2) + (4 * sx)
+
+    def xs(v: float) -> float:
+        return v * sx
+
+    def ys(v: float) -> float:
+        return v * sy
 
     zone_shapes = [
-        dict(type="rect", x0=30, y0=114, x1=36.67, y1=120, line=dict(width=0.8, color="rgba(37,99,235,0.55)"), fillcolor="rgba(37,99,235,0.10)", layer="below"),
-        dict(type="rect", x0=36.67, y0=114, x1=43.33, y1=120, line=dict(width=0.8, color="rgba(22,163,74,0.55)"), fillcolor="rgba(22,163,74,0.10)", layer="below"),
-        dict(type="rect", x0=43.33, y0=114, x1=50, y1=120, line=dict(width=0.8, color="rgba(245,158,11,0.55)"), fillcolor="rgba(245,158,11,0.10)", layer="below"),
-        dict(type="rect", x0=28, y0=108, x1=52, y1=114, line=dict(width=0.8, color="rgba(124,58,237,0.55)"), fillcolor="rgba(124,58,237,0.08)", layer="below"),
-        dict(type="rect", x0=18, y0=102, x1=62, y1=108, line=dict(width=0.8, color="rgba(100,116,139,0.45)"), fillcolor="rgba(100,116,139,0.06)", layer="below"),
+        dict(type="rect", x0=xs(30), y0=ys(114), x1=xs(36.67), y1=pitch_length, line=dict(width=0.8, color="rgba(37,99,235,0.55)"), fillcolor="rgba(37,99,235,0.10)", layer="below"),
+        dict(type="rect", x0=xs(36.67), y0=ys(114), x1=xs(43.33), y1=pitch_length, line=dict(width=0.8, color="rgba(22,163,74,0.55)"), fillcolor="rgba(22,163,74,0.10)", layer="below"),
+        dict(type="rect", x0=xs(43.33), y0=ys(114), x1=xs(50), y1=pitch_length, line=dict(width=0.8, color="rgba(245,158,11,0.55)"), fillcolor="rgba(245,158,11,0.10)", layer="below"),
+        dict(type="rect", x0=xs(28), y0=ys(108), x1=xs(52), y1=ys(114), line=dict(width=0.8, color="rgba(124,58,237,0.55)"), fillcolor="rgba(124,58,237,0.08)", layer="below"),
+        dict(type="rect", x0=xs(18), y0=ys(102), x1=xs(62), y1=ys(108), line=dict(width=0.8, color="rgba(100,116,139,0.45)"), fillcolor="rgba(100,116,139,0.06)", layer="below"),
     ]
 
     pitch_shapes = [
-        dict(type="rect", x0=0, y0=HALF_START, x1=PITCH_WIDTH, y1=PITCH_LENGTH, line=dict(width=2, color="#1e293b")),
-        dict(type="line", x0=0, y0=HALF_START, x1=PITCH_WIDTH, y1=HALF_START, line=dict(width=2, color="#94a3b8")),
-        dict(type="rect", x0=penalty_left, y0=102, x1=penalty_right, y1=120, line=dict(width=1.6, color="#1e293b")),
-        dict(type="rect", x0=six_left, y0=114, x1=six_right, y1=120, line=dict(width=1.6, color="#1e293b")),
-        dict(type="line", x0=36, y0=120, x1=44, y1=120, line=dict(width=3, color="#1e293b")),
+        dict(type="rect", x0=0, y0=half_start, x1=pitch_width, y1=pitch_length, line=dict(width=2, color="#1e293b")),
+        dict(type="line", x0=0, y0=half_start, x1=pitch_width, y1=half_start, line=dict(width=2, color="#94a3b8")),
+        dict(type="rect", x0=penalty_left, y0=ys(102), x1=penalty_right, y1=pitch_length, line=dict(width=1.6, color="#1e293b")),
+        dict(type="rect", x0=six_left, y0=ys(114), x1=six_right, y1=pitch_length, line=dict(width=1.6, color="#1e293b")),
+        dict(type="line", x0=goal_left, y0=pitch_length, x1=goal_right, y1=pitch_length, line=dict(width=3, color="#1e293b")),
     ]
 
     annotations = [
-        dict(x=33.3, y=116.5, text="Near post", showarrow=False, font=dict(size=10, color="#1e3a8a")),
-        dict(x=40.0, y=116.5, text="Central 6", showarrow=False, font=dict(size=10, color="#166534")),
-        dict(x=46.7, y=116.5, text="Far post", showarrow=False, font=dict(size=10, color="#b45309")),
-        dict(x=40.0, y=111.0, text="Penalty spot", showarrow=False, font=dict(size=10, color="#6d28d9")),
-        dict(x=40.0, y=105.0, text="Edge box", showarrow=False, font=dict(size=10, color="#475569")),
+        dict(x=xs(33.3), y=ys(116.5), text="Near post", showarrow=False, font=dict(size=10, color="#1e3a8a")),
+        dict(x=xs(40.0), y=ys(116.5), text="Central 6", showarrow=False, font=dict(size=10, color="#166534")),
+        dict(x=xs(46.7), y=ys(116.5), text="Far post", showarrow=False, font=dict(size=10, color="#b45309")),
+        dict(x=xs(40.0), y=ys(111.0), text="Penalty spot", showarrow=False, font=dict(size=10, color="#6d28d9")),
+        dict(x=xs(40.0), y=ys(105.0), text="Edge box", showarrow=False, font=dict(size=10, color="#475569")),
     ]
 
     fig.update_layout(
@@ -2306,20 +2353,55 @@ def add_half_vertical_pitch_layout(fig: go.Figure, title: str, pitch_color: str 
     )
     return fig
 
+def add_full_pitch_layout(fig: go.Figure, title: str, source_df: pd.DataFrame | None = None, height: int = 560) -> go.Figure:
+    pitch = pitch_dimensions(source_df)
+    pitch_length = float(pitch["length"])
+    pitch_width = float(pitch["width"])
+    sx = pitch_length / PITCH_LENGTH
+    sy = pitch_width / PITCH_WIDTH
+
+    def xs(v: float) -> float:
+        return v * sx
+
+    def ys(v: float) -> float:
+        return v * sy
+
+    fig.update_xaxes(range=[0, pitch_length], visible=False, scaleanchor="y", scaleratio=1)
+    fig.update_yaxes(range=[0, pitch_width], visible=False)
+    fig.update_layout(
+        title=title,
+        height=height,
+        margin=dict(l=10, r=10, t=50, b=10),
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        shapes=[
+            dict(type="rect", x0=0, y0=0, x1=pitch_length, y1=pitch_width, line=dict(color=BLACK, width=1.4)),
+            dict(type="line", x0=pitch_length / 2, y0=0, x1=pitch_length / 2, y1=pitch_width, line=dict(color="#94a3b8", width=1)),
+            dict(type="rect", x0=xs(102), y0=ys(18), x1=pitch_length, y1=ys(62), line=dict(color=BLACK, width=1.2)),
+            dict(type="rect", x0=xs(114), y0=ys(30), x1=pitch_length, y1=ys(50), line=dict(color=BLACK, width=1.2)),
+            dict(type="circle", x0=xs(108), y0=ys(34), x1=xs(112), y1=ys(46), line=dict(color="#94a3b8", width=1)),
+        ],
+    )
+    return fig
+
 def shotmap_figure(df: pd.DataFrame, title: str) -> go.Figure:
     fig = go.Figure()
+    pitch = pitch_dimensions(df)
+    half_start = float(pitch["half_start"])
+    pitch_width = float(pitch["width"])
+    pitch_length = float(pitch["length"])
     if df.empty:
-        fig.add_annotation(text="No data available", x=40, y=90, showarrow=False, font=dict(size=18, color="#64748b"))
-        return add_half_vertical_pitch_layout(fig, title)
+        fig.add_annotation(text="No data available", x=pitch_width / 2, y=(half_start + pitch_length) / 2, showarrow=False, font=dict(size=18, color="#64748b"))
+        return add_half_vertical_pitch_layout(fig, title, source_df=df)
 
     shots = unique_shot_events(df)
-    shots = shots[pd.to_numeric(shots["shot_x"], errors="coerce") >= HALF_START]
+    shots = shots[pd.to_numeric(shots["shot_x"], errors="coerce") >= half_start]
 
     if shots.empty:
-        fig.add_annotation(text="No shots for current filter", x=40, y=90, showarrow=False, font=dict(size=18, color="#64748b"))
-        return add_half_vertical_pitch_layout(fig, title)
+        fig.add_annotation(text="No shots for current filter", x=pitch_width / 2, y=(half_start + pitch_length) / 2, showarrow=False, font=dict(size=18, color="#64748b"))
+        return add_half_vertical_pitch_layout(fig, title, source_df=df)
 
-    shots["vx"], shots["vy"] = vertical_coords_from_statsbomb(shots["shot_x"], shots["shot_y"])
+    shots["vx"], shots["vy"] = vertical_coords_from_pitch(shots["shot_x"], shots["shot_y"], pitch)
     shots["Result"] = np.where(shots["is_goal"], "Goal", "Shot")
     color_map = {"Shot": "#2563eb", "Goal": "#16a34a"}
 
@@ -2352,13 +2434,17 @@ def shotmap_figure(df: pd.DataFrame, title: str) -> go.Figure:
             )
         )
 
-    return add_half_vertical_pitch_layout(fig, title)
+    return add_half_vertical_pitch_layout(fig, title, source_df=df)
 
 def delivery_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
     fig = go.Figure()
+    pitch = pitch_dimensions(df)
+    half_start = float(pitch["half_start"])
+    pitch_width = float(pitch["width"])
+    pitch_length = float(pitch["length"])
     if df.empty:
-        fig.add_annotation(text="No data available", x=40, y=90, showarrow=False, font=dict(size=18, color="#64748b"))
-        return add_half_vertical_pitch_layout(fig, title)
+        fig.add_annotation(text="No data available", x=pitch_width / 2, y=(half_start + pitch_length) / 2, showarrow=False, font=dict(size=18, color="#64748b"))
+        return add_half_vertical_pitch_layout(fig, title, source_df=df)
 
     deliveries = df.copy()
 
@@ -2374,17 +2460,17 @@ def delivery_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
 
     # Corners use the dedicated half-pitch cutoff; SWE SP freekicks/throw-ins should show all deliveries.
     if "SP_Type" not in deliveries.columns:
-        deliveries = deliveries[pd.to_numeric(deliveries["delivery_end_x"], errors="coerce") >= HALF_START]
+        deliveries = deliveries[pd.to_numeric(deliveries["delivery_end_x"], errors="coerce") >= half_start]
 
     if deliveries.empty:
-        fig.add_annotation(text="No deliveries with end locations for current filter", x=40, y=90, showarrow=False, font=dict(size=18, color="#64748b"))
-        return add_half_vertical_pitch_layout(fig, title)
+        fig.add_annotation(text="No deliveries with end locations for current filter", x=pitch_width / 2, y=(half_start + pitch_length) / 2, showarrow=False, font=dict(size=18, color="#64748b"))
+        return add_half_vertical_pitch_layout(fig, title, source_df=df)
 
     sample = deliveries.copy()
     if len(sample) > 250:
         sample = sample.sample(250, random_state=7)
 
-    sample["vx_end"], sample["vy_end"] = vertical_coords_from_statsbomb(sample["delivery_end_x"], sample["delivery_end_y"])
+    sample["vx_end"], sample["vy_end"] = vertical_coords_from_pitch(sample["delivery_end_x"], sample["delivery_end_y"], pitch)
 
     color_map = {
         "Inswinging": "#2563eb",
@@ -2396,7 +2482,7 @@ def delivery_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
     for tech, part in sample.groupby("Technique", dropna=False):
         color = color_map.get(str(tech), "#7c3aed")
         for _, row in part.iterrows():
-            start_x, start_y = restart_origin_xy(row.get("side", "Left"))
+            start_x, start_y = restart_origin_xy(row.get("side", "Left"), pitch)
             fig.add_trace(
                 go.Scatter(
                     x=[start_x, row["vx_end"]],
@@ -2434,8 +2520,8 @@ def delivery_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
 
     fig.add_trace(
         go.Scatter(
-            x=[0, 80],
-            y=[120, 120],
+            x=[0, pitch_width],
+            y=[pitch_length, pitch_length],
             mode="markers",
             name="Restart spot",
             marker=dict(size=11, color="#0f172a", symbol="circle-open", line=dict(width=2, color="#0f172a")),
@@ -2443,14 +2529,18 @@ def delivery_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
         )
     )
 
-    return add_half_vertical_pitch_layout(fig, title)
+    return add_half_vertical_pitch_layout(fig, title, source_df=df)
 
 
 def starting_location_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
     fig = go.Figure()
+    pitch = pitch_dimensions(df)
+    pitch_width = float(pitch["width"])
+    half_start = float(pitch["half_start"])
+    pitch_length = float(pitch["length"])
     if df.empty:
-        fig.add_annotation(text="No data available", x=40, y=90, showarrow=False, font=dict(size=18, color="#64748b"))
-        return add_half_vertical_pitch_layout(fig, title)
+        fig.add_annotation(text="No data available", x=pitch_width / 2, y=(half_start + pitch_length) / 2, showarrow=False, font=dict(size=18, color="#64748b"))
+        return add_half_vertical_pitch_layout(fig, title, source_df=df)
 
     starts = df.copy()
 
@@ -2466,10 +2556,10 @@ def starting_location_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
     starts = unique_start_events(starts)
 
     if starts.empty:
-        fig.add_annotation(text="No start locations for current filter", x=40, y=90, showarrow=False, font=dict(size=18, color="#64748b"))
-        return add_half_vertical_pitch_layout(fig, title)
+        fig.add_annotation(text="No start locations for current filter", x=pitch_width / 2, y=(half_start + pitch_length) / 2, showarrow=False, font=dict(size=18, color="#64748b"))
+        return add_half_vertical_pitch_layout(fig, title, source_df=df)
 
-    starts["vx"], starts["vy"] = vertical_coords_from_statsbomb(starts["pass_x"], starts["pass_y"])
+    starts["vx"], starts["vy"] = vertical_coords_from_pitch(starts["pass_x"], starts["pass_y"], pitch)
 
     color_map = {
         "From Free Kick": "#2563eb",
@@ -2509,7 +2599,7 @@ def starting_location_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
             )
         )
 
-    return add_half_vertical_pitch_layout(fig, title)
+    return add_half_vertical_pitch_layout(fig, title, source_df=df)
 
 
 def build_summary_tables(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
@@ -2835,9 +2925,16 @@ def render_analyst_table(df: pd.DataFrame, *, height: int = 360, max_rows: int =
     )
 
 
-def freekick_zone(x: object, y: object) -> str:
+def _to_statsbomb_xy(x: object, y: object, pitch_name: str = "statsbomb") -> tuple[float, float]:
     px = pd.to_numeric(pd.Series([x]), errors="coerce").iloc[0]
     py = pd.to_numeric(pd.Series([y]), errors="coerce").iloc[0]
+    if pitch_name == "opta":
+        px = px * (PITCH_LENGTH / OPTA_PITCH_LENGTH)
+        py = py * (PITCH_WIDTH / OPTA_PITCH_WIDTH)
+    return px, py
+
+def freekick_zone(x: object, y: object, pitch_name: str = "statsbomb") -> str:
+    px, py = _to_statsbomb_xy(x, y, pitch_name)
     if pd.isna(px) or pd.isna(py):
         return "Unknown"
     if px >= 96 and 24 <= py <= 56:
@@ -2851,8 +2948,8 @@ def freekick_zone(x: object, y: object) -> str:
     return "Deep restart"
 
 
-def freekick_channel(y: object) -> str:
-    py = pd.to_numeric(pd.Series([y]), errors="coerce").iloc[0]
+def freekick_channel(y: object, pitch_name: str = "statsbomb") -> str:
+    _, py = _to_statsbomb_xy(0, y, pitch_name)
     if pd.isna(py):
         return "Unknown"
     if py < 18:
@@ -2884,6 +2981,7 @@ def freekick_sequence_summary(df: pd.DataFrame) -> pd.DataFrame:
             keys = (keys,)
         record = dict(zip(group_cols, keys))
         first = part.iloc[0]
+        pitch_name = "opta" if str(first.get("League", "")) == "UAE Pro League" else "statsbomb"
         shots = unique_shot_events(part)
         total_xg = float(shots["xg"].fillna(0).sum()) if "xg" in shots.columns and not shots.empty else 0.0
         goals = int(shots["is_goal"].sum()) if "is_goal" in shots.columns and not shots.empty else 0
@@ -2893,8 +2991,8 @@ def freekick_sequence_summary(df: pd.DataFrame) -> pd.DataFrame:
                 "Minute": int(first.get("minute", 0)) if pd.notna(first.get("minute", np.nan)) else 0,
                 "Origin x": round(float(first.get("pass_x", np.nan)), 1) if pd.notna(first.get("pass_x", np.nan)) else np.nan,
                 "Origin y": round(float(first.get("pass_y", np.nan)), 1) if pd.notna(first.get("pass_y", np.nan)) else np.nan,
-                "Zone": freekick_zone(first.get("pass_x", np.nan), first.get("pass_y", np.nan)),
-                "Channel": freekick_channel(first.get("pass_y", np.nan)),
+                "Zone": freekick_zone(first.get("pass_x", np.nan), first.get("pass_y", np.nan), pitch_name),
+                "Channel": freekick_channel(first.get("pass_y", np.nan), pitch_name),
                 "Initial taker": first.get("Taker", "Unknown"),
                 "Initial height": first.get("Delivery height", "Unknown"),
                 "Actions": int(len(part)),
@@ -2990,10 +3088,13 @@ def freekick_shooter_summary(df: pd.DataFrame) -> pd.DataFrame:
 
 def freekick_origin_map_figure(df: pd.DataFrame, title: str = "Freekick origins") -> go.Figure:
     fig = go.Figure()
+    pitch = pitch_dimensions(df)
+    pitch_length = float(pitch["length"])
+    pitch_width = float(pitch["width"])
     seq = freekick_sequence_summary(df)
     if seq.empty:
-        fig.add_annotation(text="No freekick origins available", x=60, y=40, showarrow=False, font=dict(size=16, color=MUTED))
-        return fig
+        fig.add_annotation(text="No freekick origins available", x=pitch_length / 2, y=pitch_width / 2, showarrow=False, font=dict(size=16, color=MUTED))
+        return add_full_pitch_layout(fig, title, source_df=df)
 
     colors = {
         "Direct threat": RED,
@@ -3030,28 +3131,13 @@ def freekick_origin_map_figure(df: pd.DataFrame, title: str = "Freekick origins"
             )
         )
 
-    fig.update_xaxes(range=[0, 120], visible=False, scaleanchor="y", scaleratio=1)
-    fig.update_yaxes(range=[0, 80], visible=False)
-    fig.update_layout(
-        title=title,
-        height=560,
-        margin=dict(l=10, r=10, t=50, b=10),
-        plot_bgcolor="white",
-        paper_bgcolor="white",
-        shapes=[
-            dict(type="rect", x0=0, y0=0, x1=120, y1=80, line=dict(color=BLACK, width=1.4)),
-            dict(type="line", x0=60, y0=0, x1=60, y1=80, line=dict(color="#94a3b8", width=1)),
-            dict(type="rect", x0=102, y0=18, x1=120, y1=62, line=dict(color=BLACK, width=1.2)),
-            dict(type="rect", x0=114, y0=30, x1=120, y1=50, line=dict(color=BLACK, width=1.2)),
-            dict(type="circle", x0=108, y0=34, x1=112, y1=46, line=dict(color="#94a3b8", width=1)),
-        ],
-        legend_title_text="Origin zone",
-    )
+    fig = add_full_pitch_layout(fig, title, source_df=df)
+    fig.update_layout(legend_title_text="Origin zone")
     return fig
 
 
-def throwin_zone(x: object) -> str:
-    px = pd.to_numeric(pd.Series([x]), errors="coerce").iloc[0]
+def throwin_zone(x: object, pitch_name: str = "statsbomb") -> str:
+    px, _ = _to_statsbomb_xy(x, 0, pitch_name)
     if pd.isna(px):
         return "Unknown"
     if px >= 102:
@@ -3065,8 +3151,8 @@ def throwin_zone(x: object) -> str:
     return "Defensive throw"
 
 
-def throwin_side(y: object) -> str:
-    py = pd.to_numeric(pd.Series([y]), errors="coerce").iloc[0]
+def throwin_side(y: object, pitch_name: str = "statsbomb") -> str:
+    _, py = _to_statsbomb_xy(0, y, pitch_name)
     if pd.isna(py):
         return "Unknown"
     return "Left touchline" if py <= 40 else "Right touchline"
@@ -3091,6 +3177,7 @@ def throwin_sequence_summary(df: pd.DataFrame) -> pd.DataFrame:
             keys = (keys,)
         record = dict(zip(group_cols, keys))
         first = part.iloc[0]
+        pitch_name = "opta" if str(first.get("League", "")) == "UAE Pro League" else "statsbomb"
         shots = unique_shot_events(part)
         total_xg = float(shots["xg"].fillna(0).sum()) if "xg" in shots.columns and not shots.empty else 0.0
         goals = int(shots["is_goal"].sum()) if "is_goal" in shots.columns and not shots.empty else 0
@@ -3098,8 +3185,8 @@ def throwin_sequence_summary(df: pd.DataFrame) -> pd.DataFrame:
         initial_height = first.get("Delivery height", "Unknown")
         origin_x = first.get("pass_x", np.nan)
         origin_y = first.get("pass_y", np.nan)
-        zone = throwin_zone(origin_x)
-        side = throwin_side(origin_y)
+        zone = throwin_zone(origin_x, pitch_name)
+        side = throwin_side(origin_y, pitch_name)
         if zone == "Final-third pressure" and str(initial_height).lower().startswith("high"):
             profile = "Long throw threat"
         elif zone in ["Final-third pressure", "Attacking channel"]:
@@ -3208,10 +3295,13 @@ def throwin_shooter_summary(df: pd.DataFrame) -> pd.DataFrame:
 
 def throwin_origin_map_figure(df: pd.DataFrame, title: str = "Throw-in origins") -> go.Figure:
     fig = go.Figure()
+    pitch = pitch_dimensions(df)
+    pitch_length = float(pitch["length"])
+    pitch_width = float(pitch["width"])
     seq = throwin_sequence_summary(df)
     if seq.empty:
-        fig.add_annotation(text="No throw-in origins available", x=60, y=40, showarrow=False, font=dict(size=16, color=MUTED))
-        return fig
+        fig.add_annotation(text="No throw-in origins available", x=pitch_length / 2, y=pitch_width / 2, showarrow=False, font=dict(size=16, color=MUTED))
+        return add_full_pitch_layout(fig, title, source_df=df)
 
     colors = {
         "Final-third pressure": RED,
@@ -3248,22 +3338,8 @@ def throwin_origin_map_figure(df: pd.DataFrame, title: str = "Throw-in origins")
             )
         )
 
-    fig.update_xaxes(range=[0, 120], visible=False, scaleanchor="y", scaleratio=1)
-    fig.update_yaxes(range=[0, 80], visible=False)
-    fig.update_layout(
-        title=title,
-        height=560,
-        margin=dict(l=10, r=10, t=50, b=10),
-        plot_bgcolor="white",
-        paper_bgcolor="white",
-        shapes=[
-            dict(type="rect", x0=0, y0=0, x1=120, y1=80, line=dict(color=BLACK, width=1.4)),
-            dict(type="line", x0=60, y0=0, x1=60, y1=80, line=dict(color="#94a3b8", width=1)),
-            dict(type="rect", x0=102, y0=18, x1=120, y1=62, line=dict(color=BLACK, width=1.2)),
-            dict(type="rect", x0=114, y0=30, x1=120, y1=50, line=dict(color=BLACK, width=1.2)),
-        ],
-        legend_title_text="Origin zone",
-    )
+    fig = add_full_pitch_layout(fig, title, source_df=df)
+    fig.update_layout(legend_title_text="Origin zone")
     return fig
 
 def kpi_row(df: pd.DataFrame) -> None:
@@ -3287,11 +3363,14 @@ def info_panel(df: pd.DataFrame) -> None:
         st.caption(" · ".join(notes))
 
 
-def delivery_zone_label(x: object, y: object) -> str:
+def delivery_zone_label(x: object, y: object, pitch_name: str = "statsbomb") -> str:
     end_x = pd.to_numeric(pd.Series([x]), errors="coerce").iloc[0]
     end_y = pd.to_numeric(pd.Series([y]), errors="coerce").iloc[0]
     if pd.isna(end_x) or pd.isna(end_y):
         return "Unknown"
+    if pitch_name == "opta":
+        end_x = end_x * (PITCH_LENGTH / OPTA_PITCH_LENGTH)
+        end_y = end_y * (PITCH_WIDTH / OPTA_PITCH_WIDTH)
     if end_x >= 114 and 30 <= end_y <= 50:
         return "Six-yard corridor"
     if end_x >= 114:
@@ -3309,8 +3388,12 @@ def add_delivery_zones(df: pd.DataFrame) -> pd.DataFrame:
     enriched = df.copy()
     if {"delivery_end_x", "delivery_end_y"}.issubset(enriched.columns):
         enriched["Delivery zone"] = [
-            delivery_zone_label(x, y)
-            for x, y in zip(enriched["delivery_end_x"], enriched["delivery_end_y"])
+            delivery_zone_label(x, y, "opta" if str(league) == "UAE Pro League" else "statsbomb")
+            for x, y, league in zip(
+                enriched["delivery_end_x"],
+                enriched["delivery_end_y"],
+                enriched["League"] if "League" in enriched.columns else pd.Series("", index=enriched.index),
+            )
         ]
     elif "Delivery zone" not in enriched.columns:
         enriched["Delivery zone"] = "Unknown"
@@ -3468,18 +3551,23 @@ def mplsoccer_delivery_figure(df: pd.DataFrame, label: str = ""):
     from mplsoccer import Pitch
 
     base = add_delivery_zones(unique_start_events(df))
+    pitch = pitch_dimensions(df)
     fig, ax = plt.subplots(figsize=(8, 5.8), dpi=140)
-    pitch = Pitch(pitch_type="statsbomb", half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
-    pitch.draw(ax=ax)
+    pitch_plot = (
+        Pitch(pitch_type="custom", pitch_length=OPTA_PITCH_LENGTH, pitch_width=OPTA_PITCH_WIDTH, half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
+        if pitch["name"] == "opta"
+        else Pitch(pitch_type="statsbomb", half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
+    )
+    pitch_plot.draw(ax=ax)
     ax.set_title(f"{label} delivery map", fontsize=14, fontweight="bold", color=BLACK, pad=10)
 
     if base.empty or not {"delivery_end_x", "delivery_end_y"}.issubset(base.columns):
-        ax.text(90, 40, "No delivery end locations", ha="center", va="center", color=MUTED, fontsize=12)
+        ax.text(float(pitch["length"]) * 0.75, float(pitch["width"]) / 2, "No delivery end locations", ha="center", va="center", color=MUTED, fontsize=12)
         return fig
 
     plot_df = base.dropna(subset=["delivery_end_x", "delivery_end_y"]).copy()
     if plot_df.empty:
-        ax.text(90, 40, "No delivery end locations", ha="center", va="center", color=MUTED, fontsize=12)
+        ax.text(float(pitch["length"]) * 0.75, float(pitch["width"]) / 2, "No delivery end locations", ha="center", va="center", color=MUTED, fontsize=12)
         return fig
 
     if len(plot_df) > 320:
@@ -3497,7 +3585,7 @@ def mplsoccer_delivery_figure(df: pd.DataFrame, label: str = ""):
 
     for zone, part in plot_df.groupby("Delivery zone", dropna=False):
         color = colors.get(str(zone), "#64748b")
-        pitch.scatter(
+        pitch_plot.scatter(
             part["delivery_end_x"],
             part["delivery_end_y"],
             s=np.clip(part["xg"].fillna(0).to_numpy() * 550 + 28 if "xg" in part.columns else 36, 28, 120),
@@ -3519,26 +3607,32 @@ def mplsoccer_shot_figure(df: pd.DataFrame, label: str = ""):
     from mplsoccer import Pitch
 
     shots = unique_shot_events(df)
+    pitch = pitch_dimensions(df)
+    half_start = float(pitch["half_start"])
     fig, ax = plt.subplots(figsize=(8, 5.8), dpi=140)
-    pitch = Pitch(pitch_type="statsbomb", half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
-    pitch.draw(ax=ax)
+    pitch_plot = (
+        Pitch(pitch_type="custom", pitch_length=OPTA_PITCH_LENGTH, pitch_width=OPTA_PITCH_WIDTH, half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
+        if pitch["name"] == "opta"
+        else Pitch(pitch_type="statsbomb", half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
+    )
+    pitch_plot.draw(ax=ax)
     ax.set_title(f"{label} shot quality", fontsize=14, fontweight="bold", color=BLACK, pad=10)
 
     if shots.empty or not {"shot_x", "shot_y"}.issubset(shots.columns):
-        ax.text(90, 40, "No shots in current filter", ha="center", va="center", color=MUTED, fontsize=12)
+        ax.text(float(pitch["length"]) * 0.75, float(pitch["width"]) / 2, "No shots in current filter", ha="center", va="center", color=MUTED, fontsize=12)
         return fig
 
     shots = shots.dropna(subset=["shot_x", "shot_y"]).copy()
-    shots = shots[pd.to_numeric(shots["shot_x"], errors="coerce") >= HALF_START]
+    shots = shots[pd.to_numeric(shots["shot_x"], errors="coerce") >= half_start]
     if shots.empty:
-        ax.text(90, 40, "No shots in current filter", ha="center", va="center", color=MUTED, fontsize=12)
+        ax.text(float(pitch["length"]) * 0.75, float(pitch["width"]) / 2, "No shots in current filter", ha="center", va="center", color=MUTED, fontsize=12)
         return fig
 
     goals = shots["is_goal"] if "is_goal" in shots.columns else pd.Series(False, index=shots.index)
     sizes = np.clip(shots["xg"].fillna(0).to_numpy() * 700 + 34 if "xg" in shots.columns else 42, 34, 145)
-    pitch.scatter(shots.loc[~goals, "shot_x"], shots.loc[~goals, "shot_y"], s=sizes[~goals], color="#2563eb", edgecolors="white", linewidth=0.8, alpha=0.78, label="Shot", ax=ax)
+    pitch_plot.scatter(shots.loc[~goals, "shot_x"], shots.loc[~goals, "shot_y"], s=sizes[~goals], color="#2563eb", edgecolors="white", linewidth=0.8, alpha=0.78, label="Shot", ax=ax)
     if goals.any():
-        pitch.scatter(shots.loc[goals, "shot_x"], shots.loc[goals, "shot_y"], s=sizes[goals], color="#16a34a", edgecolors=BLACK, linewidth=0.8, alpha=0.92, label="Goal", ax=ax)
+        pitch_plot.scatter(shots.loc[goals, "shot_x"], shots.loc[goals, "shot_y"], s=sizes[goals], color="#16a34a", edgecolors=BLACK, linewidth=0.8, alpha=0.92, label="Goal", ax=ax)
     ax.legend(loc="lower left", bbox_to_anchor=(0.01, 0.01), fontsize=8, frameon=True)
     fig.tight_layout()
     return fig
