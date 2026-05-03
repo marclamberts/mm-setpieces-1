@@ -3402,13 +3402,11 @@ def add_delivery_zones(df: pd.DataFrame) -> pd.DataFrame:
 def mplsoccer_xy(df: pd.DataFrame, x_col: str, y_col: str, pitch: dict[str, object]) -> tuple[pd.Series, pd.Series]:
     x = pd.to_numeric(df[x_col], errors="coerce")
     y = pd.to_numeric(df[y_col], errors="coerce")
-    if pitch["name"] == "opta":
-        y = y * (100 / OPTA_PITCH_WIDTH)
     return x, y
 
 def mplsoccer_center_xy(pitch: dict[str, object], x_share: float = 0.75) -> tuple[float, float]:
     x = float(pitch["length"]) * x_share
-    y = 50.0 if pitch["name"] == "opta" else float(pitch["width"]) / 2
+    y = float(pitch["width"]) / 2
     return x, y
 
 
@@ -3566,7 +3564,7 @@ def mplsoccer_delivery_figure(df: pd.DataFrame, label: str = ""):
     pitch = pitch_dimensions(df)
     fig, ax = plt.subplots(figsize=(5.8, 8), dpi=140)
     pitch_plot = (
-        VerticalPitch(pitch_type="opta", half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
+        VerticalPitch(pitch_type="custom", pitch_length=OPTA_PITCH_LENGTH, pitch_width=OPTA_PITCH_WIDTH, half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
         if pitch["name"] == "opta"
         else VerticalPitch(pitch_type="statsbomb", half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
     )
@@ -3624,7 +3622,7 @@ def mplsoccer_shot_figure(df: pd.DataFrame, label: str = ""):
     half_start = float(pitch["half_start"])
     fig, ax = plt.subplots(figsize=(5.8, 8), dpi=140)
     pitch_plot = (
-        VerticalPitch(pitch_type="opta", half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
+        VerticalPitch(pitch_type="custom", pitch_length=OPTA_PITCH_LENGTH, pitch_width=OPTA_PITCH_WIDTH, half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
         if pitch["name"] == "opta"
         else VerticalPitch(pitch_type="statsbomb", half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
     )
