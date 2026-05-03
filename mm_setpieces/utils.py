@@ -3399,15 +3399,13 @@ def add_delivery_zones(df: pd.DataFrame) -> pd.DataFrame:
         enriched["Delivery zone"] = "Unknown"
     return enriched
 
-def mplsoccer_xy(df: pd.DataFrame, x_col: str, y_col: str, pitch: dict[str, object]) -> tuple[pd.Series, pd.Series]:
-    x = pd.to_numeric(df[x_col], errors="coerce")
-    y = pd.to_numeric(df[y_col], errors="coerce")
-    return x, y
+def mplsoccer_vertical_xy(df: pd.DataFrame, x_col: str, y_col: str) -> tuple[pd.Series, pd.Series]:
+    length_coord = pd.to_numeric(df[x_col], errors="coerce")
+    width_coord = pd.to_numeric(df[y_col], errors="coerce")
+    return width_coord, length_coord
 
 def mplsoccer_center_xy(pitch: dict[str, object], x_share: float = 0.75) -> tuple[float, float]:
-    x = float(pitch["length"]) * x_share
-    y = float(pitch["width"]) / 2
-    return x, y
+    return float(pitch["width"]) / 2, float(pitch["length"]) * x_share
 
 
 def build_role_archetypes(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
@@ -3572,12 +3570,12 @@ def mplsoccer_delivery_figure(df: pd.DataFrame, label: str = ""):
     ax.set_title(f"{label} delivery map", fontsize=14, fontweight="bold", color=BLACK, pad=10)
 
     if base.empty or not {"delivery_end_x", "delivery_end_y"}.issubset(base.columns):
-        pitch_plot.annotate("No delivery end locations", xy=mplsoccer_center_xy(pitch), ha="center", va="center", color=MUTED, fontsize=12, ax=ax)
+        ax.text(*mplsoccer_center_xy(pitch), "No delivery end locations", ha="center", va="center", color=MUTED, fontsize=12)
         return fig
 
     plot_df = base.dropna(subset=["delivery_end_x", "delivery_end_y"]).copy()
     if plot_df.empty:
-        pitch_plot.annotate("No delivery end locations", xy=mplsoccer_center_xy(pitch), ha="center", va="center", color=MUTED, fontsize=12, ax=ax)
+        ax.text(*mplsoccer_center_xy(pitch), "No delivery end locations", ha="center", va="center", color=MUTED, fontsize=12)
         return fig
 
     if len(plot_df) > 320:
@@ -3595,17 +3593,16 @@ def mplsoccer_delivery_figure(df: pd.DataFrame, label: str = ""):
 
     for zone, part in plot_df.groupby("Delivery zone", dropna=False):
         color = colors.get(str(zone), "#64748b")
-        delivery_x, delivery_y = mplsoccer_xy(part, "delivery_end_x", "delivery_end_y", pitch)
-        pitch_plot.scatter(
-            delivery_x,
-            delivery_y,
+        plot_x, plot_y = mplsoccer_vertical_xy(part, "delivery_end_x", "delivery_end_y")
+        ax.scatter(
+            plot_x,
+            plot_y,
             s=np.clip(part["xg"].fillna(0).to_numpy() * 550 + 28 if "xg" in part.columns else 36, 28, 120),
-            color=color,
+            c=color,
             edgecolors="white",
-            linewidth=0.7,
+            linewidths=0.7,
             alpha=0.82,
             label=str(zone),
-            ax=ax,
         )
 
     ax.legend(loc="lower left", bbox_to_anchor=(0.01, 0.01), fontsize=7, frameon=True)
@@ -3630,21 +3627,21 @@ def mplsoccer_shot_figure(df: pd.DataFrame, label: str = ""):
     ax.set_title(f"{label} shot quality", fontsize=14, fontweight="bold", color=BLACK, pad=10)
 
     if shots.empty or not {"shot_x", "shot_y"}.issubset(shots.columns):
-        pitch_plot.annotate("No shots in current filter", xy=mplsoccer_center_xy(pitch), ha="center", va="center", color=MUTED, fontsize=12, ax=ax)
+        ax.text(*mplsoccer_center_xy(pitch), "No shots in current filter", ha="center", va="center", color=MUTED, fontsize=12)
         return fig
 
     shots = shots.dropna(subset=["shot_x", "shot_y"]).copy()
     shots = shots[pd.to_numeric(shots["shot_x"], errors="coerce") >= half_start]
     if shots.empty:
-        pitch_plot.annotate("No shots in current filter", xy=mplsoccer_center_xy(pitch), ha="center", va="center", color=MUTED, fontsize=12, ax=ax)
+        ax.text(*mplsoccer_center_xy(pitch), "No shots in current filter", ha="center", va="center", color=MUTED, fontsize=12)
         return fig
 
     goals = shots["is_goal"] if "is_goal" in shots.columns else pd.Series(False, index=shots.index)
     sizes = np.clip(shots["xg"].fillna(0).to_numpy() * 700 + 34 if "xg" in shots.columns else 42, 34, 145)
-    shot_x, shot_y = mplsoccer_xy(shots, "shot_x", "shot_y", pitch)
-    pitch_plot.scatter(shot_x.loc[~goals], shot_y.loc[~goals], s=sizes[~goals], color="#2563eb", edgecolors="white", linewidth=0.8, alpha=0.78, label="Shot", ax=ax)
+    plot_x, plot_y = mplsoccer_vertical_xy(shots, "shot_x", "shot_y")
+    ax.scatter(plot_x.loc[~goals], plot_y.loc[~goals], s=sizes[~goals], c="#2563eb", edgecolors="white", linewidths=0.8, alpha=0.78, label="Shot")
     if goals.any():
-        pitch_plot.scatter(shot_x.loc[goals], shot_y.loc[goals], s=sizes[goals], color="#16a34a", edgecolors=BLACK, linewidth=0.8, alpha=0.92, label="Goal", ax=ax)
+        ax.scatter(plot_x.loc[goals], plot_y.loc[goals], s=sizes[goals], c="#16a34a", edgecolors=BLACK, linewidths=0.8, alpha=0.92, label="Goal")
     ax.legend(loc="lower left", bbox_to_anchor=(0.01, 0.01), fontsize=8, frameon=True)
     fig.tight_layout()
     return fig
