@@ -3548,26 +3548,26 @@ def generate_set_piece_insights(df: pd.DataFrame, label: str = "") -> list[str]:
 
 def mplsoccer_delivery_figure(df: pd.DataFrame, label: str = ""):
     import matplotlib.pyplot as plt
-    from mplsoccer import Pitch
+    from mplsoccer import VerticalPitch
 
     base = add_delivery_zones(unique_start_events(df))
     pitch = pitch_dimensions(df)
-    fig, ax = plt.subplots(figsize=(8, 5.8), dpi=140)
+    fig, ax = plt.subplots(figsize=(5.8, 8), dpi=140)
     pitch_plot = (
-        Pitch(pitch_type="custom", pitch_length=OPTA_PITCH_LENGTH, pitch_width=OPTA_PITCH_WIDTH, half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
+        VerticalPitch(pitch_type="opta", half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
         if pitch["name"] == "opta"
-        else Pitch(pitch_type="statsbomb", half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
+        else VerticalPitch(pitch_type="statsbomb", half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
     )
     pitch_plot.draw(ax=ax)
     ax.set_title(f"{label} delivery map", fontsize=14, fontweight="bold", color=BLACK, pad=10)
 
     if base.empty or not {"delivery_end_x", "delivery_end_y"}.issubset(base.columns):
-        ax.text(float(pitch["length"]) * 0.75, float(pitch["width"]) / 2, "No delivery end locations", ha="center", va="center", color=MUTED, fontsize=12)
+        pitch_plot.annotate("No delivery end locations", xy=(float(pitch["length"]) * 0.75, float(pitch["width"]) / 2), ha="center", va="center", color=MUTED, fontsize=12, ax=ax)
         return fig
 
     plot_df = base.dropna(subset=["delivery_end_x", "delivery_end_y"]).copy()
     if plot_df.empty:
-        ax.text(float(pitch["length"]) * 0.75, float(pitch["width"]) / 2, "No delivery end locations", ha="center", va="center", color=MUTED, fontsize=12)
+        pitch_plot.annotate("No delivery end locations", xy=(float(pitch["length"]) * 0.75, float(pitch["width"]) / 2), ha="center", va="center", color=MUTED, fontsize=12, ax=ax)
         return fig
 
     if len(plot_df) > 320:
@@ -3604,28 +3604,28 @@ def mplsoccer_delivery_figure(df: pd.DataFrame, label: str = ""):
 
 def mplsoccer_shot_figure(df: pd.DataFrame, label: str = ""):
     import matplotlib.pyplot as plt
-    from mplsoccer import Pitch
+    from mplsoccer import VerticalPitch
 
     shots = unique_shot_events(df)
     pitch = pitch_dimensions(df)
     half_start = float(pitch["half_start"])
-    fig, ax = plt.subplots(figsize=(8, 5.8), dpi=140)
+    fig, ax = plt.subplots(figsize=(5.8, 8), dpi=140)
     pitch_plot = (
-        Pitch(pitch_type="custom", pitch_length=OPTA_PITCH_LENGTH, pitch_width=OPTA_PITCH_WIDTH, half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
+        VerticalPitch(pitch_type="opta", half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
         if pitch["name"] == "opta"
-        else Pitch(pitch_type="statsbomb", half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
+        else VerticalPitch(pitch_type="statsbomb", half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
     )
     pitch_plot.draw(ax=ax)
     ax.set_title(f"{label} shot quality", fontsize=14, fontweight="bold", color=BLACK, pad=10)
 
     if shots.empty or not {"shot_x", "shot_y"}.issubset(shots.columns):
-        ax.text(float(pitch["length"]) * 0.75, float(pitch["width"]) / 2, "No shots in current filter", ha="center", va="center", color=MUTED, fontsize=12)
+        pitch_plot.annotate("No shots in current filter", xy=(float(pitch["length"]) * 0.75, float(pitch["width"]) / 2), ha="center", va="center", color=MUTED, fontsize=12, ax=ax)
         return fig
 
     shots = shots.dropna(subset=["shot_x", "shot_y"]).copy()
     shots = shots[pd.to_numeric(shots["shot_x"], errors="coerce") >= half_start]
     if shots.empty:
-        ax.text(float(pitch["length"]) * 0.75, float(pitch["width"]) / 2, "No shots in current filter", ha="center", va="center", color=MUTED, fontsize=12)
+        pitch_plot.annotate("No shots in current filter", xy=(float(pitch["length"]) * 0.75, float(pitch["width"]) / 2), ha="center", va="center", color=MUTED, fontsize=12, ax=ax)
         return fig
 
     goals = shots["is_goal"] if "is_goal" in shots.columns else pd.Series(False, index=shots.index)
