@@ -793,19 +793,19 @@ def render_corners() -> None:
             render_analyst_table(build_team_archetypes(filtered).head(15), height=360)
 
     elif view == "Pitch Evidence":
-        visual_view = st.radio("Pitch visual", ["Interactive maps", "Report visuals"], horizontal=True, key="corners_visual")
-        if visual_view == "Interactive maps":
-            left, right = st.columns(2)
-            with left:
-                render_plotly_visual(polish_plotly_figure(shotmap_figure(filtered, f"{label} shotmap · vertical half pitch")), "Corners shotmap", "corners_shotmap_png")
-            with right:
-                render_plotly_visual(polish_plotly_figure(delivery_map_figure(filtered, f"{label} delivery map · vertical half pitch")), "Corners delivery map", "corners_delivery_map_png")
-        else:
+        visual_view = st.radio("Pitch visual", ["Report visuals", "Interactive maps"], horizontal=True, key="corners_visual")
+        if visual_view == "Report visuals":
             left, right = st.columns(2)
             with left:
                 render_mpl_visual(mplsoccer_delivery_figure(filtered, label), "Corners report delivery map", "corners_report_delivery_map_png")
             with right:
                 render_mpl_visual(mplsoccer_shot_figure(filtered, label), "Corners report shot map", "corners_report_shot_map_png")
+        else:
+            left, right = st.columns(2)
+            with left:
+                render_plotly_visual(polish_plotly_figure(shotmap_figure(filtered, f"{label} shotmap · vertical half pitch")), "Corners shotmap", "corners_shotmap_png")
+            with right:
+                render_plotly_visual(polish_plotly_figure(delivery_map_figure(filtered, f"{label} delivery map · vertical half pitch")), "Corners delivery map", "corners_delivery_map_png")
 
     elif view == "PDF Brief":
         section_header("Pre-Match PDF", "Download a staff briefing from the current filters")
@@ -984,8 +984,11 @@ def render_sequence_page(label: str) -> None:
             render_analyst_table(freekick_shooter_summary(filtered) if is_freekick else throwin_shooter_summary(filtered), height=620)
 
     elif view == "Pitch Evidence":
-        visual_view = st.radio("Pitch visual", ["Interactive maps", "Report shot view"], horizontal=True, key=f"{key}_visual")
-        if visual_view == "Interactive maps":
+        visual_view = st.radio("Pitch visual", ["Report shot view", "Interactive maps"], horizontal=True, key=f"{key}_visual")
+        if visual_view == "Report shot view":
+            section_header("Report Shot View", "Static mplsoccer shot-quality figure")
+            render_mpl_visual(mplsoccer_shot_figure(filtered, readable), f"{readable} report shot view", f"{key}_report_shot_view_png")
+        else:
             left, right = st.columns(2)
             with left:
                 section_header("Start Locations", f"Where {readable.lower()} possessions begin")
@@ -993,9 +996,6 @@ def render_sequence_page(label: str) -> None:
             with right:
                 section_header("Shot Map", f"Shot quality generated from {readable.lower()}")
                 render_plotly_visual(polish_plotly_figure(shotmap_figure(filtered, f"{readable} shot map")), f"{readable} shot map", f"{key}_shot_map_png")
-        else:
-            section_header("Report Shot View", "Static mplsoccer shot-quality figure")
-            render_mpl_visual(mplsoccer_shot_figure(filtered, readable), f"{readable} report shot view", f"{key}_report_shot_view_png")
 
     elif view == "Event Log":
         section_header("Sequence Log", "One row per match_id + possession + team")
