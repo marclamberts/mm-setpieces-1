@@ -1755,7 +1755,7 @@ def render_plotly_png_download(fig: go.Figure, label: str, key: str) -> None:
             file_name=f"{_safe_file_stem(label)}.png",
             mime="image/png",
             key=f"{key}_download_png",
-            use_container_width=True,
+            width="stretch",
         )
     except Exception as exc:
         st.error(f"PNG export failed. Streamlit Cloud may still be installing the export dependency. Details: {exc}")
@@ -1768,7 +1768,7 @@ def render_matplotlib_png_download(fig, label: str, key: str) -> None:
         file_name=f"{_safe_file_stem(label)}.png",
         mime="image/png",
         key=f"{key}_download_png",
-        use_container_width=True,
+        width="stretch",
     )
 
 
@@ -1793,7 +1793,7 @@ def render_export_controls(df: pd.DataFrame, slug: str, sheet_name: str = "Data"
             data=df.to_csv(index=False).encode("utf-8"),
             file_name=f"{safe_slug}_filtered.csv",
             mime="text/csv",
-            use_container_width=True,
+            width="stretch",
         )
     with excel_col:
         st.download_button(
@@ -1801,7 +1801,7 @@ def render_export_controls(df: pd.DataFrame, slug: str, sheet_name: str = "Data"
             data=dataframe_to_excel_bytes(df, sheet_name=sheet_name[:31] or "Data"),
             file_name=f"{safe_slug}_filtered.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True,
+            width="stretch",
         )
 
 
@@ -2829,7 +2829,7 @@ def render_analyst_table(df: pd.DataFrame, *, height: int = 360, max_rows: int =
         st.caption(f"Showing the first {max_rows:,} of {len(df):,} rows for faster rendering. Use exports for the full table.")
     st.dataframe(
         display_df,
-        use_container_width=True,
+        width="stretch",
         hide_index=True,
         height=height,
     )
