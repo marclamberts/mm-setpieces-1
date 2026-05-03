@@ -100,7 +100,7 @@ OPTA_HALF_START = 50
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR.parent / "Data"
 LOGO_PATH = BASE_DIR.parent / "assets" / "setplaypro-logo.jpg"
-DATA_VERSION = "foldered_sources_v1"
+DATA_VERSION = "foldered_sources_v2_filters"
 
 BLACK = "#0b0f14"
 RED = "#c1121f"
@@ -2137,9 +2137,9 @@ def load_swe_sp_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
 @st.cache_data(show_spinner=False)
 def load_sp_data(label: str, _data_version: str = DATA_VERSION) -> pd.DataFrame:
     if label == "Corners":
-        return load_corner_data().copy()
+        return load_corner_data(_data_version).copy()
 
-    raw = load_swe_sp_data().copy()
+    raw = load_swe_sp_data(_data_version).copy()
     if raw.empty or "SP_Type" not in raw.columns:
         return pd.DataFrame()
 
@@ -2335,7 +2335,7 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
 
 @st.cache_data(show_spinner=False)
 def load_prepared_sp_data(label: str, _data_version: str = DATA_VERSION) -> pd.DataFrame:
-    raw = load_sp_data(label)
+    raw = load_sp_data(label, _data_version)
     return filter_by_sp_type(prepare_sp_dataframe(raw, label=label), label)
 
 

@@ -145,10 +145,10 @@ def _phase_snapshot(df: pd.DataFrame, phase: str, team: str) -> dict[str, object
 
 @st.cache_data(show_spinner=False)
 def command_center_data(_data_version: str = DATA_VERSION) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    corners = load_prepared_sp_data("Corners")
-    freekicks = load_prepared_sp_data("Freekicks")
-    throwins = load_prepared_sp_data("Throw ins")
-    hops = load_hops_data()
+    corners = load_prepared_sp_data("Corners", _data_version)
+    freekicks = load_prepared_sp_data("Freekicks", _data_version)
+    throwins = load_prepared_sp_data("Throw ins", _data_version)
+    hops = load_hops_data(_data_version)
     return corners, freekicks, throwins, hops
 
 
@@ -718,7 +718,7 @@ def filter_sp_page_data(df: pd.DataFrame, label: str, key_prefix: str) -> tuple[
 
 def render_corners() -> None:
     label = "Corners"
-    df = load_prepared_sp_data(label)
+    df = load_prepared_sp_data(label, DATA_VERSION)
     hero_block(
         "Set-piece intelligence",
         label,
@@ -831,7 +831,7 @@ def render_corners() -> None:
 def render_sequence_page(label: str) -> None:
     is_freekick = label == "Freekicks"
     readable = "Freekicks" if is_freekick else "Throw-ins"
-    df = load_prepared_sp_data("Freekicks" if is_freekick else "Throw ins")
+    df = load_prepared_sp_data("Freekicks" if is_freekick else "Throw ins", DATA_VERSION)
     hero_block(
         "Dead-ball intelligence" if is_freekick else "Touchline restart intelligence",
         readable,
@@ -1008,7 +1008,7 @@ def render_sequence_page(label: str) -> None:
 
 
 def render_hops() -> None:
-    df = load_hops_data()
+    df = load_hops_data(DATA_VERSION)
     hero_block("Duel intelligence", "HOPS", "Player and team duel profiles from the HOPS workbook, ranked by rating, percentile, and squad-level depth.")
     if df.empty:
         st.warning("No HOPS rows were found in Data/HOPS.")
