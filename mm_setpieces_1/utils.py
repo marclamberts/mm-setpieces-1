@@ -100,7 +100,7 @@ OPTA_HALF_START = 50
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR.parent / "Data"
 LOGO_PATH = BASE_DIR.parent / "assets" / "setplaypro-logo.jpg"
-DATA_VERSION = "foldered_sources_v5_auto_data_folder"
+DATA_VERSION = "foldered_sources_v6_denmark_ii"
 
 BLACK = "#0b0f14"
 RED = "#c1121f"
@@ -1957,6 +1957,10 @@ def _league_from_filename(path: Path) -> str:
         return "Allsvenskan"
     if "czech" in text or "czechia" in text or "cz" in tokens or "cze" in tokens:
         return "Czech First League"
+    if "denmark ii" in text or "denmark 2" in text or "denmark second" in text or "danish 2" in text or "dnk ii" in text:
+        return "Denmark II"
+    if "denmark" in text or "danish" in text or "dnk" in tokens or "den" in tokens:
+        return "Denmark"
     if "uae" in tokens or "emirates" in text:
         return "UAE Pro League"
     return "Unknown"
