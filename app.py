@@ -50,6 +50,12 @@ def _league_filter_options(df: pd.DataFrame, source_folder: str | None = None) -
     return ["All"] + sorted(leagues)
 
 
+def _league_selectbox(label: str, options: list[str], key: str) -> str:
+    if key in st.session_state and st.session_state[key] not in options:
+        st.session_state[key] = "All"
+    return st.sidebar.selectbox(label, options, key=key)
+
+
 @st.cache_data(show_spinner=False)
 def _cached_report_pdf(df: pd.DataFrame, label: str, opponent: str) -> bytes:
     return prematch_report_pdf_bytes(df, label, opponent)
@@ -673,7 +679,7 @@ def filter_sp_page_data(df: pd.DataFrame, label: str, key_prefix: str) -> tuple[
     shot_outcomes = _safe_sorted(df["Shot outcome"]) if "Shot outcome" in df.columns else []
 
     team = st.sidebar.selectbox("Team", teams, key=f"{key_prefix}_team")
-    league = st.sidebar.selectbox("League", leagues, key=f"{key_prefix}_league")
+    league = _league_selectbox("League", leagues, key=f"{key_prefix}_league")
     sample = st.sidebar.radio("Sample", ["Total", "Last 10 games"], key=f"{key_prefix}_sample")
     side = st.sidebar.radio("Side", sides, key=f"{key_prefix}_side")
     time_in_game = st.sidebar.selectbox("Time in the game", periods, key=f"{key_prefix}_period")
@@ -869,7 +875,7 @@ def render_sequence_page(label: str) -> None:
     heights = _safe_sorted(df["Delivery height"]) if "Delivery height" in df.columns else []
     outcomes = _safe_sorted(df["Shot outcome"]) if "Shot outcome" in df.columns else []
 
-    league = st.sidebar.selectbox("League", leagues, key=f"{key}_league")
+    league = _league_selectbox("League", leagues, key=f"{key}_league")
     team = st.sidebar.selectbox("Team", teams, key=f"{key}_team")
     period = st.sidebar.selectbox("Game period", periods, key=f"{key}_period")
     sample = st.sidebar.radio("Sample", ["Total", "Last 10 games"], key=f"{key}_sample")
@@ -1032,7 +1038,7 @@ def render_hops() -> None:
 
     leagues = _league_filter_options(df, "HOPS")
     teams = ["All"] + sorted(df["Team"].dropna().astype(str).unique().tolist())
-    league = st.sidebar.selectbox("League", leagues, key="hops_league")
+    league = _league_selectbox("League", leagues, key="hops_league")
     team = st.sidebar.selectbox("Team", teams, key="hops_team")
     top_n = st.sidebar.slider("Show top / bottom players", min_value=5, max_value=30, value=10, key="hops_top_n")
 
@@ -1126,7 +1132,7 @@ def render_delay() -> None:
     periods = ["All"] + sorted(events["period"].dropna().astype(int).astype(str).unique().tolist()) if "period" in events.columns else ["All"]
     out_types = ["All"] + sorted(events["out_event_type"].dropna().astype(str).unique().tolist()) if "out_event_type" in events.columns else ["All"]
 
-    league = st.sidebar.selectbox("League", leagues, key="delay_league")
+    league = _league_selectbox("League", leagues, key="delay_league")
     match = st.sidebar.selectbox("Match", matches, key="delay_match")
     period = st.sidebar.selectbox("Period", periods, key="delay_period")
     out_type = st.sidebar.selectbox("Exit event", out_types, key="delay_exit")

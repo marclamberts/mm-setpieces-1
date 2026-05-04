@@ -100,7 +100,7 @@ OPTA_HALF_START = 50
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR.parent / "Data"
 LOGO_PATH = BASE_DIR.parent / "assets" / "setplaypro-logo.jpg"
-DATA_VERSION = "foldered_sources_v3_recursive_leagues"
+DATA_VERSION = "foldered_sources_v4_filter_refresh"
 
 BLACK = "#0b0f14"
 RED = "#c1121f"
