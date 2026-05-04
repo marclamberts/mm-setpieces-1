@@ -100,7 +100,7 @@ OPTA_HALF_START = 50
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR.parent / "Data"
 LOGO_PATH = BASE_DIR.parent / "assets" / "setplaypro-logo.jpg"
-DATA_VERSION = "foldered_sources_v4_filter_refresh"
+DATA_VERSION = "foldered_sources_v5_auto_data_folder"
 
 BLACK = "#0b0f14"
 RED = "#c1121f"
@@ -1877,14 +1877,41 @@ DATA_SUBFOLDERS = {
 
 
 def _folder_from_filename(path: Path) -> str:
+    text = " ".join([path.name, *path.parent.parts]).lower().replace("_", " ").replace("-", " ")
     name = path.name.lower()
     if "delay" in name:
         return ""
-    if "hops" in name:
+    if "hops" in text:
         return "HOPS"
-    if "sp" in name and "corner" not in name:
+    if ("sp" in text or "set piece" in text) and "corner" not in name:
         return "SP"
-    if "corner" in name:
+    if "corner" in text:
+        return "Corners"
+    return ""
+
+
+def _columns_from_data_file(path: Path) -> set[str]:
+    try:
+        if path.suffix.lower() == ".csv":
+            cols = pd.read_csv(path, nrows=0).columns
+        else:
+            cols = pd.read_excel(path, nrows=0, engine="openpyxl").columns
+    except Exception:
+        return set()
+    return {str(col).strip().lower() for col in cols if str(col).strip()}
+
+
+def _folder_from_file(path: Path) -> str:
+    folder = _folder_from_filename(path)
+    if folder:
+        return folder
+
+    cols = _columns_from_data_file(path)
+    if {"player", "rating"}.issubset(cols):
+        return "HOPS"
+    if "sp_type" in cols or "play_pattern.name" in cols or "location.pass" in cols:
+        return "SP"
+    if {"pass_team_name", "taker"}.issubset(cols) or "sp_outcome" in cols:
         return "Corners"
     return ""
 
@@ -1909,15 +1936,12 @@ def _is_data_file(path: Path, suffixes: tuple[str, ...]) -> bool:
 
 def _data_files(folder: str, suffixes: tuple[str, ...]) -> list[Path]:
     paths: list[Path] = []
-    subdir = DATA_SUBFOLDERS.get(folder, DATA_DIR / folder)
-    if subdir.exists():
-        paths.extend(path for path in subdir.rglob("*") if _is_data_file(path, suffixes))
     if DATA_DIR.exists():
         paths.extend(
             path
             for path in DATA_DIR.rglob("*")
             if _is_data_file(path, suffixes)
-            and _folder_from_filename(path) == folder
+            and _folder_from_file(path) == folder
         )
     return sorted(set(paths), key=lambda path: tuple(part.lower() for part in path.parts))
 
