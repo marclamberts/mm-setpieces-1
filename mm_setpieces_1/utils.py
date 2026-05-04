@@ -100,7 +100,7 @@ OPTA_HALF_START = 50
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR.parent / "Data"
 LOGO_PATH = BASE_DIR.parent / "assets" / "setplaypro-logo.jpg"
-DATA_VERSION = "foldered_sources_v6_denmark_ii"
+DATA_VERSION = "foldered_sources_v7_source_league_override"
 
 BLACK = "#0b0f14"
 RED = "#c1121f"
@@ -1992,11 +1992,14 @@ def _with_league(df: pd.DataFrame, league: str) -> pd.DataFrame:
     if df.empty:
         return df
     df = df.copy()
+    if league and league != "Unknown":
+        df["League"] = league
+        return df
     if "League" not in df.columns:
         df["League"] = league
     else:
         league_text = df["League"].astype("object")
-        missing = league_text.isna() | league_text.astype(str).str.strip().isin(["", "Unknown"])
+        missing = league_text.isna() | league_text.astype(str).str.strip().str.lower().isin(["", "unknown", "nan", "none"])
         df.loc[missing, "League"] = league
     return df
 
