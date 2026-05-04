@@ -100,7 +100,7 @@ OPTA_HALF_START = 50
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR.parent / "Data"
 LOGO_PATH = BASE_DIR.parent / "assets" / "setplaypro-logo.jpg"
-DATA_VERSION = "foldered_sources_v7_source_league_override"
+DATA_VERSION = "foldered_sources_v8_sparse_sequence_metrics"
 
 BLACK = "#0b0f14"
 RED = "#c1121f"
@@ -2200,6 +2200,16 @@ def filter_by_sp_type(df: pd.DataFrame, label: str) -> pd.DataFrame:
     sp = _canonical_sp_type_series(df["SP_Type"])
     return df[sp.eq(wanted)].copy()
 
+def _has_values(df: pd.DataFrame, column: str) -> bool:
+    return column in df.columns and df[column].notna().any()
+
+def _match_count(df: pd.DataFrame) -> int:
+    if _has_values(df, "match_id"):
+        return int(df["match_id"].nunique())
+    if _has_values(df, "Match"):
+        return int(df["Match"].nunique())
+    return 0
+
 def _ensure_column(df: pd.DataFrame, target: str, candidates: list[str], default=np.nan):
     _fill_from_candidates(df, target, candidates, default)
 
@@ -2390,7 +2400,7 @@ def unique_shot_events(df: pd.DataFrame) -> pd.DataFrame:
 def unique_start_events(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return df
-    if _is_swe_sp_df(df):
+    if _is_swe_sp_df(df) and _has_values(df, "possession"):
         keys = [c for c in ["match_id", "possession", "Team", "pass_x", "pass_y", "Taker", "timestamp"] if c in df.columns]
         if keys:
             return df.drop_duplicates(subset=keys)
@@ -2749,12 +2759,12 @@ def build_summary_tables(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, 
     if df.empty or "Team" not in df.columns:
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
-    # Sequence-based summaries for SWE SP pages; corners still work because possession may be absent.
-    if "possession" in df.columns:
+    # Sequence-based summaries for SP pages; corner files may carry empty possession columns after concat.
+    if _has_values(df, "possession"):
         rows = []
         for team, part in df.groupby("Team", dropna=False):
             sequences = int(part["possession"].nunique())
-            matches = int(part["match_id"].nunique()) if "match_id" in part.columns else (int(part["Match"].nunique()) if "Match" in part.columns else 0)
+            matches = _match_count(part)
 
             shot_part = part[part["is_shot"]] if "is_shot" in part.columns else part.iloc[0:0]
             goal_part = part[part["is_goal"]] if "is_goal" in part.columns else part.iloc[0:0]
@@ -2785,7 +2795,7 @@ def build_summary_tables(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, 
         summary = (
             df.groupby("Team", dropna=False)
             .agg(
-                Matches=("match_id", "nunique") if "match_id" in df.columns else ("Match", "nunique") if "Match" in df.columns else ("Team", "size"),
+                Matches=("match_id", "nunique") if _has_values(df, "match_id") else ("Match", "nunique") if _has_values(df, "Match") else ("Team", "size"),
                 Set_Pieces=("Team", "size"),
                 Shots=("is_shot", "sum"),
                 Goals=("is_goal", "sum"),
@@ -2846,7 +2856,7 @@ def set_piece_kpi_values(df: pd.DataFrame) -> dict[str, object]:
     shots = int(len(shots_df))
     goals = int(shots_df["is_goal"].sum()) if "is_goal" in shots_df.columns and not shots_df.empty else 0
     total_xg = float(shots_df["xg"].fillna(0).sum()) if "xg" in shots_df.columns and not shots_df.empty else 0.0
-    matches = int(df["match_id"].nunique()) if "match_id" in df.columns else int(df["Match"].nunique()) if "Match" in df.columns else 0
+    matches = _match_count(df)
 
     def top_value(source: pd.DataFrame, column: str) -> str:
         if column not in source.columns or source.empty:
@@ -2924,7 +2934,7 @@ def build_team_leaderboard(df: pd.DataFrame) -> pd.DataFrame:
         shots = int(part["is_shot"].sum()) if "is_shot" in part.columns else 0
         goals = int(part["is_goal"].sum()) if "is_goal" in part.columns else 0
         total_xg = float(part["xg"].fillna(0).sum()) if "xg" in part.columns else 0.0
-        matches = int(part["match_id"].nunique()) if "match_id" in part.columns else int(part["Match"].nunique()) if "Match" in part.columns else 0
+        matches = _match_count(part)
         takers = int(part["Taker"].nunique()) if "Taker" in part.columns else 0
         rows.append(
             {

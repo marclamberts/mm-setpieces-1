@@ -125,6 +125,10 @@ def _mode_text(series: pd.Series) -> str:
     return values.value_counts().index[0]
 
 
+def _has_values(df: pd.DataFrame, column: str) -> bool:
+    return column in df.columns and df[column].notna().any()
+
+
 def _phase_snapshot(df: pd.DataFrame, phase: str, team: str) -> dict[str, object]:
     if df.empty or "Team" not in df.columns:
         return {"Phase": phase, "Rows": 0, "Set pieces": 0, "Shots": 0, "Goals": 0, "xG": 0.0, "xG / 100": 0.0, "xG / shot": 0.0, "Top taker": "Unknown", "Top shooter": "Unknown", "Shot rate %": 0.0, "Goal conv %": 0.0}
@@ -132,7 +136,7 @@ def _phase_snapshot(df: pd.DataFrame, phase: str, team: str) -> dict[str, object
     if part.empty:
         return {"Phase": phase, "Rows": 0, "Set pieces": 0, "Shots": 0, "Goals": 0, "xG": 0.0, "xG / 100": 0.0, "xG / shot": 0.0, "Top taker": "Unknown", "Top shooter": "Unknown", "Shot rate %": 0.0, "Goal conv %": 0.0}
 
-    if "possession" in part.columns:
+    if _has_values(part, "possession"):
         set_pieces = int(part["possession"].nunique())
         shot_part = part[part["is_shot"]] if "is_shot" in part.columns else part.iloc[0:0]
         goal_part = part[part["is_goal"]] if "is_goal" in part.columns else part.iloc[0:0]
@@ -143,7 +147,7 @@ def _phase_snapshot(df: pd.DataFrame, phase: str, team: str) -> dict[str, object
         shots = int(part["is_shot"].sum()) if "is_shot" in part.columns else 0
         goals = int(part["is_goal"].sum()) if "is_goal" in part.columns else 0
 
-    if set(["possession", "shot_x", "shot_y", "xg"]).issubset(part.columns):
+    if _has_values(part, "possession") and set(["shot_x", "shot_y", "xg"]).issubset(part.columns):
         xg_rows = part[part["shot_x"].notna()][["possession", "shot_x", "shot_y", "xg"]].drop_duplicates()
         total_xg = float(xg_rows["xg"].fillna(0).sum()) if not xg_rows.empty else 0.0
     else:
