@@ -100,7 +100,7 @@ OPTA_HALF_START = 50
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR.parent / "Data"
 LOGO_PATH = BASE_DIR.parent / "assets" / "setplaypro-logo.jpg"
-DATA_VERSION = "foldered_sources_v2_filters"
+DATA_VERSION = "foldered_sources_v3_recursive_leagues"
 
 BLACK = "#0b0f14"
 RED = "#c1121f"
@@ -1899,39 +1899,41 @@ def _candidate_paths(filename: str) -> list[Path]:
     ]
 
 
+def _is_data_file(path: Path, suffixes: tuple[str, ...]) -> bool:
+    return (
+        path.is_file()
+        and not path.name.startswith(("~$", "."))
+        and path.suffix.lower() in suffixes
+    )
+
+
 def _data_files(folder: str, suffixes: tuple[str, ...]) -> list[Path]:
     paths: list[Path] = []
     subdir = DATA_SUBFOLDERS.get(folder, DATA_DIR / folder)
     if subdir.exists():
+        paths.extend(path for path in subdir.rglob("*") if _is_data_file(path, suffixes))
+    if DATA_DIR.exists():
         paths.extend(
             path
-            for path in subdir.iterdir()
-            if path.is_file()
-            and not path.name.startswith("~$")
-            and path.suffix.lower() in suffixes
+            for path in DATA_DIR.rglob("*")
+            if _is_data_file(path, suffixes)
+            and _folder_from_filename(path) == folder
         )
-    paths.extend(
-        path
-        for path in DATA_DIR.iterdir()
-        if path.is_file()
-        and not path.name.startswith("~$")
-        and path.suffix.lower() in suffixes
-        and _folder_from_filename(path) == folder
-    )
-    return sorted(set(paths), key=lambda path: path.name.lower())
+    return sorted(set(paths), key=lambda path: tuple(part.lower() for part in path.parts))
 
 
 def _league_from_filename(path: Path) -> str:
-    name = path.stem.lower()
-    if "serie a" in name or "italy" in name:
+    text = " ".join([path.stem, *path.parent.parts]).lower().replace("_", " ").replace("-", " ")
+    tokens = set(text.split())
+    if "serie a" in text or "italy" in text or "italia" in text or "ita" in tokens:
         return "Serie A"
-    if "bundesliga" in name or name.startswith("ger ") or name.startswith("ger_"):
+    if "bundesliga" in text or "germany" in text or "ger" in tokens or "deu" in tokens:
         return "Bundesliga"
-    if "allsvenskan" in name or name.startswith("swe ") or name.startswith("swe_"):
+    if "allsvenskan" in text or "sweden" in text or "swe" in tokens:
         return "Allsvenskan"
-    if "czech" in name or name.startswith("cz ") or name.startswith("cz_") or name.startswith("cz -"):
+    if "czech" in text or "czechia" in text or "cz" in tokens or "cze" in tokens:
         return "Czech First League"
-    if "uae" in name:
+    if "uae" in tokens or "emirates" in text:
         return "UAE Pro League"
     return "Unknown"
 
