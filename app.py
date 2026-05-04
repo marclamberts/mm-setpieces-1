@@ -34,6 +34,22 @@ def _safe_sorted(values: pd.Series) -> list[str]:
     return sorted([str(v) for v in values.dropna().astype(str).unique().tolist() if str(v).strip()])
 
 
+def _source_league_options(folder: str) -> list[str]:
+    suffixes = (".xlsx", ".xlsm", ".xls", ".csv") if folder == "Corners" else (".xlsx", ".xlsm", ".xls")
+    return sorted({
+        league
+        for league in (_league_from_filename(path) for path in _data_files(folder, suffixes))
+        if league and league != "Unknown"
+    })
+
+
+def _league_filter_options(df: pd.DataFrame, source_folder: str | None = None) -> list[str]:
+    leagues = set(_safe_sorted(df["League"])) if "League" in df.columns else set()
+    if source_folder:
+        leagues.update(_source_league_options(source_folder))
+    return ["All"] + sorted(leagues)
+
+
 @st.cache_data(show_spinner=False)
 def _cached_report_pdf(df: pd.DataFrame, label: str, opponent: str) -> bytes:
     return prematch_report_pdf_bytes(df, label, opponent)
@@ -648,7 +664,7 @@ def render_home() -> None:
 
 def filter_sp_page_data(df: pd.DataFrame, label: str, key_prefix: str) -> tuple[pd.DataFrame, list[tuple[str, object]]]:
     teams = ["All"] + _safe_sorted(df["Team"]) if "Team" in df.columns else ["All"]
-    leagues = ["All"] + _safe_sorted(df["League"]) if "League" in df.columns else ["All"]
+    leagues = _league_filter_options(df, "Corners")
     sides = ["All"] + _safe_sorted(df["side"]) if "side" in df.columns else ["All"]
     periods = ["All"] + _safe_sorted(df["game_period"]) if "game_period" in df.columns else ["All"]
     techniques = _safe_sorted(df["Technique"]) if "Technique" in df.columns else []
@@ -845,7 +861,7 @@ def render_sequence_page(label: str) -> None:
 
     render_workflow_rail()
     key = "freekicks" if is_freekick else "throwins"
-    leagues = ["All"] + _safe_sorted(df["League"]) if "League" in df.columns else ["All"]
+    leagues = _league_filter_options(df, "SP")
     teams = ["All"] + _safe_sorted(df["Team"]) if "Team" in df.columns else ["All"]
     periods = ["All"] + _safe_sorted(df["game_period"]) if "game_period" in df.columns else ["All"]
     takers = _safe_sorted(df["Taker"]) if "Taker" in df.columns else []
@@ -1014,7 +1030,7 @@ def render_hops() -> None:
         st.warning("No HOPS rows were found in Data/HOPS.")
         return
 
-    leagues = ["All"] + sorted(df["League"].dropna().astype(str).unique().tolist())
+    leagues = _league_filter_options(df, "HOPS")
     teams = ["All"] + sorted(df["Team"].dropna().astype(str).unique().tolist())
     league = st.sidebar.selectbox("League", leagues, key="hops_league")
     team = st.sidebar.selectbox("Team", teams, key="hops_team")
