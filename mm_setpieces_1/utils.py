@@ -100,7 +100,7 @@ OPTA_HALF_START = 50
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR.parent / "Data"
 LOGO_PATH = BASE_DIR.parent / "assets" / "setplaypro-logo.jpg"
-DATA_VERSION = "foldered_sources_v8_sparse_sequence_metrics"
+DATA_VERSION = "foldered_sources_v9_auto_league_names"
 
 BLACK = "#0b0f14"
 RED = "#c1121f"
@@ -1915,6 +1915,29 @@ def _folder_from_file(path: Path) -> str:
         return "Corners"
     return ""
 
+def _title_from_token(text: str) -> str:
+    upper_tokens = {"ii", "iii", "iv", "u21", "u23", "uae", "usa", "uk"}
+    words = []
+    for word in text.replace("_", " ").replace("-", " ").split():
+        clean = word.strip()
+        if not clean:
+            continue
+        words.append(clean.upper() if clean.lower() in upper_tokens else clean.capitalize())
+    return " ".join(words)
+
+
+def _league_from_generic_filename(path: Path) -> str:
+    stem = path.stem.strip()
+    parts = stem.replace("_", " ").split(" - ", 1)
+    candidate = parts[0].strip()
+    for suffix in [" Corners", " SP", " HOPS"]:
+        if candidate.lower().endswith(suffix.lower()):
+            candidate = candidate[: -len(suffix)].strip()
+    candidate = " ".join(candidate.split())
+    if not candidate or candidate.lower() in {"all", "data", "corners", "sp", "hops"}:
+        return "Unknown"
+    return _title_from_token(candidate)
+
 
 def _candidate_paths(filename: str) -> list[Path]:
     return [
@@ -1963,7 +1986,7 @@ def _league_from_filename(path: Path) -> str:
         return "Denmark"
     if "uae" in tokens or "emirates" in text:
         return "UAE Pro League"
-    return "Unknown"
+    return _league_from_generic_filename(path)
 
 
 def _read_excel_path(path: Path, sheet_name=0):
