@@ -100,7 +100,7 @@ OPTA_HALF_START = 50
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR.parent / "Data"
 LOGO_PATH = BASE_DIR.parent / "assets" / "setplaypro-logo.jpg"
-DATA_VERSION = "foldered_sources_v9_auto_league_names"
+DATA_VERSION = "foldered_sources_v10_bundesliga_ii"
 
 BLACK = "#0b0f14"
 RED = "#c1121f"
@@ -1974,6 +1974,8 @@ def _league_from_filename(path: Path) -> str:
     tokens = set(text.split())
     if "serie a" in text or "italy" in text or "italia" in text or "ita" in tokens:
         return "Serie A"
+    if "bundesliga ii" in text or "bundesliga 2" in text or "bundesliga second" in text:
+        return "Bundesliga II"
     if "bundesliga" in text or "germany" in text or "ger" in tokens or "deu" in tokens:
         return "Bundesliga"
     if "allsvenskan" in text or "sweden" in text or "swe" in tokens:
