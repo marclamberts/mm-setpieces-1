@@ -129,6 +129,37 @@ def _has_values(df: pd.DataFrame, column: str) -> bool:
     return column in df.columns and df[column].notna().any()
 
 
+def _match_team_parts(match: object) -> list[str]:
+    text = str(match)
+    if " - " not in text:
+        return []
+    return [part.strip() for part in text.split(" - ", 1) if part.strip()]
+
+
+def _team_in_match_mask(df: pd.DataFrame, team: str) -> pd.Series:
+    if "Match" not in df.columns:
+        return pd.Series(False, index=df.index)
+    return df["Match"].apply(lambda match: team in _match_team_parts(match))
+
+
+def _set_piece_team_options(df: pd.DataFrame) -> list[str]:
+    teams = set(_safe_sorted(df["Team"])) if "Team" in df.columns else set()
+    if "Match" in df.columns:
+        for match in df["Match"].dropna():
+            teams.update(_match_team_parts(match))
+    teams = {team for team in teams if team and team != "Unknown"}
+    return ["All"] + sorted(teams)
+
+
+def _apply_team_perspective(df: pd.DataFrame, team: str, perspective: str) -> pd.DataFrame:
+    if team == "All" or "Team" not in df.columns:
+        return df
+    team_series = df["Team"].astype(str)
+    if perspective == "Against":
+        return df[_team_in_match_mask(df, team) & team_series.ne(team)].copy()
+    return df[team_series.eq(team)].copy()
+
+
 def _phase_snapshot(df: pd.DataFrame, phase: str, team: str) -> dict[str, object]:
     if df.empty or "Team" not in df.columns:
         return {"Phase": phase, "Rows": 0, "Set pieces": 0, "Shots": 0, "Goals": 0, "xG": 0.0, "xG / 100": 0.0, "xG / shot": 0.0, "Top taker": "Unknown", "Top shooter": "Unknown", "Shot rate %": 0.0, "Goal conv %": 0.0}
@@ -673,7 +704,7 @@ def render_home() -> None:
 
 
 def filter_sp_page_data(df: pd.DataFrame, label: str, key_prefix: str) -> tuple[pd.DataFrame, list[tuple[str, object]]]:
-    teams = ["All"] + _safe_sorted(df["Team"]) if "Team" in df.columns else ["All"]
+    teams = _set_piece_team_options(df)
     leagues = _league_filter_options(df, "Corners")
     sides = ["All"] + _safe_sorted(df["side"]) if "side" in df.columns else ["All"]
     periods = ["All"] + _safe_sorted(df["game_period"]) if "game_period" in df.columns else ["All"]
@@ -683,6 +714,7 @@ def filter_sp_page_data(df: pd.DataFrame, label: str, key_prefix: str) -> tuple[
     shot_outcomes = _safe_sorted(df["Shot outcome"]) if "Shot outcome" in df.columns else []
 
     team = st.sidebar.selectbox("Team", teams, key=f"{key_prefix}_team")
+    perspective = st.sidebar.radio("Perspective", ["For", "Against"], key=f"{key_prefix}_perspective")
     league = _league_selectbox("League", leagues, key=f"{key_prefix}_league")
     sample = st.sidebar.radio("Sample", ["Total", "Last 10 games"], key=f"{key_prefix}_sample")
     side = st.sidebar.radio("Side", sides, key=f"{key_prefix}_side")
@@ -703,8 +735,7 @@ def filter_sp_page_data(df: pd.DataFrame, label: str, key_prefix: str) -> tuple[
     only_shots = st.sidebar.checkbox(f"Only {label.lower()} ending with a shot", value=False, key=f"{key_prefix}_shots_only")
 
     filtered = df.copy()
-    if team != "All" and "Team" in filtered.columns:
-        filtered = filtered[filtered["Team"] == team]
+    filtered = _apply_team_perspective(filtered, team, perspective)
     if league != "All" and "League" in filtered.columns:
         filtered = filtered[filtered["League"] == league]
     if sample == "Last 10 games" and "match_rank" in filtered.columns:
@@ -728,6 +759,7 @@ def filter_sp_page_data(df: pd.DataFrame, label: str, key_prefix: str) -> tuple[
 
     filters = [
         ("Team", team),
+        ("Perspective", perspective if team != "All" else "All"),
         ("League", league),
         ("Sample", sample),
         ("Side", side),
@@ -872,7 +904,7 @@ def render_sequence_page(label: str) -> None:
     render_workflow_rail()
     key = "freekicks" if is_freekick else "throwins"
     leagues = _league_filter_options(df, "SP")
-    teams = ["All"] + _safe_sorted(df["Team"]) if "Team" in df.columns else ["All"]
+    teams = _set_piece_team_options(df)
     periods = ["All"] + _safe_sorted(df["game_period"]) if "game_period" in df.columns else ["All"]
     takers = _safe_sorted(df["Taker"]) if "Taker" in df.columns else []
     shooters = _safe_sorted(df["Shooter"]) if "Shooter" in df.columns else []
@@ -881,6 +913,7 @@ def render_sequence_page(label: str) -> None:
 
     league = _league_selectbox("League", leagues, key=f"{key}_league")
     team = st.sidebar.selectbox("Team", teams, key=f"{key}_team")
+    perspective = st.sidebar.radio("Perspective", ["For", "Against"], key=f"{key}_perspective")
     period = st.sidebar.selectbox("Game period", periods, key=f"{key}_period")
     sample = st.sidebar.radio("Sample", ["Total", "Last 10 games"], key=f"{key}_sample")
     minute_min = int(pd.to_numeric(df["minute"], errors="coerce").fillna(0).min()) if "minute" in df.columns else 0
@@ -894,8 +927,7 @@ def render_sequence_page(label: str) -> None:
     filtered = df.copy()
     if league != "All" and "League" in filtered.columns:
         filtered = filtered[filtered["League"].eq(league)].copy()
-    if team != "All" and "Team" in filtered.columns:
-        filtered = filtered[filtered["Team"].eq(team)].copy()
+    filtered = _apply_team_perspective(filtered, team, perspective)
     if period != "All" and "game_period" in filtered.columns:
         filtered = filtered[filtered["game_period"].eq(period)].copy()
     if sample == "Last 10 games" and "match_rank" in filtered.columns:
@@ -913,7 +945,7 @@ def render_sequence_page(label: str) -> None:
 
     sequences = freekick_sequence_summary(filtered) if is_freekick else throwin_sequence_summary(filtered)
     filters = [
-        ("League", league), ("Team", team), ("Period", period), ("Sample", sample),
+        ("League", league), ("Team", team), ("Perspective", perspective if team != "All" else "All"), ("Period", period), ("Sample", sample),
         ("Minutes", f"{minute_range[0]}-{minute_range[1]}" if minute_range != (minute_min, minute_max) else "All"),
         ("Taker" if is_freekick else "Thrower", taker_filter), ("Shooter", shooter_filter),
         ("Height", height_filter), ("Shot outcome", outcome_filter),
