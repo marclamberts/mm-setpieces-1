@@ -142,6 +142,12 @@ def _team_in_match_mask(df: pd.DataFrame, team: str) -> pd.Series:
     return df["Match"].apply(lambda match: team in _match_team_parts(match))
 
 
+def _row_team_in_match_mask(df: pd.DataFrame) -> pd.Series:
+    if "Match" not in df.columns or "Team" not in df.columns:
+        return pd.Series(False, index=df.index)
+    return df.apply(lambda row: str(row["Team"]) in _match_team_parts(row["Match"]), axis=1)
+
+
 @st.cache_data(show_spinner=False)
 def _match_name_lookup(_data_version: str = DATA_VERSION) -> dict[str, str]:
     data_dir = Path(__file__).resolve().parent / "Data"
@@ -215,7 +221,7 @@ def _apply_team_perspective(df: pd.DataFrame, team: str, perspective: str) -> pd
         return df
     team_series = df["Team"].astype(str)
     if perspective == "Against":
-        return df[_team_in_match_mask(df, team) & team_series.ne(team)].copy()
+        return df[_team_in_match_mask(df, team) & _row_team_in_match_mask(df) & team_series.ne(team)].copy()
     return df[team_series.eq(team)].copy()
 
 

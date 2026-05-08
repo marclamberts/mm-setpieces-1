@@ -2210,23 +2210,67 @@ def _sp_source_matches_filename_league(df: pd.DataFrame, league: str) -> bool:
     dominant_competition = competitions.value_counts().index[0]
     return _normalise_league_name(dominant_competition) == _normalise_league_name(league)
 
+
+@st.cache_data(show_spinner=False)
+def _sp_match_taker_team_map(league: str, _data_version: str = DATA_VERSION) -> dict[tuple[str, str], str]:
+    sources = []
+    for path in _data_files("SP", (".xlsx", ".xlsm", ".xls")):
+        if _league_from_filename(path) != league:
+            continue
+        source = _normalise_sp_source(_with_league(_read_excel_path(path), league))
+        if not _sp_source_matches_filename_league(source, league):
+            continue
+        if not source.empty:
+            sources.append(source)
+    if not sources:
+        return {}
+
+    sp = pd.concat(sources, ignore_index=True, sort=False)
+    player_col = "Taker" if "Taker" in sp.columns else "player.name" if "player.name" in sp.columns else None
+    team_col = "Team" if "Team" in sp.columns else "team.name" if "team.name" in sp.columns else None
+    if player_col is None or team_col is None or "match_id" not in sp.columns:
+        return {}
+
+    source = sp[["match_id", player_col, team_col]].dropna().astype(str).copy()
+    source["match_id"] = source["match_id"].str.replace(r"\.0$", "", regex=True)
+    taker_team = (
+        source.groupby(["match_id", player_col])[team_col]
+        .agg(lambda s: s.value_counts().idxmax())
+    )
+    return {(match_id, taker): team for (match_id, taker), team in taker_team.items()}
+
+
+def _assign_corner_team_from_sp(corners: pd.DataFrame, league: str) -> pd.DataFrame:
+    if corners.empty or "Team" in corners.columns or "pass_team_name" in corners.columns or "Taker" not in corners.columns:
+        return corners
+
+    corners = corners.copy()
+    corners["Team"] = np.nan
+    if "match_id" in corners.columns:
+        match_map = _sp_match_taker_team_map(league)
+        if match_map:
+            match_ids = corners["match_id"].astype(str).str.replace(r"\.0$", "", regex=True)
+            takers = corners["Taker"].astype(str)
+            corners["Team"] = [match_map.get((match_id, taker), np.nan) for match_id, taker in zip(match_ids, takers)]
+
+    missing = corners["Team"].isna()
+    if missing.any():
+        corners.loc[missing, "Team"] = corners.loc[missing, "Taker"].astype(str).map(_sp_taker_team_map(league))
+    return corners
+
 @st.cache_data(show_spinner=False)
 def load_corner_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
     sources = []
     for path in _data_files("Corners", (".xlsx", ".xlsm", ".xls")):
         league = _league_from_filename(path)
         corners = _with_league(_read_excel_path(path), league)
-        if not corners.empty and "Team" not in corners.columns and "Taker" in corners.columns:
-            corners = corners.copy()
-            corners["Team"] = corners["Taker"].astype(str).map(_sp_taker_team_map(league))
+        corners = _assign_corner_team_from_sp(corners, league)
         sources.append(corners)
 
     for path in _data_files("Corners", (".csv",)):
         league = _league_from_filename(path)
         corners = _with_league(pd.read_csv(path), league)
-        if not corners.empty and "Team" not in corners.columns and "Taker" in corners.columns:
-            corners = corners.copy()
-            corners["Team"] = corners["Taker"].astype(str).map(_sp_taker_team_map(league))
+        corners = _assign_corner_team_from_sp(corners, league)
         sources.append(corners)
 
     sources = [df for df in sources if not df.empty]
@@ -2296,6 +2340,12 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
         return df
 
     if label == "Corners":
+        if "pass_team_name" in df.columns:
+            pass_team = df["pass_team_name"].astype("object")
+            valid_pass_team = pass_team.notna() & pass_team.astype(str).str.strip().ne("")
+            if "Team" not in df.columns:
+                df["Team"] = np.nan
+            df.loc[valid_pass_team, "Team"] = pass_team.loc[valid_pass_team]
         _ensure_column(df, "Team", ["Team", "pass_team_name", "shot_team_name"], "Unknown")
         _ensure_column(df, "Match", ["Match"], "Unknown")
         _ensure_column(df, "minute", ["minute", "Minute"], 0)
