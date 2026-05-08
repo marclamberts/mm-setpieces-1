@@ -142,6 +142,64 @@ def _team_in_match_mask(df: pd.DataFrame, team: str) -> pd.Series:
     return df["Match"].apply(lambda match: team in _match_team_parts(match))
 
 
+@st.cache_data(show_spinner=False)
+def _match_name_lookup(_data_version: str = DATA_VERSION) -> dict[str, str]:
+    data_dir = Path(__file__).resolve().parent / "Data"
+    lookup: dict[str, str] = {}
+
+    path = data_dir / "all_matches.csv"
+    if path.exists():
+        matches = pd.read_csv(path, usecols=["match_id", "home_team", "away_team"])
+        matches = matches.dropna(subset=["match_id", "home_team", "away_team"]).copy()
+        matches["match_id"] = matches["match_id"].astype(str).str.replace(r"\.0$", "", regex=True)
+        matches["Match"] = matches["home_team"].astype(str) + " - " + matches["away_team"].astype(str)
+        lookup.update(dict(zip(matches["match_id"], matches["Match"])))
+
+    corners_dir = data_dir / "Corners"
+    for source in sorted(corners_dir.glob("*")) if corners_dir.exists() else []:
+        if source.name.startswith("~$") or source.suffix.lower() not in {".xlsx", ".xlsm", ".xls", ".csv"}:
+            continue
+        try:
+            if source.suffix.lower() == ".csv":
+                corner_matches = pd.read_csv(source, usecols=["match_id", "Match"])
+            else:
+                corner_matches = pd.read_excel(source, usecols=["match_id", "Match"])
+        except (ValueError, FileNotFoundError):
+            continue
+        corner_matches = corner_matches.dropna(subset=["match_id", "Match"]).copy()
+        corner_matches["match_id"] = corner_matches["match_id"].astype(str).str.replace(r"\.0$", "", regex=True)
+        corner_matches["Match"] = corner_matches["Match"].astype(str)
+        for match_id, match_name in zip(corner_matches["match_id"], corner_matches["Match"]):
+            lookup.setdefault(match_id, match_name)
+
+    return lookup
+
+
+def _with_match_names(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty or "match_id" not in df.columns:
+        return df
+    lookup = _match_name_lookup()
+    if not lookup:
+        return df
+
+    clean = df.copy()
+    match_ids = clean["match_id"].astype(str).str.replace(r"\.0$", "", regex=True)
+    mapped = match_ids.map(lookup)
+    if "Match" not in clean.columns:
+        clean["Match"] = mapped
+        return clean
+
+    current = clean["Match"].astype("object")
+    current_text = current.astype(str).str.strip()
+    missing = (
+        current.isna()
+        | current_text.str.lower().isin(["", "unknown", "nan", "none"])
+        | current_text.str.match(r"^Match\s+\d+(\.0)?$")
+    )
+    clean.loc[missing & mapped.notna(), "Match"] = mapped[mapped.notna()]
+    return clean
+
+
 def _set_piece_team_options(df: pd.DataFrame) -> list[str]:
     teams = set(_safe_sorted(df["Team"])) if "Team" in df.columns else set()
     if "Match" in df.columns:
@@ -160,10 +218,10 @@ def _apply_team_perspective(df: pd.DataFrame, team: str, perspective: str) -> pd
     return df[team_series.eq(team)].copy()
 
 
-def _phase_snapshot(df: pd.DataFrame, phase: str, team: str) -> dict[str, object]:
+def _phase_snapshot(df: pd.DataFrame, phase: str, team: str, already_filtered: bool = False) -> dict[str, object]:
     if df.empty or "Team" not in df.columns:
         return {"Phase": phase, "Rows": 0, "Set pieces": 0, "Shots": 0, "Goals": 0, "xG": 0.0, "xG / 100": 0.0, "xG / shot": 0.0, "Top taker": "Unknown", "Top shooter": "Unknown", "Shot rate %": 0.0, "Goal conv %": 0.0}
-    part = df[df["Team"].astype(str).eq(team)].copy()
+    part = df.copy() if already_filtered else df[df["Team"].astype(str).eq(team)].copy()
     if part.empty:
         return {"Phase": phase, "Rows": 0, "Set pieces": 0, "Shots": 0, "Goals": 0, "xG": 0.0, "xG / 100": 0.0, "xG / shot": 0.0, "Top taker": "Unknown", "Top shooter": "Unknown", "Shot rate %": 0.0, "Goal conv %": 0.0}
 
@@ -202,26 +260,28 @@ def _phase_snapshot(df: pd.DataFrame, phase: str, team: str) -> dict[str, object
 
 @st.cache_data(show_spinner=False)
 def command_center_data(_data_version: str = DATA_VERSION) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    corners = load_prepared_sp_data("Corners", _data_version)
-    freekicks = load_prepared_sp_data("Freekicks", _data_version)
-    throwins = load_prepared_sp_data("Throw ins", _data_version)
+    corners = _with_match_names(load_prepared_sp_data("Corners", _data_version))
+    freekicks = _with_match_names(load_prepared_sp_data("Freekicks", _data_version))
+    throwins = _with_match_names(load_prepared_sp_data("Throw ins", _data_version))
     hops = load_hops_data(_data_version)
     return corners, freekicks, throwins, hops
 
 
 def _team_options(corners: pd.DataFrame, freekicks: pd.DataFrame, throwins: pd.DataFrame, hops: pd.DataFrame) -> list[str]:
     teams: set[str] = set()
-    for df in [corners, freekicks, throwins, hops]:
+    for df in [corners, freekicks, throwins]:
+        teams.update(_set_piece_team_options(df)[1:])
+    for df in [hops]:
         if not df.empty and "Team" in df.columns:
             teams.update(str(v) for v in df["Team"].dropna().unique() if str(v).strip() and str(v) != "Unknown")
     return sorted(teams)
 
 
-def team_snapshot_table(team: str, corners: pd.DataFrame, freekicks: pd.DataFrame, throwins: pd.DataFrame) -> pd.DataFrame:
+def team_snapshot_table(team: str, corners: pd.DataFrame, freekicks: pd.DataFrame, throwins: pd.DataFrame, perspective: str = "For") -> pd.DataFrame:
     rows = [
-        _phase_snapshot(corners, "Corners", team),
-        _phase_snapshot(freekicks, "Freekicks", team),
-        _phase_snapshot(throwins, "Throw-ins", team),
+        _phase_snapshot(_apply_team_perspective(corners, team, perspective), "Corners", team, already_filtered=True),
+        _phase_snapshot(_apply_team_perspective(freekicks, team, perspective), "Freekicks", team, already_filtered=True),
+        _phase_snapshot(_apply_team_perspective(throwins, team, perspective), "Throw-ins", team, already_filtered=True),
     ]
     return pd.DataFrame(rows)
 
@@ -552,7 +612,8 @@ def render_home() -> None:
         command_left, command_right = st.columns([1.05, .95])
         with command_left:
             selected_team = st.selectbox("Team snapshot", teams, index=teams.index(default_team), key="home_team_snapshot")
-            snapshot = team_snapshot_table(selected_team, corners, freekicks, throwins)
+            snapshot_perspective = st.radio("Snapshot perspective", ["For", "Against"], horizontal=True, key="home_snapshot_perspective")
+            snapshot = team_snapshot_table(selected_team, corners, freekicks, throwins, snapshot_perspective)
             total_set_pieces = int(snapshot["Set pieces"].sum())
             total_shots = int(snapshot["Shots"].sum())
             total_goals = int(snapshot["Goals"].sum())
@@ -615,8 +676,8 @@ def render_home() -> None:
             compare_team = st.selectbox("Compare with", teams, index=min(1, len(teams) - 1), key="home_compare_team")
             comparison = pd.concat(
                 [
-                    team_snapshot_table(selected_team, corners, freekicks, throwins).assign(Team=selected_team),
-                    team_snapshot_table(compare_team, corners, freekicks, throwins).assign(Team=compare_team),
+                    team_snapshot_table(selected_team, corners, freekicks, throwins, snapshot_perspective).assign(Team=selected_team),
+                    team_snapshot_table(compare_team, corners, freekicks, throwins, snapshot_perspective).assign(Team=compare_team),
                 ],
                 ignore_index=True,
             )
@@ -889,7 +950,7 @@ def render_corners() -> None:
 def render_sequence_page(label: str) -> None:
     is_freekick = label == "Freekicks"
     readable = "Freekicks" if is_freekick else "Throw-ins"
-    df = load_prepared_sp_data("Freekicks" if is_freekick else "Throw ins", DATA_VERSION)
+    df = _with_match_names(load_prepared_sp_data("Freekicks" if is_freekick else "Throw ins", DATA_VERSION))
     hero_block(
         "Dead-ball intelligence" if is_freekick else "Touchline restart intelligence",
         readable,
