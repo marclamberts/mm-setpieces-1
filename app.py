@@ -269,13 +269,14 @@ def command_center_data(_data_version: str = DATA_VERSION) -> tuple[pd.DataFrame
 
 
 def _team_options(corners: pd.DataFrame, freekicks: pd.DataFrame, throwins: pd.DataFrame, hops: pd.DataFrame) -> list[str]:
-    teams: set[str] = set()
-    for df in [corners, freekicks, throwins]:
-        teams.update(_set_piece_team_options(df)[1:])
-    for df in [hops]:
-        if not df.empty and "Team" in df.columns:
-            teams.update(str(v) for v in df["Team"].dropna().unique() if str(v).strip() and str(v) != "Unknown")
-    return sorted(teams)
+    restart_team_sets = [
+        set(_set_piece_team_options(df)[1:])
+        for df in [corners, freekicks, throwins]
+        if not df.empty
+    ]
+    if not restart_team_sets:
+        return []
+    return sorted(set.intersection(*restart_team_sets))
 
 
 def team_snapshot_table(team: str, corners: pd.DataFrame, freekicks: pd.DataFrame, throwins: pd.DataFrame, perspective: str = "For") -> pd.DataFrame:

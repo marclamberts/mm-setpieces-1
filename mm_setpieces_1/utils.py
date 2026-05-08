@@ -2142,6 +2142,8 @@ def _sp_taker_team_map(league: str, _data_version: str = DATA_VERSION) -> dict[s
         if _league_from_filename(path) != league:
             continue
         source = _normalise_sp_source(_with_league(_read_excel_path(path), league))
+        if not _sp_source_matches_filename_league(source, league):
+            continue
         if not source.empty:
             sources.append(source)
     if not sources:
@@ -2159,6 +2161,54 @@ def _sp_taker_team_map(league: str, _data_version: str = DATA_VERSION) -> dict[s
         .agg(lambda s: s.value_counts().idxmax())
     )
     return taker_team.to_dict()
+
+
+def _normalise_league_name(value: object) -> str:
+    text = str(value).strip().lower()
+    replacements = {
+        "italy - serie a": "serie a",
+        "germany - bundesliga": "bundesliga",
+        "germany - 2. bundesliga": "bundesliga ii",
+        "sweden - allsvenskan": "allsvenskan",
+        "czech republic - 1. liga": "czech",
+        "croatia - 1. hnl": "croatia",
+        "uae - uae pro league": "uae",
+    }
+    text = replacements.get(text, text)
+    for prefix in ["italy - ", "germany - ", "sweden - ", "czech republic - ", "croatia - ", "uae - "]:
+        if text.startswith(prefix):
+            text = text[len(prefix):]
+    return text.replace("2. bundesliga", "bundesliga ii").replace("uae pro league", "uae").strip()
+
+
+@st.cache_data(show_spinner=False)
+def _match_competition_lookup(_data_version: str = DATA_VERSION) -> dict[str, str]:
+    path = DATA_DIR / "all_matches.csv"
+    if not path.exists():
+        return {}
+    try:
+        matches = pd.read_csv(path, usecols=["match_id", "competition_name"])
+    except ValueError:
+        return {}
+    matches = matches.dropna(subset=["match_id", "competition_name"]).copy()
+    matches["match_id"] = matches["match_id"].astype(str).str.replace(r"\.0$", "", regex=True)
+    return dict(zip(matches["match_id"], matches["competition_name"].astype(str)))
+
+
+def _sp_source_matches_filename_league(df: pd.DataFrame, league: str) -> bool:
+    if df.empty or "match_id" not in df.columns:
+        return True
+    lookup = _match_competition_lookup()
+    if not lookup:
+        return True
+
+    match_ids = df["match_id"].dropna().astype(str).str.replace(r"\.0$", "", regex=True).drop_duplicates()
+    competitions = match_ids.map(lookup).dropna()
+    if competitions.empty:
+        return True
+
+    dominant_competition = competitions.value_counts().index[0]
+    return _normalise_league_name(dominant_competition) == _normalise_league_name(league)
 
 @st.cache_data(show_spinner=False)
 def load_corner_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
@@ -2188,6 +2238,8 @@ def load_swe_sp_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
     for path in _data_files("SP", (".xlsx", ".xlsm", ".xls")):
         league = _league_from_filename(path)
         source = _normalise_sp_source(_with_league(_read_excel_path(path), league))
+        if not _sp_source_matches_filename_league(source, league):
+            continue
         sources.append(source)
     sources = [df for df in sources if not df.empty]
     return pd.concat(sources, ignore_index=True, sort=False) if sources else pd.DataFrame()
