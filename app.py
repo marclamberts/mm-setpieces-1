@@ -196,7 +196,8 @@ def _with_match_names(df: pd.DataFrame) -> pd.DataFrame:
         | current_text.str.lower().isin(["", "unknown", "nan", "none"])
         | current_text.str.match(r"^Match\s+\d+(\.0)?$")
     )
-    clean.loc[missing & mapped.notna(), "Match"] = mapped[mapped.notna()]
+    fill_mask = missing & mapped.notna()
+    clean.loc[fill_mask, "Match"] = mapped.loc[fill_mask].to_numpy()
     return clean
 
 
