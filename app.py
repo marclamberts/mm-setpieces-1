@@ -29,7 +29,8 @@ st.set_page_config(
 )
 inject_app_style()
 inject_sidebar_light_css()  # ← add this
-
+def inject_sidebar_light_css() -> None:
+    st.markdown("""<style> ... </style>""", ...)
 def _safe_sorted(values: pd.Series) -> list[str]:
     return sorted([str(v) for v in values.dropna().astype(str).unique().tolist() if str(v).strip()])
 
