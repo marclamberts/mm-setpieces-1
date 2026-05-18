@@ -405,6 +405,31 @@ def render_single_app_sidebar() -> str:
     return section
 
 
+# ── Drop-in replacement for render_landing() in app.py ──────────────────────
+#
+# Changes:
+#   • Adds a username / password login form before the "Continue" button.
+#   • Credentials are checked against VALID_CREDENTIALS dict (edit as needed).
+#   • Successful login sets st.session_state["authenticated"] = True and
+#     st.session_state["show_playform"] = True, then reruns.
+#   • Failed attempts show an inline error with a lockout after 5 tries.
+#   • The bottom of the file also shows the one-line guard change needed in
+#     the main block at the end of app.py.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Credentials ──────────────────────────────────────────────────────────────
+# Add / remove users here.  Values are plain-text passwords for simplicity;
+# swap for hashed values + a secrets manager when deploying to production.
+VALID_CREDENTIALS: dict[str, str] = {
+    "michael": "setplay2025",
+    "analyst": "scout123",
+    "admin":   "admin",
+}
+
+MAX_ATTEMPTS = 5  # lock the form after this many bad tries
+
+
 def render_landing() -> None:
     st.markdown(
         """
@@ -473,22 +498,144 @@ def render_landing() -> None:
                 min-height: 2.75rem !important;
                 box-shadow: none !important;
             }
+            /* ── login form tweaks ── */
+            div[data-testid="stTextInput"] {
+                width: min(260px, 68vw) !important;
+                margin: 0 auto !important;
+            }
+            .mm-login-error {
+                color: #c1121f;
+                font-size: .78rem;
+                text-align: center;
+                margin-top: .25rem;
+            }
+            .mm-login-locked {
+                color: #6b7280;
+                font-size: .78rem;
+                text-align: center;
+                margin-top: .25rem;
+            }
+            .mm-login-label {
+                font-size: .72rem;
+                letter-spacing: .06em;
+                text-transform: uppercase;
+                color: #6b7280;
+                text-align: center;
+                margin-bottom: .5rem;
+            }
         </style>
         """,
         unsafe_allow_html=True,
     )
+
     st.markdown('<div class="mm-landing-shell">', unsafe_allow_html=True)
+
+    # ── Logo ──────────────────────────────────────────────────────────────────
     if LOGO_PATH.exists():
         st.image(str(LOGO_PATH), width=340)
     else:
-        st.markdown('<div class="mm-landing-wordmark"><span>SetPlay</span><strong>Pro</strong></div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="mm-landing-wordmark"><span>SetPlay</span><strong>Pro</strong></div>',
+            unsafe_allow_html=True,
+        )
+
+    # ── Initialise session counters ───────────────────────────────────────────
+    if "login_attempts" not in st.session_state:
+        st.session_state["login_attempts"] = 0
+    if "login_error" not in st.session_state:
+        st.session_state["login_error"] = ""
+
+    locked = st.session_state["login_attempts"] >= MAX_ATTEMPTS
+
+    # ── Login form ────────────────────────────────────────────────────────────
     st.markdown('<div class="mm-landing-action">', unsafe_allow_html=True)
-    if st.button("Continue to playform", key="continue_to_playform", width="stretch"):
-        st.session_state["show_playform"] = True
-        st.session_state["section"] = "Home"
-        st.session_state["section_select"] = "Home"
-        st.rerun()
+    st.markdown('<div class="mm-login-label">Staff access</div>', unsafe_allow_html=True)
+
+    username = st.text_input(
+        "Username",
+        key="login_username",
+        placeholder="Username",
+        label_visibility="collapsed",
+        disabled=locked,
+    )
+    password = st.text_input(
+        "Password",
+        key="login_password",
+        placeholder="Password",
+        type="password",
+        label_visibility="collapsed",
+        disabled=locked,
+    )
+
+    if not locked:
+        if st.button("Sign in", key="login_submit", width="stretch"):
+            entered_pw = VALID_CREDENTIALS.get(username.strip().lower(), "")
+            if entered_pw and password == entered_pw:
+                # ✅ Correct — enter the app
+                st.session_state["authenticated"] = True
+                st.session_state["login_attempts"] = 0
+                st.session_state["login_error"] = ""
+                st.session_state["show_playform"] = True
+                st.session_state["section"] = "Home"
+                st.session_state["section_select"] = "Home"
+                st.rerun()
+            else:
+                # ❌ Wrong credentials
+                st.session_state["login_attempts"] += 1
+                remaining = MAX_ATTEMPTS - st.session_state["login_attempts"]
+                if remaining > 0:
+                    st.session_state["login_error"] = (
+                        f"Incorrect username or password. {remaining} attempt{'s' if remaining != 1 else ''} remaining."
+                    )
+                else:
+                    st.session_state["login_error"] = "Too many failed attempts. Please reload the page."
+                st.rerun()
+    else:
+        st.markdown(
+            '<div class="mm-login-locked">Account locked — reload the page to try again.</div>',
+            unsafe_allow_html=True,
+        )
+
+    if st.session_state["login_error"]:
+        st.markdown(
+            f'<div class="mm-login-error">{st.session_state["login_error"]}</div>',
+            unsafe_allow_html=True,
+        )
+
     st.markdown("</div></div>", unsafe_allow_html=True)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ALSO update the bottom of app.py so that the app cannot be accessed without
+# authenticating (e.g. by navigating directly to /?show_playform=True).
+#
+# Replace the final block:
+#
+#   if not st.session_state.get("show_playform", False):
+#       render_landing()
+#   else:
+#       section = render_single_app_sidebar()
+#       ...
+#
+# With:
+#
+#   if not st.session_state.get("authenticated", False):
+#       render_landing()
+#   else:
+#       section = render_single_app_sidebar()
+#       if section == "Home":
+#           render_home()
+#       elif section == "Corners":
+#           render_corners()
+#       elif section == "Freekicks":
+#           render_sequence_page("Freekicks")
+#       elif section == "Throw-ins":
+#           render_sequence_page("Throw-ins")
+#       elif section == "HOPS":
+#           render_hops()
+#       elif section == "Delay Analysis":
+#           render_delay()
+# ─────────────────────────────────────────────────────────────────────────────
 
 
 def render_plotly_visual(fig, label: str, key: str) -> None:
