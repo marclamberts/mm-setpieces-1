@@ -27,8 +27,58 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+# app.py — around line 28-34, change to this order:
+
+st.set_page_config(
+    page_title="Michael Mackin Set Piece",
+    page_icon="⚽",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 inject_app_style()
-inject_sidebar_light_css()  # ← add this
+
+# ── DEFINE first ──
+def inject_sidebar_light_css() -> None:
+    st.markdown(
+        """
+        <style>
+            section[data-testid="stSidebar"],
+            section[data-testid="stSidebar"] > div,
+            section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
+                background-color: #ffffff !important;
+                color: #111827 !important;
+                color-scheme: light !important;
+            }
+            section[data-testid="stSidebar"] * {
+                color: #111827 !important;
+            }
+            section[data-testid="stSidebar"] [data-baseweb="select"] > div,
+            section[data-testid="stSidebar"] [data-baseweb="select"] span,
+            section[data-testid="stSidebar"] [data-baseweb="select"] div {
+                background-color: #ffffff !important;
+                color: #111827 !important;
+                border-color: #d1d5db !important;
+            }
+            section[data-testid="stSidebar"] [data-baseweb="tag"] {
+                background-color: #f3f4f6 !important;
+                color: #111827 !important;
+            }
+            section[data-testid="stSidebar"] button {
+                background-color: #ffffff !important;
+                color: #111827 !important;
+                border: 1.5px solid #111827 !important;
+            }
+            section[data-testid="stSidebar"] button:hover {
+                background-color: #111827 !important;
+                color: #ffffff !important;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+# ── CALL after ──
+inject_sidebar_light_css()
 def inject_sidebar_light_css() -> None:
     st.markdown("""<style> ... </style>""", ...)
 def _safe_sorted(values: pd.Series) -> list[str]:
