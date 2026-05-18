@@ -28,7 +28,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 inject_app_style()
-
+inject_sidebar_light_css()  # ← add this
 
 def _safe_sorted(values: pd.Series) -> list[str]:
     return sorted([str(v) for v in values.dropna().astype(str).unique().tolist() if str(v).strip()])
