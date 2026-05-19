@@ -27,7 +27,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-# app.py — around line 28-34, change to this order:
 
 st.set_page_config(
     page_title="Michael Mackin Set Piece",
@@ -79,8 +78,7 @@ def inject_sidebar_light_css() -> None:
 
 # ── CALL after ──
 inject_sidebar_light_css()
-def inject_sidebar_light_css() -> None:
-    st.markdown("""<style> ... </style>""", ...)
+
 def _safe_sorted(values: pd.Series) -> list[str]:
     return sorted([str(v) for v in values.dropna().astype(str).unique().tolist() if str(v).strip()])
 
@@ -456,29 +454,150 @@ def render_single_app_sidebar() -> str:
     return section
 
 
-# ── Drop-in replacement for render_landing() in app.py ──────────────────────
-#
-# Changes:
-#   • Adds a username / password login form before the "Continue" button.
-#   • Credentials are checked against VALID_CREDENTIALS dict (edit as needed).
-#   • Successful login sets st.session_state["authenticated"] = True and
-#     st.session_state["show_playform"] = True, then reruns.
-#   • Failed attempts show an inline error with a lockout after 5 tries.
-#   • The bottom of the file also shows the one-line guard change needed in
-#     the main block at the end of app.py.
-#
-# ─────────────────────────────────────────────────────────────────────────────
+# ── NEW: Delivery map with only scatters colored by SP outcome ─────────────────
+def delivery_map_scatter_only(df: pd.DataFrame, title: str = "Corner delivery map") -> go.Figure:
+    """
+    Create a delivery map with only scatter points colored by SP outcome.
+    No arrows/lines, just delivery locations with color coding.
+    """
+    if df.empty or "pass_x" not in df.columns or "pass_y" not in df.columns:
+        return go.Figure()
+    
+    fig = go.Figure()
+    
+    # Add pitch outline
+    fig.add_shape(type="rect", x0=0, x1=80, y0=0, y1=120, line=dict(color="#333333", width=2), fillcolor="rgba(0,0,0,0)")
+    
+    # Add halfway line
+    fig.add_shape(type="line", x0=0, x1=80, y0=60, y1=60, line=dict(color="#333333", width=2, dash="dash"))
+    
+    # Add center circle
+    fig.add_shape(type="circle", x0=80/2 - 9.15, x1=80/2 + 9.15, y0=60 - 9.15, y1=60 + 9.15, 
+                  line=dict(color="#333333", width=2), fillcolor="rgba(0,0,0,0)")
+    
+    # Add penalty areas
+    fig.add_shape(type="rect", x0=0, x1=16.5, y0=30, y1=90, line=dict(color="#333333", width=2), fillcolor="rgba(0,0,0,0)")
+    fig.add_shape(type="rect", x0=63.5, x1=80, y0=30, y1=90, line=dict(color="#333333", width=2), fillcolor="rgba(0,0,0,0)")
+    
+    # Add goals
+    fig.add_shape(type="rect", x0=-2, x1=0, y0=36, y1=84, line=dict(color="#333333", width=2), fillcolor="#cccccc")
+    fig.add_shape(type="rect", x0=80, x1=82, y0=36, y1=84, line=dict(color="#333333", width=2), fillcolor="#cccccc")
+    
+    # Color mapping for SP outcomes
+    outcome_colors = {
+        "Goal": "#2ecc71",
+        "Shot on target": "#3498db",
+        "Shot off target": "#e74c3c",
+        "Shot blocked": "#e67e22",
+        "No shot": "#95a5a6",
+        "Foul": "#9b59b6",
+        "Offside": "#f39c12",
+        "Clearance": "#7f8c8d",
+        "Corner": "#1abc9c",
+        "Throw-in": "#34495e"
+    }
+    
+    default_colors = ["#111827", "#c1121f", "#1d4ed8", "#15803d", "#b45309", "#7c3aed", "#64748b", "#dc2626", "#16a34a", "#9333ea"]
+    
+    # Group by SP outcome
+    outcome_col = "SP outcome"
+    if outcome_col in df.columns:
+        outcomes = df[outcome_col].dropna().unique()
+        
+        for idx, outcome in enumerate(outcomes):
+            outcome_df = df[df[outcome_col] == outcome]
+            if outcome_df.empty:
+                continue
+            
+            color = outcome_colors.get(str(outcome), default_colors[idx % len(default_colors)])
+            
+            fig.add_trace(go.Scatter(
+                x=outcome_df["pass_x"],
+                y=outcome_df["pass_y"],
+                mode="markers",
+                name=str(outcome),
+                marker=dict(
+                    size=12,
+                    color=color,
+                    opacity=0.75,
+                    symbol="circle",
+                    line=dict(width=1.5, color="white")
+                ),
+                text=outcome_df.apply(lambda row: 
+                    f"<b>{row.get('Match', 'Unknown')}</b><br>"
+                    f"Taker: {row.get('Taker', 'Unknown')}<br>"
+                    f"Outcome: {row.get(outcome_col, 'Unknown')}<br>"
+                    f"Minute: {row.get('minute', 'Unknown')}<br>"
+                    f"xG: {row.get('xg', 0):.3f}" if pd.notna(row.get('xg')) 
+                    else f"<b>{row.get('Match', 'Unknown')}</b><br>"
+                         f"Taker: {row.get('Taker', 'Unknown')}<br>"
+                         f"Outcome: {row.get(outcome_col, 'Unknown')}<br>"
+                         f"Minute: {row.get('minute', 'Unknown')}", 
+                    axis=1),
+                hoverinfo="text"
+            ))
+    
+    # If no SP outcome column, use single color
+    else:
+        fig.add_trace(go.Scatter(
+            x=df["pass_x"],
+            y=df["pass_y"],
+            mode="markers",
+            name="Deliveries",
+            marker=dict(size=10, color="#1d4ed8", opacity=0.7),
+            hoverinfo="text"
+        ))
+    
+    # Update layout
+    fig.update_layout(
+        title=title,
+        width=600,
+        height=900,
+        showlegend=True,
+        legend=dict(
+            title="<b>SP Outcome</b>",
+            yanchor="top",
+            y=0.99,
+            xanchor="left",
+            x=1.02,
+            bgcolor="rgba(255,255,255,0.95)",
+            bordercolor="#cccccc",
+            borderwidth=1,
+            font=dict(size=11)
+        ),
+        xaxis=dict(
+            title="Width (yards)",
+            range=[-5, 85],
+            showgrid=False,
+            zeroline=False,
+            tickfont=dict(size=10)
+        ),
+        yaxis=dict(
+            title="Length (yards)",
+            range=[-5, 125],
+            showgrid=False,
+            zeroline=False,
+            scaleanchor="x",
+            scaleratio=1,
+            tickfont=dict(size=10)
+        ),
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        hovermode="closest",
+        margin=dict(l=60, r=180, t=60, b=60)
+    )
+    
+    return fig
+
 
 # ── Credentials ──────────────────────────────────────────────────────────────
-# Add / remove users here.  Values are plain-text passwords for simplicity;
-# swap for hashed values + a secrets manager when deploying to production.
 VALID_CREDENTIALS: dict[str, str] = {
     "michael": "setplay2025",
     "analyst": "scout123",
     "admin":   "admin",
 }
 
-MAX_ATTEMPTS = 5  # lock the form after this many bad tries
+MAX_ATTEMPTS = 5
 
 
 def render_landing() -> None:
@@ -549,7 +668,6 @@ def render_landing() -> None:
                 min-height: 2.75rem !important;
                 box-shadow: none !important;
             }
-            /* ── login form tweaks ── */
             div[data-testid="stTextInput"] {
                 width: min(260px, 68vw) !important;
                 margin: 0 auto !important;
@@ -581,7 +699,6 @@ def render_landing() -> None:
 
     st.markdown('<div class="mm-landing-shell">', unsafe_allow_html=True)
 
-    # ── Logo ──────────────────────────────────────────────────────────────────
     if LOGO_PATH.exists():
         st.image(str(LOGO_PATH), width=340)
     else:
@@ -590,7 +707,6 @@ def render_landing() -> None:
             unsafe_allow_html=True,
         )
 
-    # ── Initialise session counters ───────────────────────────────────────────
     if "login_attempts" not in st.session_state:
         st.session_state["login_attempts"] = 0
     if "login_error" not in st.session_state:
@@ -598,7 +714,6 @@ def render_landing() -> None:
 
     locked = st.session_state["login_attempts"] >= MAX_ATTEMPTS
 
-    # ── Login form ────────────────────────────────────────────────────────────
     st.markdown('<div class="mm-landing-action">', unsafe_allow_html=True)
     st.markdown('<div class="mm-login-label">Staff access</div>', unsafe_allow_html=True)
 
@@ -622,7 +737,6 @@ def render_landing() -> None:
         if st.button("Sign in", key="login_submit", width="stretch"):
             entered_pw = VALID_CREDENTIALS.get(username.strip().lower(), "")
             if entered_pw and password == entered_pw:
-                # ✅ Correct — enter the app
                 st.session_state["authenticated"] = True
                 st.session_state["login_attempts"] = 0
                 st.session_state["login_error"] = ""
@@ -631,7 +745,6 @@ def render_landing() -> None:
                 st.session_state["section_select"] = "Home"
                 st.rerun()
             else:
-                # ❌ Wrong credentials
                 st.session_state["login_attempts"] += 1
                 remaining = MAX_ATTEMPTS - st.session_state["login_attempts"]
                 if remaining > 0:
@@ -656,49 +769,16 @@ def render_landing() -> None:
     st.markdown("</div></div>", unsafe_allow_html=True)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# ALSO update the bottom of app.py so that the app cannot be accessed without
-# authenticating (e.g. by navigating directly to /?show_playform=True).
-#
-# Replace the final block:
-#
-#   if not st.session_state.get("show_playform", False):
-#       render_landing()
-#   else:
-#       section = render_single_app_sidebar()
-#       ...
-#
-# With:
-#
-#   if not st.session_state.get("authenticated", False):
-#       render_landing()
-#   else:
-#       section = render_single_app_sidebar()
-#       if section == "Home":
-#           render_home()
-#       elif section == "Corners":
-#           render_corners()
-#       elif section == "Freekicks":
-#           render_sequence_page("Freekicks")
-#       elif section == "Throw-ins":
-#           render_sequence_page("Throw-ins")
-#       elif section == "HOPS":
-#           render_hops()
-#       elif section == "Delay Analysis":
-#           render_delay()
-# ─────────────────────────────────────────────────────────────────────────────
-
-
 def render_plotly_visual(fig, label: str, key: str) -> None:
     if PLOTLY_AVAILABLE:
-        st.plotly_chart(fig, width="stretch", config={"displaylogo": False, "modeBarButtonsToRemove": ["toImage"]})
+        st.plotly_chart(fig, use_container_width=True, config={"displaylogo": False, "modeBarButtonsToRemove": ["toImage"]})
     else:
-        st.image(plotly_figure_png_bytes(fig), width="stretch")
+        st.image(plotly_figure_png_bytes(fig), use_container_width=True)
     render_plotly_png_download(fig, label, key)
 
 
 def render_mpl_visual(fig, label: str, key: str) -> None:
-    st.pyplot(fig, width="stretch")
+    st.pyplot(fig, use_container_width=True)
     render_matplotlib_png_download(fig, label, key)
 
 
@@ -1128,7 +1208,8 @@ def render_corners() -> None:
             with left:
                 render_plotly_visual(polish_plotly_figure(shotmap_figure(filtered, f"{label} shotmap · vertical half pitch")), "Corners shotmap", "corners_shotmap_png")
             with right:
-                render_plotly_visual(polish_plotly_figure(delivery_map_figure(filtered, f"{label} delivery map · vertical half pitch")), "Corners delivery map", "corners_delivery_map_png")
+                # Use the new scatter-only delivery map without arrows
+                render_plotly_visual(polish_plotly_figure(delivery_map_scatter_only(filtered, f"{label} delivery map · scatters by SP outcome")), "Corners delivery map", "corners_delivery_map_png")
 
     elif view == "PDF Brief":
         section_header("Pre-Match PDF", "Download a staff briefing from the current filters")
@@ -1570,7 +1651,8 @@ def render_delay() -> None:
         render_analyst_table(filtered[display_cols], height=620)
 
 
-if not st.session_state.get("show_playform", False):
+# Main app execution
+if not st.session_state.get("authenticated", False):
     render_landing()
 else:
     section = render_single_app_sidebar()
