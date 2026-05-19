@@ -457,7 +457,7 @@ def render_single_app_sidebar() -> str:
 # ── NEW: Delivery map with only scatters colored by SP outcome ─────────────────
 def delivery_map_scatter_only(df: pd.DataFrame, title: str = "Corner delivery map") -> go.Figure:
     """
-    Create a delivery map with only scatter points colored by SP outcome.
+    Create a delivery map with only scatter points colored by outcome.
     No arrows/lines, just delivery locations with color coding.
     """
     if df.empty or "pass_x" not in df.columns or "pass_y" not in df.columns:
@@ -483,39 +483,82 @@ def delivery_map_scatter_only(df: pd.DataFrame, title: str = "Corner delivery ma
     fig.add_shape(type="rect", x0=-2, x1=0, y0=36, y1=84, line=dict(color="#333333", width=2), fillcolor="#cccccc")
     fig.add_shape(type="rect", x0=80, x1=82, y0=36, y1=84, line=dict(color="#333333", width=2), fillcolor="#cccccc")
     
-    # Color mapping for SP outcomes
-    outcome_colors = {
-        "Goal": "#2ecc71",
-        "Shot on target": "#3498db",
-        "Shot off target": "#e74c3c",
-        "Shot blocked": "#e67e22",
-        "No shot": "#95a5a6",
-        "Foul": "#9b59b6",
-        "Offside": "#f39c12",
-        "Clearance": "#7f8c8d",
-        "Corner": "#1abc9c",
-        "Throw-in": "#34495e"
-    }
+    # Determine which outcome column to use (try common names)
+    outcome_col = None
+    possible_outcome_cols = ["SP outcome", "Shot outcome", "Delivery outcome", "Outcome", "Event Type"]
+    for col in possible_outcome_cols:
+        if col in df.columns:
+            outcome_col = col
+            break
     
-    default_colors = ["#111827", "#c1121f", "#1d4ed8", "#15803d", "#b45309", "#7c3aed", "#64748b", "#dc2626", "#16a34a", "#9333ea"]
-    
-    # Group by SP outcome
-    outcome_col = "SP outcome"
-    if outcome_col in df.columns:
+    # If no outcome column found, use a default
+    if outcome_col is None:
+        # Just plot all deliveries in one color
+        fig.add_trace(go.Scatter(
+            x=df["pass_x"],
+            y=df["pass_y"],
+            mode="markers",
+            name="All deliveries",
+            marker=dict(size=12, color="#1d4ed8", opacity=0.7, line=dict(width=1, color="white")),
+            text=df.apply(lambda row: 
+                f"<b>{row.get('Match', 'Unknown')}</b><br>"
+                f"Taker: {row.get('Taker', 'Unknown')}<br>"
+                f"Minute: {row.get('minute', 'Unknown')}<br>"
+                f"xG: {row.get('xg', 0):.3f}" if pd.notna(row.get('xg')) 
+                else f"<b>{row.get('Match', 'Unknown')}</b><br>"
+                     f"Taker: {row.get('Taker', 'Unknown')}<br>"
+                     f"Minute: {row.get('minute', 'Unknown')}", 
+                axis=1),
+            hoverinfo="text"
+        ))
+    else:
+        # Color mapping for outcomes
+        outcome_colors = {
+            # Shot outcomes
+            "Goal": "#2ecc71",
+            "Shot on target": "#3498db",
+            "Shot off target": "#e74c3c",
+            "Shot blocked": "#e67e22",
+            "Saved": "#f39c12",
+            "Miss": "#e74c3c",
+            "Woodwork": "#9b59b6",
+            # Delivery outcomes
+            "No shot": "#95a5a6",
+            "Foul": "#9b59b6",
+            "Offside": "#f39c12",
+            "Clearance": "#7f8c8d",
+            "Corner": "#1abc9c",
+            "Throw-in": "#34495e",
+            "Goal kick": "#7f8c8d",
+            "Cross": "#3498db",
+            "Pass": "#1d4ed8",
+            # Default
+            "Unknown": "#64748b"
+        }
+        
+        default_colors = ["#111827", "#c1121f", "#1d4ed8", "#15803d", "#b45309", "#7c3aed", "#64748b", "#dc2626", "#16a34a", "#9333ea"]
+        
+        # Get unique outcomes
         outcomes = df[outcome_col].dropna().unique()
         
+        # Add debug info in Streamlit (remove after testing)
+        if len(outcomes) > 0:
+            st.sidebar.write(f"Found {len(outcomes)} unique outcomes: {list(outcomes)[:5]}...")
+        
+        # Create scatter traces for each outcome
         for idx, outcome in enumerate(outcomes):
             outcome_df = df[df[outcome_col] == outcome]
             if outcome_df.empty:
                 continue
             
+            # Get color for this outcome
             color = outcome_colors.get(str(outcome), default_colors[idx % len(default_colors)])
             
             fig.add_trace(go.Scatter(
                 x=outcome_df["pass_x"],
                 y=outcome_df["pass_y"],
                 mode="markers",
-                name=str(outcome),
+                name=str(outcome)[:30],  # Truncate long names
                 marker=dict(
                     size=12,
                     color=color,
@@ -537,17 +580,6 @@ def delivery_map_scatter_only(df: pd.DataFrame, title: str = "Corner delivery ma
                 hoverinfo="text"
             ))
     
-    # If no SP outcome column, use single color
-    else:
-        fig.add_trace(go.Scatter(
-            x=df["pass_x"],
-            y=df["pass_y"],
-            mode="markers",
-            name="Deliveries",
-            marker=dict(size=10, color="#1d4ed8", opacity=0.7),
-            hoverinfo="text"
-        ))
-    
     # Update layout
     fig.update_layout(
         title=title,
@@ -555,7 +587,7 @@ def delivery_map_scatter_only(df: pd.DataFrame, title: str = "Corner delivery ma
         height=900,
         showlegend=True,
         legend=dict(
-            title="<b>SP Outcome</b>",
+            title="<b>Outcome</b>",
             yanchor="top",
             y=0.99,
             xanchor="left",
