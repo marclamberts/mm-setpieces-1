@@ -2412,7 +2412,7 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
     _ensure_column(df, "Match", ["Match"], "Unknown")
     _ensure_column(df, "Technique", ["Technique", "type.name", "pass.technique.name"], "Unknown")
     _ensure_column(df, "Delivery height", ["Delivery height", "pass.height.name"], "Unknown")
-    _ensure_column(df, "Delivery outcome", ["Delivery outcome", "Metrics", "pass.outcome.name"], "Unknown")
+    _ensure_column(df, "Delivery outcome", ["SP_outcome", "Delivery outcome", "Metrics", "pass.outcome.name"], "Unknown")
     _ensure_column(df, "Shot outcome", ["Shot outcome", "shot.outcome.name"], "No shot")
     _ensure_column(df, "Taker", ["Taker"], "Unknown")
     _ensure_column(df, "Shooter", ["Shooter"], "Unknown")
@@ -2749,14 +2749,27 @@ def delivery_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
     sample["vx_end"], sample["vy_end"] = vertical_coords_from_pitch(sample["plot_end_x"], sample["plot_end_y"], pitch)
 
     color_map = {
-        "Inswinging": "#2563eb",
-        "Outswinging": "#f59e0b",
-        "Straight": "#7c3aed",
+        "Goal": "#15803d",
+        "Shot after 3 seconds": "#2563eb",
+        "Shot after 5 seconds": "#1d4ed8",
+        "Shot after 10 seconds": "#7c3aed",
+        "Shot": "#2563eb",
+        "No shot": "#64748b",
+        "Ball astray": "#b45309",
+        "First contact won": "#0f766e",
+        "First contact lost": "#dc2626",
+        "Cleared": "#475569",
+        "Retained": "#16a34a",
         "Unknown": "#94a3b8",
     }
+    fallback_colors = ["#c1121f", "#0891b2", "#9333ea", "#ea580c", "#334155", "#be123c", "#4f46e5"]
+    outcomes = sorted(sample["Delivery outcome"].fillna("Unknown").astype(str).unique())
+    for idx, outcome in enumerate(outcomes):
+        color_map.setdefault(outcome, fallback_colors[idx % len(fallback_colors)])
 
-    for tech, part in sample.groupby("Technique", dropna=False):
-        color = color_map.get(str(tech), "#7c3aed")
+    for outcome, part in sample.groupby("Delivery outcome", dropna=False):
+        outcome_label = str(outcome) if str(outcome).strip() else "Unknown"
+        color = color_map.get(outcome_label, "#64748b")
         for _, row in part.iterrows():
             start_x, start_y = restart_origin_xy(row.get("side", "Left"), pitch)
             fig.add_trace(
@@ -2775,22 +2788,23 @@ def delivery_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
             go.Scatter(
                 x=part["vx_end"],
                 y=part["vy_end"],
-                mode="markers",
-                name=str(tech),
+                mode="markers+text",
+                name=outcome_label,
                 marker=dict(size=10, color=color, opacity=0.84, line=dict(width=0.8, color="white")),
                 text=part["Delivery outcome"].fillna("Unknown"),
                 textposition="top center",
-                textfont=dict(size=9),
+                textfont=dict(size=9, color=BLACK),
                 customdata=np.stack(
                     [
                         part["Taker"].fillna("Unknown"),
+                        part["Technique"].fillna("Unknown") if "Technique" in part.columns else pd.Series("Unknown", index=part.index),
                         part["Delivery height"].fillna("Unknown"),
                         part["Delivery outcome"].fillna("Unknown"),
                         part["Match"].fillna("Unknown"),
                     ],
                     axis=1,
                 ),
-                hovertemplate="<b>%{customdata[0]}</b><br>Height: %{customdata[1]}<br>SP outcome: %{customdata[2]}<br>%{customdata[3]}<extra></extra>",
+                hovertemplate="<b>%{customdata[0]}</b><br>Technique: %{customdata[1]}<br>Height: %{customdata[2]}<br>SP outcome: %{customdata[3]}<br>%{customdata[4]}<extra></extra>",
             )
         )
 
@@ -2805,7 +2819,9 @@ def delivery_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
         )
     )
 
-    return add_half_vertical_pitch_layout(fig, title, source_df=df)
+    fig = add_half_vertical_pitch_layout(fig, title, source_df=df)
+    fig.update_layout(legend_title_text="SP outcome")
+    return fig
 
 
 def starting_location_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
