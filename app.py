@@ -495,24 +495,6 @@ def delivery_map_scatter_only(df: pd.DataFrame, title: str = "Corner delivery ma
         plot_df = plot_df.sample(250, random_state=7)
 
     plot_df["vx"], plot_df["vy"] = vertical_coords_from_pitch(plot_df["plot_x"], plot_df["plot_y"], pitch)
-
-    # Add pitch outline
-    fig.add_shape(type="rect", x0=0, x1=80, y0=0, y1=120, line=dict(color="#333333", width=2), fillcolor="rgba(0,0,0,0)")
-    
-    # Add halfway line
-    fig.add_shape(type="line", x0=0, x1=80, y0=60, y1=60, line=dict(color="#333333", width=2, dash="dash"))
-    
-    # Add center circle
-    fig.add_shape(type="circle", x0=80/2 - 9.15, x1=80/2 + 9.15, y0=60 - 9.15, y1=60 + 9.15, 
-                  line=dict(color="#333333", width=2), fillcolor="rgba(0,0,0,0)")
-    
-    # Add penalty areas
-    fig.add_shape(type="rect", x0=0, x1=16.5, y0=30, y1=90, line=dict(color="#333333", width=2), fillcolor="rgba(0,0,0,0)")
-    fig.add_shape(type="rect", x0=63.5, x1=80, y0=30, y1=90, line=dict(color="#333333", width=2), fillcolor="rgba(0,0,0,0)")
-    
-    # Add goals
-    fig.add_shape(type="rect", x0=-2, x1=0, y0=36, y1=84, line=dict(color="#333333", width=2), fillcolor="#cccccc")
-    fig.add_shape(type="rect", x0=80, x1=82, y0=36, y1=84, line=dict(color="#333333", width=2), fillcolor="#cccccc")
     
     # Determine which outcome column to use (try common names)
     outcome_col = None
@@ -597,8 +579,8 @@ def delivery_map_scatter_only(df: pd.DataFrame, title: str = "Corner delivery ma
             fig.add_trace(go.Scatter(
                 x=outcome_df["vx"],
                 y=outcome_df["vy"],
-                mode="markers+text",
-                name=str(outcome)[:30],  # Truncate long names
+                mode="markers",
+                name=str(outcome),
                 marker=dict(
                     size=12,
                     color=color,
@@ -606,9 +588,6 @@ def delivery_map_scatter_only(df: pd.DataFrame, title: str = "Corner delivery ma
                     symbol="circle",
                     line=dict(width=1.5, color="white")
                 ),
-                text=outcome_df[outcome_col],
-                textposition="top center",
-                textfont=dict(size=9, color=BLACK),
                 customdata=np.stack(
                     [
                         outcome_df["Match"].fillna("Unknown") if "Match" in outcome_df.columns else pd.Series("Unknown", index=outcome_df.index),
@@ -622,42 +601,22 @@ def delivery_map_scatter_only(df: pd.DataFrame, title: str = "Corner delivery ma
                 hovertemplate="<b>%{customdata[0]}</b><br>Taker: %{customdata[1]}<br>SP outcome: %{customdata[2]}<br>Minute: %{customdata[3]}<br>xG: %{customdata[4]}<extra></extra>",
             ))
     
-    # Update layout
+    fig = add_half_vertical_pitch_layout(fig, title, source_df=df)
     fig.update_layout(
-        title=title,
-        height=620,
         showlegend=True,
         legend=dict(
             title="<b>SP outcome</b>",
             yanchor="top",
             y=0.99,
             xanchor="left",
-            x=1.02,
+            x=1.01,
             bgcolor="rgba(255,255,255,0.95)",
             bordercolor="#cccccc",
             borderwidth=1,
             font=dict(size=11)
         ),
-        xaxis=dict(
-            range=[0, 80],
-            visible=False,
-            showgrid=False,
-            zeroline=False,
-            tickfont=dict(size=10)
-        ),
-        yaxis=dict(
-            range=[60, 120],
-            visible=False,
-            showgrid=False,
-            zeroline=False,
-            scaleanchor="x",
-            scaleratio=1,
-            tickfont=dict(size=10)
-        ),
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
         hovermode="closest",
-        margin=dict(l=60, r=180, t=60, b=60)
+        margin=dict(l=10, r=300, t=50, b=10),
     )
     
     return fig
