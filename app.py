@@ -457,14 +457,45 @@ def render_single_app_sidebar() -> str:
 # ── NEW: Delivery map with only scatters colored by SP outcome ─────────────────
 def delivery_map_scatter_only(df: pd.DataFrame, title: str = "Corner delivery map") -> go.Figure:
     """
-    Create a delivery map with only scatter points colored by outcome.
-    No arrows/lines, just delivery locations with color coding.
+    Create a delivery map with only delivery-end scatter points colored by SP outcome.
+    No arrows/lines, just delivery locations with labels and color coding.
     """
-    if df.empty or "pass_x" not in df.columns or "pass_y" not in df.columns:
-        return go.Figure()
-    
     fig = go.Figure()
-    
+
+    if df.empty:
+        fig.add_annotation(text="No delivery data available", x=40, y=90, showarrow=False, font=dict(size=16, color="#64748b"))
+        return add_half_vertical_pitch_layout(fig, title, source_df=df)
+
+    plot_df = df.copy()
+    if {"delivery_end_x", "delivery_end_y"}.issubset(plot_df.columns):
+        x_col, y_col = "delivery_end_x", "delivery_end_y"
+    elif {"pass_end_location_x", "pass_end_location_y"}.issubset(plot_df.columns):
+        x_col, y_col = "pass_end_location_x", "pass_end_location_y"
+    elif {"pass_x", "pass_y"}.issubset(plot_df.columns):
+        x_col, y_col = "pass_x", "pass_y"
+    else:
+        fig.add_annotation(text="No delivery end locations available", x=40, y=90, showarrow=False, font=dict(size=16, color="#64748b"))
+        return add_half_vertical_pitch_layout(fig, title, source_df=df)
+
+    plot_df = plot_df[pd.to_numeric(plot_df[x_col], errors="coerce").notna() & pd.to_numeric(plot_df[y_col], errors="coerce").notna()].copy()
+    if plot_df.empty:
+        fig.add_annotation(text="No delivery end locations available", x=40, y=90, showarrow=False, font=dict(size=16, color="#64748b"))
+        return add_half_vertical_pitch_layout(fig, title, source_df=df)
+
+    plot_df["plot_x"], plot_df["plot_y"] = coords_to_statsbomb(plot_df, x_col, y_col)
+    pitch = pitch_dimensions(plot_df)
+    half_start = float(pitch["half_start"])
+    if "SP_Type" not in plot_df.columns:
+        plot_df = plot_df[plot_df["plot_x"] >= half_start].copy()
+    if plot_df.empty:
+        fig.add_annotation(text="No deliveries in the attacking half", x=40, y=90, showarrow=False, font=dict(size=16, color="#64748b"))
+        return add_half_vertical_pitch_layout(fig, title, source_df=df)
+
+    if len(plot_df) > 250:
+        plot_df = plot_df.sample(250, random_state=7)
+
+    plot_df["vx"], plot_df["vy"] = vertical_coords_from_pitch(plot_df["plot_x"], plot_df["plot_y"], pitch)
+
     # Add pitch outline
     fig.add_shape(type="rect", x0=0, x1=80, y0=0, y1=120, line=dict(color="#333333", width=2), fillcolor="rgba(0,0,0,0)")
     
@@ -485,9 +516,9 @@ def delivery_map_scatter_only(df: pd.DataFrame, title: str = "Corner delivery ma
     
     # Determine which outcome column to use (try common names)
     outcome_col = None
-    possible_outcome_cols = ["SP outcome", "Shot outcome", "Delivery outcome", "Outcome", "Event Type"]
+    possible_outcome_cols = ["SP_outcome", "SP outcome", "Delivery outcome", "Shot outcome", "Outcome", "Event Type"]
     for col in possible_outcome_cols:
-        if col in df.columns:
+        if col in plot_df.columns:
             outcome_col = col
             break
     
@@ -495,12 +526,12 @@ def delivery_map_scatter_only(df: pd.DataFrame, title: str = "Corner delivery ma
     if outcome_col is None:
         # Just plot all deliveries in one color
         fig.add_trace(go.Scatter(
-            x=df["pass_x"],
-            y=df["pass_y"],
+            x=plot_df["vx"],
+            y=plot_df["vy"],
             mode="markers",
             name="All deliveries",
             marker=dict(size=12, color="#1d4ed8", opacity=0.7, line=dict(width=1, color="white")),
-            text=df.apply(lambda row: 
+            text=plot_df.apply(lambda row:
                 f"<b>{row.get('Match', 'Unknown')}</b><br>"
                 f"Taker: {row.get('Taker', 'Unknown')}<br>"
                 f"Minute: {row.get('minute', 'Unknown')}<br>"
@@ -532,6 +563,12 @@ def delivery_map_scatter_only(df: pd.DataFrame, title: str = "Corner delivery ma
             "Goal kick": "#7f8c8d",
             "Cross": "#3498db",
             "Pass": "#1d4ed8",
+            "Shot after 3 seconds": "#2563eb",
+            "Shot after 5 seconds": "#1d4ed8",
+            "Shot after 10 seconds": "#7c3aed",
+            "Ball astray": "#b45309",
+            "First contact won": "#0f766e",
+            "First contact lost": "#dc2626",
             # Default
             "Unknown": "#64748b"
         }
@@ -539,15 +576,18 @@ def delivery_map_scatter_only(df: pd.DataFrame, title: str = "Corner delivery ma
         default_colors = ["#111827", "#c1121f", "#1d4ed8", "#15803d", "#b45309", "#7c3aed", "#64748b", "#dc2626", "#16a34a", "#9333ea"]
         
         # Get unique outcomes
-        outcomes = df[outcome_col].dropna().unique()
-        
-        # Add debug info in Streamlit (remove after testing)
-        if len(outcomes) > 0:
-            st.sidebar.write(f"Found {len(outcomes)} unique outcomes: {list(outcomes)[:5]}...")
+        plot_df[outcome_col] = (
+            plot_df[outcome_col]
+            .fillna("Unknown")
+            .astype(str)
+            .str.strip()
+            .replace({"": "Unknown", "nan": "Unknown", "None": "Unknown", "undefined": "Unknown"})
+        )
+        outcomes = sorted(plot_df[outcome_col].unique())
         
         # Create scatter traces for each outcome
         for idx, outcome in enumerate(outcomes):
-            outcome_df = df[df[outcome_col] == outcome]
+            outcome_df = plot_df[plot_df[outcome_col] == outcome]
             if outcome_df.empty:
                 continue
             
@@ -555,9 +595,9 @@ def delivery_map_scatter_only(df: pd.DataFrame, title: str = "Corner delivery ma
             color = outcome_colors.get(str(outcome), default_colors[idx % len(default_colors)])
             
             fig.add_trace(go.Scatter(
-                x=outcome_df["pass_x"],
-                y=outcome_df["pass_y"],
-                mode="markers",
+                x=outcome_df["vx"],
+                y=outcome_df["vy"],
+                mode="markers+text",
                 name=str(outcome)[:30],  # Truncate long names
                 marker=dict(
                     size=12,
@@ -566,28 +606,29 @@ def delivery_map_scatter_only(df: pd.DataFrame, title: str = "Corner delivery ma
                     symbol="circle",
                     line=dict(width=1.5, color="white")
                 ),
-                text=outcome_df.apply(lambda row: 
-                    f"<b>{row.get('Match', 'Unknown')}</b><br>"
-                    f"Taker: {row.get('Taker', 'Unknown')}<br>"
-                    f"Outcome: {row.get(outcome_col, 'Unknown')}<br>"
-                    f"Minute: {row.get('minute', 'Unknown')}<br>"
-                    f"xG: {row.get('xg', 0):.3f}" if pd.notna(row.get('xg')) 
-                    else f"<b>{row.get('Match', 'Unknown')}</b><br>"
-                         f"Taker: {row.get('Taker', 'Unknown')}<br>"
-                         f"Outcome: {row.get(outcome_col, 'Unknown')}<br>"
-                         f"Minute: {row.get('minute', 'Unknown')}", 
-                    axis=1),
-                hoverinfo="text"
+                text=outcome_df[outcome_col],
+                textposition="top center",
+                textfont=dict(size=9, color=BLACK),
+                customdata=np.stack(
+                    [
+                        outcome_df["Match"].fillna("Unknown") if "Match" in outcome_df.columns else pd.Series("Unknown", index=outcome_df.index),
+                        outcome_df["Taker"].fillna("Unknown") if "Taker" in outcome_df.columns else pd.Series("Unknown", index=outcome_df.index),
+                        outcome_df[outcome_col].fillna("Unknown"),
+                        outcome_df["minute"].fillna("Unknown") if "minute" in outcome_df.columns else pd.Series("Unknown", index=outcome_df.index),
+                        pd.to_numeric(outcome_df["xg"], errors="coerce").fillna(0).round(3) if "xg" in outcome_df.columns else pd.Series(0, index=outcome_df.index),
+                    ],
+                    axis=1,
+                ),
+                hovertemplate="<b>%{customdata[0]}</b><br>Taker: %{customdata[1]}<br>SP outcome: %{customdata[2]}<br>Minute: %{customdata[3]}<br>xG: %{customdata[4]}<extra></extra>",
             ))
     
     # Update layout
     fig.update_layout(
         title=title,
-        width=600,
-        height=900,
+        height=620,
         showlegend=True,
         legend=dict(
-            title="<b>Outcome</b>",
+            title="<b>SP outcome</b>",
             yanchor="top",
             y=0.99,
             xanchor="left",
@@ -598,15 +639,15 @@ def delivery_map_scatter_only(df: pd.DataFrame, title: str = "Corner delivery ma
             font=dict(size=11)
         ),
         xaxis=dict(
-            title="Width (yards)",
-            range=[-5, 85],
+            range=[0, 80],
+            visible=False,
             showgrid=False,
             zeroline=False,
             tickfont=dict(size=10)
         ),
         yaxis=dict(
-            title="Length (yards)",
-            range=[-5, 125],
+            range=[60, 120],
+            visible=False,
             showgrid=False,
             zeroline=False,
             scaleanchor="x",
