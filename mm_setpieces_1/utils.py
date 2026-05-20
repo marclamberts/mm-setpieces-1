@@ -2788,12 +2788,9 @@ def delivery_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
             go.Scatter(
                 x=part["vx_end"],
                 y=part["vy_end"],
-                mode="markers+text",
+                mode="markers",
                 name=outcome_label,
                 marker=dict(size=10, color=color, opacity=0.84, line=dict(width=0.8, color="white")),
-                text=part["Delivery outcome"].fillna("Unknown"),
-                textposition="top center",
-                textfont=dict(size=9, color=BLACK),
                 customdata=np.stack(
                     [
                         part["Taker"].fillna("Unknown"),
