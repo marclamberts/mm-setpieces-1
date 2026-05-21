@@ -2565,7 +2565,14 @@ def restart_origin_xy(side: str, pitch: dict[str, object] | None = None) -> tupl
     pitch = pitch or pitch_dimensions()
     return (0.0, float(pitch["length"])) if str(side).lower() == "left" else (float(pitch["width"]), float(pitch["length"]))
 
-def add_half_vertical_pitch_layout(fig: go.Figure, title: str, pitch_color: str = "white", height: int = 620, source_df: pd.DataFrame | None = None) -> go.Figure:
+def add_half_vertical_pitch_layout(
+    fig: go.Figure,
+    title: str,
+    pitch_color: str = "white",
+    height: int = 620,
+    source_df: pd.DataFrame | None = None,
+    show_zone_labels: bool = True,
+) -> go.Figure:
     pitch = pitch_dimensions(source_df)
     pitch_width = float(pitch["width"])
     pitch_length = float(pitch["length"])
@@ -2611,7 +2618,7 @@ def add_half_vertical_pitch_layout(fig: go.Figure, title: str, pitch_color: str 
         dict(x=xs(46.7), y=ys(116.5), text="Far post", showarrow=False, font=dict(size=10, color="#b45309")),
         dict(x=xs(40.0), y=ys(111.0), text="Penalty spot", showarrow=False, font=dict(size=10, color="#6d28d9")),
         dict(x=xs(40.0), y=ys(105.0), text="Edge box", showarrow=False, font=dict(size=10, color="#475569")),
-    ]
+    ] if show_zone_labels else []
 
     fig.update_layout(
         title=title,
