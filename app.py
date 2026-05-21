@@ -455,6 +455,13 @@ def render_single_app_sidebar() -> str:
 
 
 # ── NEW: Delivery map with only scatters colored by SP outcome ─────────────────
+def _unlabeled_corner_delivery_pitch(fig: go.Figure, title: str, source_df: pd.DataFrame | None = None) -> go.Figure:
+    existing_annotations = list(fig.layout.annotations)
+    fig = add_half_vertical_pitch_layout(fig, title, source_df=source_df)
+    fig.update_layout(annotations=existing_annotations)
+    return fig
+
+
 def delivery_map_scatter_only(df: pd.DataFrame, title: str = "Corner delivery map") -> go.Figure:
     """
     Create a delivery map with only delivery-end scatter points colored by SP outcome.
@@ -464,7 +471,7 @@ def delivery_map_scatter_only(df: pd.DataFrame, title: str = "Corner delivery ma
 
     if df.empty:
         fig.add_annotation(text="No delivery data available", x=40, y=90, showarrow=False, font=dict(size=16, color="#64748b"))
-        return add_half_vertical_pitch_layout(fig, title, source_df=df, show_zone_labels=False)
+        return _unlabeled_corner_delivery_pitch(fig, title, source_df=df)
 
     plot_df = df.copy()
     if {"delivery_end_x", "delivery_end_y"}.issubset(plot_df.columns):
@@ -475,12 +482,12 @@ def delivery_map_scatter_only(df: pd.DataFrame, title: str = "Corner delivery ma
         x_col, y_col = "pass_x", "pass_y"
     else:
         fig.add_annotation(text="No delivery end locations available", x=40, y=90, showarrow=False, font=dict(size=16, color="#64748b"))
-        return add_half_vertical_pitch_layout(fig, title, source_df=df, show_zone_labels=False)
+        return _unlabeled_corner_delivery_pitch(fig, title, source_df=df)
 
     plot_df = plot_df[pd.to_numeric(plot_df[x_col], errors="coerce").notna() & pd.to_numeric(plot_df[y_col], errors="coerce").notna()].copy()
     if plot_df.empty:
         fig.add_annotation(text="No delivery end locations available", x=40, y=90, showarrow=False, font=dict(size=16, color="#64748b"))
-        return add_half_vertical_pitch_layout(fig, title, source_df=df, show_zone_labels=False)
+        return _unlabeled_corner_delivery_pitch(fig, title, source_df=df)
 
     plot_df["plot_x"], plot_df["plot_y"] = coords_to_statsbomb(plot_df, x_col, y_col)
     pitch = pitch_dimensions(plot_df)
@@ -489,7 +496,7 @@ def delivery_map_scatter_only(df: pd.DataFrame, title: str = "Corner delivery ma
         plot_df = plot_df[plot_df["plot_x"] >= half_start].copy()
     if plot_df.empty:
         fig.add_annotation(text="No deliveries in the attacking half", x=40, y=90, showarrow=False, font=dict(size=16, color="#64748b"))
-        return add_half_vertical_pitch_layout(fig, title, source_df=df, show_zone_labels=False)
+        return _unlabeled_corner_delivery_pitch(fig, title, source_df=df)
 
     if len(plot_df) > 250:
         plot_df = plot_df.sample(250, random_state=7)
@@ -601,7 +608,7 @@ def delivery_map_scatter_only(df: pd.DataFrame, title: str = "Corner delivery ma
                 hovertemplate="<b>%{customdata[0]}</b><br>Taker: %{customdata[1]}<br>SP outcome: %{customdata[2]}<br>Minute: %{customdata[3]}<br>xG: %{customdata[4]}<extra></extra>",
             ))
     
-    fig = add_half_vertical_pitch_layout(fig, title, source_df=df, show_zone_labels=False)
+    fig = _unlabeled_corner_delivery_pitch(fig, title, source_df=df)
     fig.update_layout(
         showlegend=True,
         legend=dict(
