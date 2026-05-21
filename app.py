@@ -613,17 +613,18 @@ def delivery_map_scatter_only(df: pd.DataFrame, title: str = "Corner delivery ma
         showlegend=True,
         legend=dict(
             title="<b>SP outcome</b>",
+            orientation="h",
             yanchor="top",
-            y=0.99,
-            xanchor="left",
-            x=1.01,
+            y=-0.08,
+            xanchor="center",
+            x=0.5,
             bgcolor="rgba(255,255,255,0.95)",
             bordercolor="#cccccc",
             borderwidth=1,
             font=dict(size=11)
         ),
         hovermode="closest",
-        margin=dict(l=10, r=300, t=50, b=10),
+        margin=dict(l=10, r=10, t=50, b=90),
     )
     
     return fig
