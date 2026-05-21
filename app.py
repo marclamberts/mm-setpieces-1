@@ -1248,13 +1248,24 @@ def render_corners() -> None:
         section_header("Pre-Match PDF", "Download a staff briefing from the current filters")
         report_left, report_right = st.columns([1, 1.2])
         with report_left:
+            pdf_teams = ["All"]
+            if "Team" in filtered.columns:
+                pdf_teams += _safe_sorted(filtered["Team"])
+            if st.session_state.get("corners_pdf_team") not in pdf_teams:
+                st.session_state["corners_pdf_team"] = "All"
+            pdf_team = st.selectbox("Report team", pdf_teams, key="corners_pdf_team")
             opponent = st.text_input("Opponent / report label", value="", key="corners_pdf_label")
-            st.caption("The PDF uses the active sidebar filters, role classifications, archetypes, insights, and mplsoccer visuals.")
+            st.caption("The PDF uses the active sidebar filters plus this team selection, with text, logo, and three static pitch visuals.")
         with report_right:
-            safe_name = (opponent.strip() or label).lower().replace(" ", "_").replace("/", "-")
+            pdf_filtered = filtered.copy()
+            if pdf_team != "All" and "Team" in pdf_filtered.columns:
+                pdf_filtered = pdf_filtered[pdf_filtered["Team"].astype(str).eq(pdf_team)].copy()
+            pdf_label = f"{label} - {pdf_team}" if pdf_team != "All" else label
+            safe_base = opponent.strip() or pdf_label
+            safe_name = safe_base.lower().replace(" ", "_").replace("/", "-")
             st.markdown('<div class="mm-table-note">PDF generation is prepared on demand because pitch images are heavier than tables.</div>', unsafe_allow_html=True)
             if st.checkbox("Prepare PDF brief", key="corners_prepare_pdf"):
-                st.download_button("Download pre-match PDF", data=_cached_report_pdf(filtered, label, opponent.strip()), file_name=f"{safe_name}_set_piece_report.pdf", mime="application/pdf", width="stretch")
+                st.download_button("Download pre-match PDF", data=_cached_report_pdf(pdf_filtered, pdf_label, opponent.strip()), file_name=f"{safe_name}_set_piece_report.pdf", mime="application/pdf", width="stretch")
 
     elif view == "Event Log":
         section_header("Event Log", f"{len(filtered):,} workbook rows in the current filter")

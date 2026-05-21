@@ -4169,5 +4169,10 @@ def prematch_report_pdf_bytes(df: pd.DataFrame, label: str = "", opponent: str =
         pdf.savefig(fig, bbox_inches="tight")
         plt.close(fig)
 
+        fig = mplsoccer_delivery_sp_outcome_figure(df, label)
+        add_logo_to_matplotlib_figure(fig)
+        pdf.savefig(fig, bbox_inches="tight")
+        plt.close(fig)
+
     buffer.seek(0)
     return buffer.getvalue()
