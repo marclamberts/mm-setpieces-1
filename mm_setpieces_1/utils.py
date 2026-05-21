@@ -1641,8 +1641,30 @@ def _coerce_plot_values(values) -> list:
     return list(values)
 
 
+def _matplotlib_color(value: object, default: str = "#94a3b8"):
+    text = str(value or "").strip()
+    if text.startswith("rgba(") and text.endswith(")"):
+        parts = [part.strip() for part in text[5:-1].split(",")]
+        if len(parts) == 4:
+            try:
+                return (float(parts[0]) / 255, float(parts[1]) / 255, float(parts[2]) / 255, float(parts[3]))
+            except ValueError:
+                return default
+    if text.startswith("rgb(") and text.endswith(")"):
+        parts = [part.strip() for part in text[4:-1].split(",")]
+        if len(parts) == 3:
+            try:
+                return (float(parts[0]) / 255, float(parts[1]) / 255, float(parts[2]) / 255)
+            except ValueError:
+                return default
+    if text in {"", "none", "None"}:
+        return "none"
+    return text
+
+
 def _plotly_matplotlib_fallback_png_bytes(fig: go.Figure, width: int, height: int) -> bytes:
     import matplotlib.pyplot as plt
+    import matplotlib.patches as patches
 
     fig_dict = fig.to_dict()
     data = fig_dict.get("data", [])
@@ -1653,6 +1675,50 @@ def _plotly_matplotlib_fallback_png_bytes(fig: go.Figure, width: int, height: in
     mpl_fig, ax = plt.subplots(figsize=(width / 180, height / 180), dpi=180)
     mpl_fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
+
+    for shape in layout.get("shapes", []) or []:
+        shape_type = shape.get("type", "")
+        line = shape.get("line", {}) or {}
+        fillcolor = _matplotlib_color(shape.get("fillcolor", "none"), "none")
+        edgecolor = _matplotlib_color(line.get("color", "#94a3b8"))
+        linewidth = float(line.get("width", 1) or 1)
+        alpha = 1.0
+        if fillcolor == "rgba(255,255,255,0)":
+            fillcolor = "none"
+
+        if shape_type == "rect":
+            rect = patches.Rectangle(
+                (float(shape.get("x0", 0)), float(shape.get("y0", 0))),
+                float(shape.get("x1", 0)) - float(shape.get("x0", 0)),
+                float(shape.get("y1", 0)) - float(shape.get("y0", 0)),
+                linewidth=linewidth,
+                edgecolor=edgecolor,
+                facecolor=fillcolor,
+                alpha=alpha,
+                zorder=0,
+            )
+            ax.add_patch(rect)
+        elif shape_type == "line":
+            ax.plot(
+                [float(shape.get("x0", 0)), float(shape.get("x1", 0))],
+                [float(shape.get("y0", 0)), float(shape.get("y1", 0))],
+                color=edgecolor,
+                linewidth=linewidth,
+                zorder=0,
+            )
+        elif shape_type == "circle":
+            x0, x1 = float(shape.get("x0", 0)), float(shape.get("x1", 0))
+            y0, y1 = float(shape.get("y0", 0)), float(shape.get("y1", 0))
+            circle = patches.Ellipse(
+                ((x0 + x1) / 2, (y0 + y1) / 2),
+                abs(x1 - x0),
+                abs(y1 - y0),
+                linewidth=linewidth,
+                edgecolor=edgecolor,
+                facecolor=fillcolor,
+                zorder=0,
+            )
+            ax.add_patch(circle)
 
     drew_trace = False
     box_values = []
@@ -1705,10 +1771,24 @@ def _plotly_matplotlib_fallback_png_bytes(fig: go.Figure, width: int, height: in
     ax.set_title(title, color=BLACK, fontweight="bold", pad=14)
     ax.set_xlabel(x_title)
     ax.set_ylabel(y_title)
+    xaxis = layout.get("xaxis", {}) if isinstance(layout.get("xaxis"), dict) else {}
+    yaxis = layout.get("yaxis", {}) if isinstance(layout.get("yaxis"), dict) else {}
+    if xaxis.get("range"):
+        ax.set_xlim(xaxis["range"])
+    if yaxis.get("range"):
+        ax.set_ylim(yaxis["range"])
+    ax.set_aspect("equal", adjustable="box")
     ax.grid(True, color="#e5e7eb", linewidth=0.7)
     if len(data) > 1:
-        ax.legend(loc="best", fontsize=7)
-    mpl_fig.tight_layout(rect=[0, 0, 0.9, 0.96])
+        legend = layout.get("legend", {}) if isinstance(layout.get("legend"), dict) else {}
+        if legend.get("orientation") == "h":
+            ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.08), ncol=min(4, len(data)), fontsize=7)
+            mpl_fig.tight_layout(rect=[0, 0.08, 1, 0.96])
+        else:
+            ax.legend(loc="best", fontsize=7)
+            mpl_fig.tight_layout(rect=[0, 0, 0.9, 0.96])
+    else:
+        mpl_fig.tight_layout(rect=[0, 0, 1, 0.96])
 
     output = BytesIO()
     mpl_fig.savefig(output, format="png", dpi=180, facecolor="white")
@@ -1719,16 +1799,21 @@ def _plotly_matplotlib_fallback_png_bytes(fig: go.Figure, width: int, height: in
 def plotly_figure_png_bytes(fig: go.Figure, width: int = 1400, height: int | None = None) -> bytes:
     export_height = height or int(fig.layout.height or 820)
     export_fig = go.Figure(fig)
+    margin = fig.layout.margin
     export_fig.update_layout(
         paper_bgcolor="#ffffff",
         plot_bgcolor="#ffffff",
         margin=dict(
-            l=int(fig.layout.margin.l or 40) if fig.layout.margin else 40,
-            r=max(int(fig.layout.margin.r or 40) if fig.layout.margin else 40, 170),
-            t=max(int(fig.layout.margin.t or 50) if fig.layout.margin else 50, 70),
-            b=int(fig.layout.margin.b or 40) if fig.layout.margin else 40,
+            l=int(margin.l or 40) if margin else 40,
+            r=int(margin.r or 40) if margin else 40,
+            t=max(int(margin.t or 50) if margin else 50, 70),
+            b=int(margin.b or 40) if margin else 40,
         ),
     )
+    try:
+        return add_logo_to_png_bytes(export_fig.to_image(format="png", width=width, height=export_height, scale=2))
+    except Exception:
+        pass
     return _plotly_matplotlib_fallback_png_bytes(export_fig, width, export_height)
 
 
