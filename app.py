@@ -344,6 +344,7 @@ def team_snapshot_table(team: str, corners: pd.DataFrame, freekicks: pd.DataFram
     return pd.DataFrame(rows)
 
 
+@st.cache_data(show_spinner=False)
 def _league_comparison_source(corners: pd.DataFrame, freekicks: pd.DataFrame, throwins: pd.DataFrame) -> pd.DataFrame:
     frames = []
     for phase, df in [("Corners", corners), ("Freekicks", freekicks), ("Throw-ins", throwins)]:
@@ -361,6 +362,7 @@ def _league_comparison_source(corners: pd.DataFrame, freekicks: pd.DataFrame, th
     return combined
 
 
+@st.cache_data(show_spinner=False)
 def _league_summary_table(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "League" not in df.columns:
         return pd.DataFrame()
@@ -393,6 +395,7 @@ def _league_summary_table(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows).sort_values(["xG / 100", "Shot rate %", "Set pieces"], ascending=False)
 
 
+@st.cache_data(show_spinner=False)
 def _league_phase_summary_table(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or not {"League", "Phase"}.issubset(df.columns):
         return pd.DataFrame()
@@ -419,6 +422,7 @@ def _league_phase_summary_table(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows).sort_values(["League", "Phase"])
 
 
+@st.cache_data(show_spinner=False)
 def _league_set_piece_difference_table(phase_summary: pd.DataFrame) -> pd.DataFrame:
     if phase_summary.empty:
         return pd.DataFrame()

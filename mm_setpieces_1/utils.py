@@ -1836,28 +1836,30 @@ def add_logo_to_matplotlib_figure(fig) -> None:
 
 
 def render_plotly_png_download(fig: go.Figure, label: str, key: str) -> None:
-    try:
+    if st.checkbox(f"Prepare {label} PNG", key=f"{key}_prepare_png"):
+        try:
+            st.download_button(
+                "Download PNG with logo",
+                data=plotly_figure_png_bytes(fig),
+                file_name=f"{_safe_file_stem(label)}.png",
+                mime="image/png",
+                key=f"{key}_download_png",
+                width="stretch",
+            )
+        except Exception as exc:
+            st.error(f"PNG export failed. Streamlit Cloud may still be installing the export dependency. Details: {exc}")
+
+
+def render_matplotlib_png_download(fig, label: str, key: str) -> None:
+    if st.checkbox(f"Prepare {label} PNG", key=f"{key}_prepare_png"):
         st.download_button(
             "Download PNG with logo",
-            data=plotly_figure_png_bytes(fig),
+            data=matplotlib_figure_png_bytes(fig),
             file_name=f"{_safe_file_stem(label)}.png",
             mime="image/png",
             key=f"{key}_download_png",
             width="stretch",
         )
-    except Exception as exc:
-        st.error(f"PNG export failed. Streamlit Cloud may still be installing the export dependency. Details: {exc}")
-
-
-def render_matplotlib_png_download(fig, label: str, key: str) -> None:
-    st.download_button(
-        "Download PNG with logo",
-        data=matplotlib_figure_png_bytes(fig),
-        file_name=f"{_safe_file_stem(label)}.png",
-        mime="image/png",
-        key=f"{key}_download_png",
-        width="stretch",
-    )
 
 
 @st.cache_data(show_spinner=False)
@@ -2986,6 +2988,7 @@ def starting_location_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
     return add_half_vertical_pitch_layout(fig, title, source_df=df)
 
 
+@st.cache_data(show_spinner=False)
 def build_summary_tables(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     if df.empty or "Team" not in df.columns:
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
@@ -3154,6 +3157,7 @@ def render_set_piece_kpi_deck(df: pd.DataFrame, label: str = "Set pieces") -> No
     st.markdown(read_html, unsafe_allow_html=True)
 
 
+@st.cache_data(show_spinner=False)
 def build_team_leaderboard(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "Team" not in df.columns:
         return pd.DataFrame()
@@ -3261,6 +3265,7 @@ def build_pattern_library(df: pd.DataFrame) -> pd.DataFrame:
     )
 
 
+@st.cache_data(show_spinner=False)
 def build_match_log(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return pd.DataFrame()
@@ -3293,7 +3298,7 @@ def build_match_log(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows).sort_values(["Match", "Total xG"], ascending=[True, False])
 
 
-def render_analyst_table(df: pd.DataFrame, *, height: int = 360, max_rows: int = 2500) -> None:
+def render_analyst_table(df: pd.DataFrame, *, height: int = 360, max_rows: int = 500) -> None:
     if df.empty:
         st.info("No rows available for this view.")
         return
@@ -3800,6 +3805,7 @@ def mplsoccer_center_xy(pitch: dict[str, object], x_share: float = 0.75) -> tupl
     return float(pitch["width"]) / 2, float(pitch["length"]) * x_share
 
 
+@st.cache_data(show_spinner=False)
 def build_role_archetypes(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
     if df.empty or "Taker" not in df.columns:
         return pd.DataFrame()
@@ -3865,6 +3871,7 @@ def build_role_archetypes(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
     return pd.DataFrame(rows).sort_values(["xG / 100", "Shot rate", "Events"], ascending=False)
 
 
+@st.cache_data(show_spinner=False)
 def build_team_archetypes(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "Team" not in df.columns:
         return pd.DataFrame()
