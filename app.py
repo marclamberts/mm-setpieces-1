@@ -10,13 +10,14 @@ from mm_setpieces_1.utils import *
 from mm_setpieces_1.utils import DATA_VERSION, _data_files, _league_from_filename, _read_excel_if_exists, _read_excel_path, _with_league
 
 
-APP_SECTIONS = ["Home", "Corners", "Freekicks", "Throw-ins", "HOPS", "Delay Analysis"]
+APP_SECTIONS = ["Home", "Corners", "Freekicks", "Throw-ins", "HOPS", "League Comparison", "Delay Analysis"]
 LOGO_PATH = Path(__file__).resolve().parent / "assets" / "setplaypro-logo.jpg"
 FILTER_PREFIXES = {
     "Corners": "corners",
     "Freekicks": "freekicks",
     "Throw-ins": "throwins",
     "HOPS": "hops",
+    "League Comparison": "league_comparison",
     "Delay Analysis": "delay",
 }
 
@@ -341,6 +342,77 @@ def team_snapshot_table(team: str, corners: pd.DataFrame, freekicks: pd.DataFram
         _phase_snapshot(_apply_team_perspective(throwins, team, perspective), "Throw-ins", team, already_filtered=True),
     ]
     return pd.DataFrame(rows)
+
+
+def _league_comparison_source(corners: pd.DataFrame, freekicks: pd.DataFrame, throwins: pd.DataFrame) -> pd.DataFrame:
+    frames = []
+    for phase, df in [("Corners", corners), ("Freekicks", freekicks), ("Throw-ins", throwins)]:
+        if df.empty:
+            continue
+        base = unique_start_events(df).copy()
+        base["Phase"] = phase
+        frames.append(base)
+    if not frames:
+        return pd.DataFrame()
+    combined = pd.concat(frames, ignore_index=True, sort=False)
+    if "League" not in combined.columns:
+        combined["League"] = "Unknown"
+    combined["League"] = combined["League"].fillna("Unknown").astype(str)
+    return combined
+
+
+def _league_summary_table(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty or "League" not in df.columns:
+        return pd.DataFrame()
+
+    rows = []
+    for league, part in df.groupby("League", dropna=False):
+        set_pieces = int(len(part))
+        shots = int(part["is_shot"].sum()) if "is_shot" in part.columns else 0
+        goals = int(part["is_goal"].sum()) if "is_goal" in part.columns else 0
+        total_xg = float(part["xg"].fillna(0).sum()) if "xg" in part.columns else 0.0
+        teams = int(part["Team"].nunique()) if "Team" in part.columns else 0
+        matches = int(part["Match"].nunique()) if "Match" in part.columns else 0
+        rows.append(
+            {
+                "League": league,
+                "Set pieces": set_pieces,
+                "Teams": teams,
+                "Matches": matches,
+                "Shots": shots,
+                "Goals": goals,
+                "Shot rate %": round(shots / set_pieces * 100, 1) if set_pieces else 0.0,
+                "xG": round(total_xg, 2),
+                "xG / 100": round(total_xg / set_pieces * 100, 2) if set_pieces else 0.0,
+                "xG / shot": round(total_xg / shots, 3) if shots else 0.0,
+                "Goal conv %": round(goals / shots * 100, 1) if shots else 0.0,
+                "Top team": _mode_text(part["Team"]) if "Team" in part.columns else "Unknown",
+                "Top taker": _mode_text(part["Taker"]) if "Taker" in part.columns else "Unknown",
+            }
+        )
+    return pd.DataFrame(rows).sort_values(["xG / 100", "Shot rate %", "Set pieces"], ascending=False)
+
+
+def _league_phase_summary_table(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty or not {"League", "Phase"}.issubset(df.columns):
+        return pd.DataFrame()
+    rows = []
+    for (league, phase), part in df.groupby(["League", "Phase"], dropna=False):
+        set_pieces = int(len(part))
+        shots = int(part["is_shot"].sum()) if "is_shot" in part.columns else 0
+        total_xg = float(part["xg"].fillna(0).sum()) if "xg" in part.columns else 0.0
+        rows.append(
+            {
+                "League": league,
+                "Phase": phase,
+                "Set pieces": set_pieces,
+                "Shots": shots,
+                "Shot rate %": round(shots / set_pieces * 100, 1) if set_pieces else 0.0,
+                "xG / 100": round(total_xg / set_pieces * 100, 2) if set_pieces else 0.0,
+                "xG": round(total_xg, 2),
+            }
+        )
+    return pd.DataFrame(rows).sort_values(["League", "Phase"])
 
 
 def search_people(query: str, corners: pd.DataFrame, freekicks: pd.DataFrame, throwins: pd.DataFrame, hops: pd.DataFrame) -> pd.DataFrame:
@@ -1057,8 +1129,8 @@ def render_home() -> None:
             if st.button(f"Open {title}", key=f"home_open_{title}"):
                 set_section(title)
 
-    section_header("Specialist Scouting Modules", "Player rating model and timing audit")
-    s1, s2 = st.columns(2)
+    section_header("Specialist Scouting Modules", "Player rating model, league benchmarking, and timing audit")
+    s1, s2, s3 = st.columns(3)
     with s1:
         st.markdown(
             """
@@ -1075,6 +1147,21 @@ def render_home() -> None:
             set_section("HOPS")
 
     with s2:
+        st.markdown(
+            """
+            <div class="mm-nav-card">
+                <div class="mm-card-kicker">Module · League benchmark</div>
+                <div class="mm-nav-title">League Comparison</div>
+                <div class="mm-nav-copy">Compare restart volume, shot rate, and xG quality across competitions and restart phases.</div>
+                <div class="mm-tiny">Corners · Freekicks · Throw-ins</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        if st.button("Open League Comparison", key="home_open_league_comparison"):
+            set_section("League Comparison")
+
+    with s3:
         st.markdown(
             """
             <div class="mm-nav-card">
@@ -1457,6 +1544,100 @@ def render_sequence_page(label: str) -> None:
             render_analyst_table(filtered[display_cols], height=620)
 
 
+def render_league_comparison() -> None:
+    corners, freekicks, throwins, _ = command_center_data()
+    df = _league_comparison_source(corners, freekicks, throwins)
+    hero_block("League comparison", "League Comparison", "Benchmark restart volume, shot creation, and shot quality across competitions.")
+    if df.empty:
+        st.warning("No restart rows were found for league comparison.")
+        return
+
+    phases = ["All"] + _safe_sorted(df["Phase"]) if "Phase" in df.columns else ["All"]
+    leagues = _safe_sorted(df["League"]) if "League" in df.columns else []
+    phase = st.sidebar.selectbox("Phase", phases, key="league_comparison_phase")
+    if any(league not in leagues for league in st.session_state.get("league_comparison_leagues", [])):
+        st.session_state["league_comparison_leagues"] = leagues
+    selected_leagues = st.sidebar.multiselect("Leagues", leagues, default=leagues, key="league_comparison_leagues")
+    min_set_pieces = st.sidebar.slider("Minimum set pieces", min_value=1, max_value=100, value=10, key="league_comparison_min_sp")
+    top_n = st.sidebar.slider("Show top leagues", min_value=3, max_value=20, value=min(10, max(3, len(leagues))), key="league_comparison_top_n")
+
+    filtered = df.copy()
+    if phase != "All" and "Phase" in filtered.columns:
+        filtered = filtered[filtered["Phase"].eq(phase)].copy()
+    if selected_leagues and "League" in filtered.columns:
+        filtered = filtered[filtered["League"].isin(selected_leagues)].copy()
+
+    summary = _league_summary_table(filtered)
+    if not summary.empty:
+        summary = summary[summary["Set pieces"] >= min_set_pieces].copy()
+    phase_summary = _league_phase_summary_table(filtered)
+    if not phase_summary.empty and not summary.empty:
+        phase_summary = phase_summary[phase_summary["League"].isin(summary["League"])].copy()
+
+    render_export_controls(filtered, "league_comparison", "League Comparison")
+    render_filter_summary(
+        "League Comparison",
+        len(df),
+        len(filtered),
+        [("Phase", phase), ("Leagues", selected_leagues), ("Minimum set pieces", min_set_pieces)],
+    )
+    if filtered.empty or summary.empty:
+        render_empty_filter_state()
+        return
+
+    league_count = int(summary["League"].nunique())
+    set_pieces = int(summary["Set pieces"].sum())
+    shots = int(summary["Shots"].sum())
+    goals = int(summary["Goals"].sum())
+    total_xg = float(summary["xG"].sum())
+    c1, c2, c3, c4, c5 = st.columns(5)
+    c1.metric("Leagues", league_count)
+    c2.metric("Set pieces", f"{set_pieces:,}")
+    c3.metric("Shots", f"{shots:,}")
+    c4.metric("Shot rate", f"{(shots / set_pieces * 100) if set_pieces else 0:.1f}%")
+    c5.metric("xG / 100", f"{(total_xg / set_pieces * 100) if set_pieces else 0:.2f}")
+
+    view = st.radio("View", ["Briefing", "Evidence", "League Log"], horizontal=True, key="league_comparison_view")
+    if view == "Briefing":
+        left, right = st.columns([1.2, 1])
+        with left:
+            section_header("League Threat Board", "Restart output by competition")
+            render_analyst_table(summary.head(top_n), height=430)
+        with right:
+            section_header("Phase Split", "How each league creates threat by restart type")
+            render_analyst_table(phase_summary.sort_values(["xG / 100", "Set pieces"], ascending=False).head(top_n * 3), height=430)
+
+    elif view == "Evidence":
+        chart_left, chart_right = st.columns(2)
+        chart_df = summary.head(top_n).sort_values("xG / 100")
+        with chart_left:
+            section_header("xG / 100", "Shot value generated per 100 restarts")
+            fig = bar_chart(chart_df, x="xG / 100", y="League", color=None, orientation="h")
+            fig.update_layout(height=520, margin=dict(l=10, r=10, t=30, b=10), showlegend=False)
+            render_plotly_visual(polish_plotly_figure(fig), "League comparison xG per 100", "league_comparison_xg_per_100_png")
+        with chart_right:
+            section_header("Shot Rate", "Share of restarts ending in a shot")
+            shot_df = summary.head(top_n).sort_values("Shot rate %")
+            fig = bar_chart(shot_df, x="Shot rate %", y="League", color=None, orientation="h")
+            fig.update_layout(height=520, margin=dict(l=10, r=10, t=30, b=10), showlegend=False)
+            render_plotly_visual(polish_plotly_figure(fig), "League comparison shot rate", "league_comparison_shot_rate_png")
+
+        if not phase_summary.empty:
+            section_header("Phase Threat Mix", "xG / 100 by league and restart phase")
+            phase_chart = phase_summary[phase_summary["League"].isin(summary.head(top_n)["League"])].copy()
+            fig = bar_chart(phase_chart, x="League", y="xG / 100", color="Phase", barmode="group")
+            fig.update_layout(height=430, margin=dict(l=10, r=10, t=30, b=10), legend_title_text="")
+            render_plotly_visual(polish_plotly_figure(fig), "League comparison phase threat", "league_comparison_phase_threat_png")
+
+    elif view == "League Log":
+        section_header("League Event Log", f"{len(filtered):,} restart rows in the active filter")
+        display_cols = [c for c in [
+            "League", "Phase", "Match", "Team", "Taker", "Shooter", "side", "minute", "second",
+            "Technique", "Delivery height", "Shot outcome", "xg", "Delivery outcome",
+        ] if c in filtered.columns]
+        render_analyst_table(filtered[display_cols], height=620)
+
+
 def render_hops() -> None:
     df = load_hops_data(DATA_VERSION)
     hero_block("Duel intelligence", "HOPS", "Player and team duel profiles from the HOPS workbook, ranked by rating, percentile, and squad-level depth.")
@@ -1710,5 +1891,7 @@ else:
         render_sequence_page("Throw-ins")
     elif section == "HOPS":
         render_hops()
+    elif section == "League Comparison":
+        render_league_comparison()
     elif section == "Delay Analysis":
         render_delay()
