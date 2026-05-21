@@ -400,6 +400,7 @@ def _league_phase_summary_table(df: pd.DataFrame) -> pd.DataFrame:
     for (league, phase), part in df.groupby(["League", "Phase"], dropna=False):
         set_pieces = int(len(part))
         shots = int(part["is_shot"].sum()) if "is_shot" in part.columns else 0
+        goals = int(part["is_goal"].sum()) if "is_goal" in part.columns else 0
         total_xg = float(part["xg"].fillna(0).sum()) if "xg" in part.columns else 0.0
         rows.append(
             {
@@ -407,12 +408,57 @@ def _league_phase_summary_table(df: pd.DataFrame) -> pd.DataFrame:
                 "Phase": phase,
                 "Set pieces": set_pieces,
                 "Shots": shots,
+                "Goals": goals,
                 "Shot rate %": round(shots / set_pieces * 100, 1) if set_pieces else 0.0,
                 "xG / 100": round(total_xg / set_pieces * 100, 2) if set_pieces else 0.0,
+                "Goals / set piece": round(goals / set_pieces, 3) if set_pieces else 0.0,
+                "xG / set piece": round(total_xg / set_pieces, 3) if set_pieces else 0.0,
                 "xG": round(total_xg, 2),
             }
         )
     return pd.DataFrame(rows).sort_values(["League", "Phase"])
+
+
+def _league_set_piece_difference_table(phase_summary: pd.DataFrame) -> pd.DataFrame:
+    if phase_summary.empty:
+        return pd.DataFrame()
+
+    phase_labels = {
+        "Corners": "Corners",
+        "Freekicks": "Indirect free kicks",
+        "Throw-ins": "Throw-ins",
+    }
+    rows = []
+    for league, part in phase_summary.groupby("League", dropna=False):
+        row: dict[str, object] = {"League": league}
+        metrics: dict[str, dict[str, float]] = {}
+        for phase, label in phase_labels.items():
+            phase_part = part[part["Phase"].eq(phase)]
+            if phase_part.empty:
+                set_pieces = goals = 0
+                xg = goals_per = xg_per = 0.0
+            else:
+                first = phase_part.iloc[0]
+                set_pieces = int(first.get("Set pieces", 0))
+                goals = int(first.get("Goals", 0))
+                xg = float(first.get("xG", 0))
+                goals_per = float(first.get("Goals / set piece", 0))
+                xg_per = float(first.get("xG / set piece", 0))
+            metrics[phase] = {"Goals / set piece": goals_per, "xG / set piece": xg_per}
+            row[f"{label}"] = set_pieces
+            row[f"{label} goals"] = goals
+            row[f"Goals / {label.lower()}"] = round(goals_per, 3)
+            row[f"xG / {label.lower()}"] = round(xg_per, 3)
+            row[f"{label} xG"] = round(xg, 2)
+
+        row["Corner xG edge vs indirect FK"] = round(metrics["Corners"]["xG / set piece"] - metrics["Freekicks"]["xG / set piece"], 3)
+        row["Corner xG edge vs throw-in"] = round(metrics["Corners"]["xG / set piece"] - metrics["Throw-ins"]["xG / set piece"], 3)
+        row["Indirect FK xG edge vs throw-in"] = round(metrics["Freekicks"]["xG / set piece"] - metrics["Throw-ins"]["xG / set piece"], 3)
+        row["Corner goal edge vs indirect FK"] = round(metrics["Corners"]["Goals / set piece"] - metrics["Freekicks"]["Goals / set piece"], 3)
+        row["Corner goal edge vs throw-in"] = round(metrics["Corners"]["Goals / set piece"] - metrics["Throw-ins"]["Goals / set piece"], 3)
+        rows.append(row)
+
+    return pd.DataFrame(rows).sort_values(["Corner xG edge vs indirect FK", "Corner xG edge vs throw-in"], ascending=False)
 
 
 def search_people(query: str, corners: pd.DataFrame, freekicks: pd.DataFrame, throwins: pd.DataFrame, hops: pd.DataFrame) -> pd.DataFrame:
@@ -1573,6 +1619,7 @@ def render_league_comparison() -> None:
     phase_summary = _league_phase_summary_table(filtered)
     if not phase_summary.empty and not summary.empty:
         phase_summary = phase_summary[phase_summary["League"].isin(summary["League"])].copy()
+    set_piece_differences = _league_set_piece_difference_table(phase_summary)
 
     render_export_controls(filtered, "league_comparison", "League Comparison")
     render_filter_summary(
@@ -1606,6 +1653,8 @@ def render_league_comparison() -> None:
         with right:
             section_header("Phase Split", "How each league creates threat by restart type")
             render_analyst_table(phase_summary.sort_values(["xG / 100", "Set pieces"], ascending=False).head(top_n * 3), height=430)
+        section_header("Set Piece Differences", "Goals and xG per restart by phase")
+        render_analyst_table(set_piece_differences.head(top_n), height=430)
 
     elif view == "Evidence":
         chart_left, chart_right = st.columns(2)
@@ -1628,6 +1677,19 @@ def render_league_comparison() -> None:
             fig = bar_chart(phase_chart, x="League", y="xG / 100", color="Phase", barmode="group")
             fig.update_layout(height=430, margin=dict(l=10, r=10, t=30, b=10), legend_title_text="")
             render_plotly_visual(polish_plotly_figure(fig), "League comparison phase threat", "league_comparison_phase_threat_png")
+
+        if not set_piece_differences.empty:
+            section_header("Set Piece Difference Evidence", "Where corners, indirect free kicks, and throw-ins separate")
+            diff_cols = [
+                "League",
+                "Corner xG edge vs indirect FK",
+                "Corner xG edge vs throw-in",
+                "Indirect FK xG edge vs throw-in",
+            ]
+            diff_chart = set_piece_differences[diff_cols].head(top_n).melt("League", var_name="Difference", value_name="xG edge")
+            fig = bar_chart(diff_chart, x="League", y="xG edge", color="Difference", barmode="group")
+            fig.update_layout(height=430, margin=dict(l=10, r=10, t=30, b=10), legend_title_text="")
+            render_plotly_visual(polish_plotly_figure(fig), "League comparison set piece differences", "league_comparison_set_piece_differences_png")
 
     elif view == "League Log":
         section_header("League Event Log", f"{len(filtered):,} restart rows in the active filter")
