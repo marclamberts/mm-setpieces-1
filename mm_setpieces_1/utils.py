@@ -3999,6 +3999,79 @@ def mplsoccer_delivery_figure(df: pd.DataFrame, label: str = ""):
     return fig
 
 
+def mplsoccer_delivery_sp_outcome_figure(df: pd.DataFrame, label: str = ""):
+    import matplotlib.pyplot as plt
+    from mplsoccer import VerticalPitch
+
+    base = unique_start_events(df).copy()
+    pitch = pitch_dimensions(df)
+    fig, ax = plt.subplots(figsize=(5.8, 8), dpi=140)
+    pitch_plot = VerticalPitch(pitch_type="statsbomb", half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
+    pitch_plot.draw(ax=ax)
+    ax.set_title(f"{label} delivery map SP outcomes", fontsize=14, fontweight="bold", color=BLACK, pad=10)
+
+    if base.empty or not {"delivery_end_x", "delivery_end_y"}.issubset(base.columns):
+        ax.text(*mplsoccer_center_xy(pitch), "No delivery end locations", ha="center", va="center", color=MUTED, fontsize=12)
+        return fig
+
+    plot_df = base.dropna(subset=["delivery_end_x", "delivery_end_y"]).copy()
+    if plot_df.empty:
+        ax.text(*mplsoccer_center_xy(pitch), "No delivery end locations", ha="center", va="center", color=MUTED, fontsize=12)
+        return fig
+
+    if len(plot_df) > 320:
+        plot_df = plot_df.sample(320, random_state=13)
+
+    outcome_col = next((col for col in ["SP_outcome", "SP outcome", "Delivery outcome", "Shot outcome", "Outcome"] if col in plot_df.columns), None)
+    if outcome_col is None:
+        plot_df["SP outcome"] = "Unknown"
+        outcome_col = "SP outcome"
+
+    plot_df[outcome_col] = (
+        plot_df[outcome_col]
+        .fillna("Unknown")
+        .astype(str)
+        .str.strip()
+        .replace({"": "Unknown", "nan": "Unknown", "None": "Unknown", "undefined": "Unknown"})
+    )
+
+    colors = {
+        "Goal": "#16a34a",
+        "Shot after 3 seconds": "#2563eb",
+        "Shot after 5 seconds": "#1d4ed8",
+        "Shot after 10 seconds": "#7c3aed",
+        "Shot": "#2563eb",
+        "No shot": "#64748b",
+        "Ball astray": "#b45309",
+        "First contact won": "#0f766e",
+        "First contact lost": "#dc2626",
+        "Cleared": "#475569",
+        "Retained": "#16a34a",
+        "Unknown": "#94a3b8",
+    }
+    fallback_colors = [RED, "#0891b2", "#9333ea", "#ea580c", "#334155", "#be123c", "#4f46e5"]
+
+    for idx, (outcome, part) in enumerate(plot_df.groupby(outcome_col, dropna=False)):
+        outcome_label = str(outcome) if str(outcome).strip() else "Unknown"
+        color = colors.get(outcome_label, fallback_colors[idx % len(fallback_colors)])
+        plot_x, plot_y = mplsoccer_pitch_xy(part, "delivery_end_x", "delivery_end_y", pitch)
+        pitch_plot.scatter(
+            plot_x,
+            plot_y,
+            s=44,
+            color=color,
+            edgecolors="white",
+            linewidth=0.7,
+            alpha=0.82,
+            label=outcome_label,
+            ax=ax,
+        )
+
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.02), ncol=2, fontsize=7, frameon=True)
+    fig.tight_layout()
+    return fig
+
+
 def mplsoccer_shot_figure(df: pd.DataFrame, label: str = ""):
     import matplotlib.pyplot as plt
     from mplsoccer import VerticalPitch

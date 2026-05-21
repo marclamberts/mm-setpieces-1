@@ -1236,20 +1236,13 @@ def render_corners() -> None:
             render_analyst_table(build_team_archetypes(filtered).head(15), height=360)
 
     elif view == "Pitch Evidence":
-        visual_view = st.radio("Pitch visual", ["Report visuals", "Interactive maps"], horizontal=True, key="corners_visual")
-        if visual_view == "Report visuals":
-            left, right = st.columns(2)
-            with left:
-                render_mpl_visual(mplsoccer_delivery_figure(filtered, label), "Corners report delivery map", "corners_report_delivery_map_png")
-            with right:
-                render_mpl_visual(mplsoccer_shot_figure(filtered, label), "Corners report shot map", "corners_report_shot_map_png")
-        else:
-            left, right = st.columns(2)
-            with left:
-                render_plotly_visual(polish_plotly_figure(shotmap_figure(filtered, f"{label} shotmap · vertical half pitch")), "Corners shotmap", "corners_shotmap_png")
-            with right:
-                # Use the new scatter-only delivery map without arrows
-                render_plotly_visual(polish_plotly_figure(delivery_map_scatter_only(filtered, f"{label} delivery map · scatters by SP outcome")), "Corners delivery map", "corners_delivery_map_png")
+        left, right = st.columns(2)
+        with left:
+            render_mpl_visual(mplsoccer_delivery_figure(filtered, label), "Corners delivery map", "corners_delivery_map_png")
+        with right:
+            render_mpl_visual(mplsoccer_shot_figure(filtered, label), "Corners shot quality", "corners_shot_quality_png")
+
+        render_mpl_visual(mplsoccer_delivery_sp_outcome_figure(filtered, label), "Corners delivery map SP outcomes", "corners_delivery_map_sp_outcomes_png")
 
     elif view == "PDF Brief":
         section_header("Pre-Match PDF", "Download a staff briefing from the current filters")
