@@ -752,16 +752,6 @@ def delivery_map_scatter_only(df: pd.DataFrame, title: str = "Corner delivery ma
     return fig
 
 
-# ── Credentials ──────────────────────────────────────────────────────────────
-VALID_CREDENTIALS: dict[str, str] = {
-    "michael": "setplay2025",
-    "analyst": "scout123",
-    "admin":   "admin",
-}
-
-MAX_ATTEMPTS = 5
-
-
 def render_landing() -> None:
     st.markdown(
         """
@@ -830,30 +820,6 @@ def render_landing() -> None:
                 min-height: 2.75rem !important;
                 box-shadow: none !important;
             }
-            div[data-testid="stTextInput"] {
-                width: min(260px, 68vw) !important;
-                margin: 0 auto !important;
-            }
-            .mm-login-error {
-                color: #c1121f;
-                font-size: .78rem;
-                text-align: center;
-                margin-top: .25rem;
-            }
-            .mm-login-locked {
-                color: #6b7280;
-                font-size: .78rem;
-                text-align: center;
-                margin-top: .25rem;
-            }
-            .mm-login-label {
-                font-size: .72rem;
-                letter-spacing: .06em;
-                text-transform: uppercase;
-                color: #6b7280;
-                text-align: center;
-                margin-bottom: .5rem;
-            }
         </style>
         """,
         unsafe_allow_html=True,
@@ -869,64 +835,13 @@ def render_landing() -> None:
             unsafe_allow_html=True,
         )
 
-    if "login_attempts" not in st.session_state:
-        st.session_state["login_attempts"] = 0
-    if "login_error" not in st.session_state:
-        st.session_state["login_error"] = ""
-
-    locked = st.session_state["login_attempts"] >= MAX_ATTEMPTS
-
     st.markdown('<div class="mm-landing-action">', unsafe_allow_html=True)
-    st.markdown('<div class="mm-login-label">Staff access</div>', unsafe_allow_html=True)
-
-    username = st.text_input(
-        "Username",
-        key="login_username",
-        placeholder="Username",
-        label_visibility="collapsed",
-        disabled=locked,
-    )
-    password = st.text_input(
-        "Password",
-        key="login_password",
-        placeholder="Password",
-        type="password",
-        label_visibility="collapsed",
-        disabled=locked,
-    )
-
-    if not locked:
-        if st.button("Sign in", key="login_submit", width="stretch"):
-            entered_pw = VALID_CREDENTIALS.get(username.strip().lower(), "")
-            if entered_pw and password == entered_pw:
-                st.session_state["authenticated"] = True
-                st.session_state["login_attempts"] = 0
-                st.session_state["login_error"] = ""
-                st.session_state["show_playform"] = True
-                st.session_state["section"] = "Home"
-                st.session_state["section_select"] = "Home"
-                st.rerun()
-            else:
-                st.session_state["login_attempts"] += 1
-                remaining = MAX_ATTEMPTS - st.session_state["login_attempts"]
-                if remaining > 0:
-                    st.session_state["login_error"] = (
-                        f"Incorrect username or password. {remaining} attempt{'s' if remaining != 1 else ''} remaining."
-                    )
-                else:
-                    st.session_state["login_error"] = "Too many failed attempts. Please reload the page."
-                st.rerun()
-    else:
-        st.markdown(
-            '<div class="mm-login-locked">Account locked — reload the page to try again.</div>',
-            unsafe_allow_html=True,
-        )
-
-    if st.session_state["login_error"]:
-        st.markdown(
-            f'<div class="mm-login-error">{st.session_state["login_error"]}</div>',
-            unsafe_allow_html=True,
-        )
+    if st.button("Go to portal", key="portal_submit", width="stretch"):
+        st.session_state["authenticated"] = True
+        st.session_state["show_playform"] = True
+        st.session_state["section"] = "Home"
+        st.session_state["section_select"] = "Home"
+        st.rerun()
 
     st.markdown("</div></div>", unsafe_allow_html=True)
 
@@ -1310,7 +1225,8 @@ def render_corners() -> None:
         st.warning("No corner rows were found in the bundled workbook(s).")
         return
 
-    render_workflow_rail()
+    if not is_freekick:
+        render_workflow_rail()
     filtered, filters = filter_sp_page_data(df, label, "corners")
     render_export_controls(filtered, label, label)
     st.caption("Corners use every Excel workbook in Data/Corners, plus any corner CSV files in the same folder.")
@@ -1415,14 +1331,38 @@ def render_corners() -> None:
         render_analyst_table(filtered[display_cols], height=620)
 
 
+def _freekick_zone_summary_from_sequences(sequences: pd.DataFrame) -> pd.DataFrame:
+    if sequences.empty:
+        return pd.DataFrame()
+    summary = (
+        sequences.groupby(["Zone", "Channel"], dropna=False)
+        .agg(
+            Sequences=("Zone", "size"),
+            Shots=("Shots", "sum"),
+            Goals=("Goals", "sum"),
+            Total_xG=("Total xG", "sum"),
+            Avg_xG=("Total xG", "mean"),
+        )
+        .reset_index()
+    )
+    summary["Shot rate %"] = summary.apply(lambda r: _rate(r["Shots"], r["Sequences"]), axis=1)
+    summary["Total_xG"] = summary["Total_xG"].round(2)
+    summary["Avg_xG"] = summary["Avg_xG"].round(3)
+    return summary.sort_values(["Total_xG", "Shots", "Sequences"], ascending=False)
+
+
 def render_sequence_page(label: str) -> None:
     is_freekick = label == "Freekicks"
     readable = "Freekicks" if is_freekick else "Throw-ins"
-    df = _with_match_names(load_prepared_sp_data("Freekicks" if is_freekick else "Throw ins", DATA_VERSION))
+    df = _with_match_names(
+        load_prepared_freekick_brief_data(DATA_VERSION)
+        if is_freekick else
+        load_prepared_sp_data("Throw ins", DATA_VERSION)
+    )
     hero_block(
-        "Dead-ball intelligence" if is_freekick else "Touchline restart intelligence",
+        "Free-kick briefing" if is_freekick else "Touchline restart intelligence",
         readable,
-        "Specialist view for free-kick origins, delivery profiles, takers, shooters, and possession-level shot value."
+        "Fast view with only the core free-kick volume, origin, shot, goal, and xG signals."
         if is_freekick else
         "Specialist view for throw-in territory, touchline pressure, taker profiles, shot creation, and possession-level output.",
     )
@@ -1434,24 +1374,24 @@ def render_sequence_page(label: str) -> None:
     key = "freekicks" if is_freekick else "throwins"
     leagues = _league_filter_options(df, "SP")
     teams = _set_piece_team_options(df)
-    periods = ["All"] + _safe_sorted(df["game_period"]) if "game_period" in df.columns else ["All"]
+    periods = ["All"] + _safe_sorted(df["game_period"]) if (not is_freekick and "game_period" in df.columns) else ["All"]
     takers = _safe_sorted(df["Taker"]) if "Taker" in df.columns else []
-    shooters = _safe_sorted(df["Shooter"]) if "Shooter" in df.columns else []
-    heights = _safe_sorted(df["Delivery height"]) if "Delivery height" in df.columns else []
-    outcomes = _safe_sorted(df["Shot outcome"]) if "Shot outcome" in df.columns else []
+    shooters = _safe_sorted(df["Shooter"]) if (not is_freekick and "Shooter" in df.columns) else []
+    heights = _safe_sorted(df["Delivery height"]) if (not is_freekick and "Delivery height" in df.columns) else []
+    outcomes = _safe_sorted(df["Shot outcome"]) if (not is_freekick and "Shot outcome" in df.columns) else []
 
     league = _league_selectbox("League", leagues, key=f"{key}_league")
     team = st.sidebar.selectbox("Team", teams, key=f"{key}_team")
     perspective = st.sidebar.radio("Perspective", ["For", "Against"], key=f"{key}_perspective")
-    period = st.sidebar.selectbox("Game period", periods, key=f"{key}_period")
+    period = "All" if is_freekick else st.sidebar.selectbox("Game period", periods, key=f"{key}_period")
     sample = st.sidebar.radio("Sample", ["Total", "Last 10 games"], key=f"{key}_sample")
     minute_min = int(pd.to_numeric(df["minute"], errors="coerce").fillna(0).min()) if "minute" in df.columns else 0
     minute_max = max(95, int(pd.to_numeric(df["minute"], errors="coerce").fillna(95).max())) if "minute" in df.columns else 95
-    minute_range = st.sidebar.slider("Minute range", minute_min, minute_max, (minute_min, minute_max), key=f"{key}_minutes")
+    minute_range = (minute_min, minute_max) if is_freekick else st.sidebar.slider("Minute range", minute_min, minute_max, (minute_min, minute_max), key=f"{key}_minutes")
     taker_filter = st.sidebar.multiselect("Initial / sequence taker" if is_freekick else "Thrower / sequence starter", takers, key=f"{key}_taker")
-    shooter_filter = st.sidebar.multiselect("Shooter", shooters, key=f"{key}_shooter")
-    height_filter = st.sidebar.multiselect("Pass height" if is_freekick else "Initial pass height", heights, key=f"{key}_height")
-    outcome_filter = st.sidebar.multiselect("Shot outcome", outcomes, key=f"{key}_outcome")
+    shooter_filter = [] if is_freekick else st.sidebar.multiselect("Shooter", shooters, key=f"{key}_shooter")
+    height_filter = [] if is_freekick else st.sidebar.multiselect("Initial pass height", heights, key=f"{key}_height")
+    outcome_filter = [] if is_freekick else st.sidebar.multiselect("Shot outcome", outcomes, key=f"{key}_outcome")
 
     filtered = df.copy()
     if league != "All" and "League" in filtered.columns:
@@ -1479,6 +1419,8 @@ def render_sequence_page(label: str) -> None:
         ("Taker" if is_freekick else "Thrower", taker_filter), ("Shooter", shooter_filter),
         ("Height", height_filter), ("Shot outcome", outcome_filter),
     ]
+    if is_freekick:
+        filters = [("League", league), ("Team", team), ("Perspective", perspective if team != "All" else "All"), ("Sample", sample), ("Taker", taker_filter)]
 
     render_export_controls(filtered, key, readable)
     st.caption(
@@ -1503,6 +1445,28 @@ def render_sequence_page(label: str) -> None:
     c3.metric("Direct threat share" if is_freekick else "Final-third share", f"{third_metric:.1f}%")
     c4.metric("Wide delivery share" if is_freekick else "Long throw share", f"{profile_metric:.1f}%")
     st.metric("Best sequence xG", f"{best_seq_xg:.3f}")
+
+    if is_freekick:
+        insights = generate_set_piece_insights(filtered, readable)
+        zone_summary = _freekick_zone_summary_from_sequences(sequences)
+        priority_cols = [
+            "Match", "Team", "Minute", "Zone", "Channel", "Initial taker",
+            "Actions", "Shots", "Goals", "Total xG", "Best shooter", "Best shot xG", "Shot outcome",
+        ]
+        priority_sequences = sequences[[c for c in priority_cols if c in sequences.columns]] if not sequences.empty else sequences
+
+        top_left, top_right = st.columns([0.9, 1.25])
+        with top_left:
+            section_header("Vital Notes", "Core signals only")
+            for insight in insights[:4]:
+                st.markdown(f"<div class='mm-insight-card'>{insight}</div>", unsafe_allow_html=True)
+        with top_right:
+            section_header("Origin Threat", "Where value is coming from")
+            render_analyst_table(zone_summary.head(10), height=300)
+
+        section_header("Priority Sequences", "Best free-kick possessions by xG")
+        render_analyst_table(priority_sequences.head(25), height=430)
+        return
 
     view = st.radio("View", ["Briefing", "Origins", "Roles", "Pitch Evidence", "Event Log"], horizontal=True, key=f"{key}_view")
     if view == "Briefing":

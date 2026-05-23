@@ -2596,6 +2596,75 @@ def load_prepared_sp_data(label: str, _data_version: str = DATA_VERSION) -> pd.D
     return filter_by_sp_type(prepare_sp_dataframe(raw, label=label), label)
 
 
+@st.cache_data(show_spinner=False)
+def load_prepared_freekick_brief_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
+    keep_columns = {
+        "match_id",
+        "possession",
+        "team.name",
+        "type.name",
+        "SP_Type",
+        "location.pass",
+        "pass.height.name",
+        "timestamp",
+        "Taker",
+        "Shooter",
+        "location.shot",
+        "shot.statsbomb_xg",
+        "shot.outcome.name",
+        "shot_x",
+        "shot_y",
+    }
+    sources = []
+    for path in _data_files("SP", (".xlsx", ".xlsm", ".xls")):
+        league = _league_from_filename(path)
+        try:
+            source = pd.read_excel(
+                path,
+                engine="openpyxl",
+                usecols=lambda col: str(col) in keep_columns,
+            )
+        except (ImportError, ValueError, FileNotFoundError):
+            source = pd.DataFrame()
+        except Exception:
+            source = pd.DataFrame()
+        source = _normalise_sp_source(_with_league(source, league))
+        if not _sp_source_matches_filename_league(source, league):
+            continue
+        if not source.empty:
+            sources.append(source)
+
+    if not sources:
+        return pd.DataFrame()
+
+    raw = pd.concat(sources, ignore_index=True, sort=False)
+    raw = filter_by_sp_type(raw, "Freekicks")
+    prepared = filter_by_sp_type(prepare_sp_dataframe(raw, label="Freekicks"), "Freekicks")
+    vital_columns = [
+        "match_id",
+        "possession",
+        "Team",
+        "Match",
+        "League",
+        "minute",
+        "second",
+        "game_period",
+        "match_rank",
+        "pass_x",
+        "pass_y",
+        "Taker",
+        "Delivery height",
+        "Shooter",
+        "shot_x",
+        "shot_y",
+        "xg",
+        "Shot outcome",
+        "is_shot",
+        "is_goal",
+    ]
+    return prepared[[c for c in vital_columns if c in prepared.columns]].copy()
+
+
 def _is_swe_sp_df(df: pd.DataFrame) -> bool:
     return "SP_Type" in df.columns
 
