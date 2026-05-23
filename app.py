@@ -1225,8 +1225,7 @@ def render_corners() -> None:
         st.warning("No corner rows were found in the bundled workbook(s).")
         return
 
-    if not is_freekick:
-        render_workflow_rail()
+    render_workflow_rail()
     filtered, filters = filter_sp_page_data(df, label, "corners")
     render_export_controls(filtered, label, label)
     st.caption("Corners use every Excel workbook in Data/Corners, plus any corner CSV files in the same folder.")
@@ -1370,7 +1369,8 @@ def render_sequence_page(label: str) -> None:
         st.warning(f"No {readable.lower()} rows were found in the bundled SP workbooks.")
         return
 
-    render_workflow_rail()
+    if not is_freekick:
+        render_workflow_rail()
     key = "freekicks" if is_freekick else "throwins"
     leagues = _league_filter_options(df, "SP")
     teams = _set_piece_team_options(df)
