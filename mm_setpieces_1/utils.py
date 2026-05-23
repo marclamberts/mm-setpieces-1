@@ -2086,6 +2086,37 @@ def _read_excel_path(path: Path, sheet_name=0):
     except Exception:
         return {} if sheet_name is None else pd.DataFrame()
 
+
+def _sp_parquet_path(path: Path) -> Path:
+    return DATA_DIR / "SP_Parquet" / f"{path.stem}.parquet"
+
+
+def _read_sp_source_path(path: Path, columns: list[str] | set[str] | None = None) -> pd.DataFrame:
+    parquet_path = _sp_parquet_path(path)
+    if parquet_path.exists():
+        try:
+            if columns is None:
+                return pd.read_parquet(parquet_path, engine="pyarrow")
+            return pd.read_parquet(parquet_path, engine="pyarrow", columns=list(columns))
+        except ImportError:
+            pass
+        except Exception:
+            try:
+                source = pd.read_parquet(parquet_path, engine="pyarrow")
+                return source[[col for col in source.columns if str(col) in columns]].copy()
+            except Exception:
+                pass
+
+    try:
+        if columns is None:
+            return pd.read_excel(path, engine="openpyxl")
+        return pd.read_excel(path, engine="openpyxl", usecols=lambda col: str(col) in columns)
+    except ImportError:
+        return pd.DataFrame()
+    except Exception:
+        return pd.DataFrame()
+
+
 @st.cache_data(show_spinner=False)
 def _read_excel_if_exists(filename: str, sheet_name=0):
     for path in _candidate_paths(filename):
@@ -2368,7 +2399,7 @@ def load_swe_sp_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
     sources = []
     for path in _data_files("SP", (".xlsx", ".xlsm", ".xls")):
         league = _league_from_filename(path)
-        source = _normalise_sp_source(_with_league(_read_excel_path(path), league))
+        source = _normalise_sp_source(_with_league(_read_sp_source_path(path), league))
         if not _sp_source_matches_filename_league(source, league):
             continue
         sources.append(source)
@@ -2618,16 +2649,7 @@ def load_prepared_freekick_brief_data(_data_version: str = DATA_VERSION) -> pd.D
     sources = []
     for path in _data_files("SP", (".xlsx", ".xlsm", ".xls")):
         league = _league_from_filename(path)
-        try:
-            source = pd.read_excel(
-                path,
-                engine="openpyxl",
-                usecols=lambda col: str(col) in keep_columns,
-            )
-        except (ImportError, ValueError, FileNotFoundError):
-            source = pd.DataFrame()
-        except Exception:
-            source = pd.DataFrame()
+        source = _read_sp_source_path(path, columns=keep_columns)
         source = _normalise_sp_source(_with_league(source, league))
         if not _sp_source_matches_filename_league(source, league):
             continue
