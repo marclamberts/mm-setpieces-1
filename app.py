@@ -1344,7 +1344,11 @@ def _freekick_zone_summary_from_sequences(sequences: pd.DataFrame) -> pd.DataFra
         )
         .reset_index()
     )
-    summary["Shot rate %"] = summary.apply(lambda r: _rate(r["Shots"], r["Sequences"]), axis=1)
+    summary["Shot rate %"] = (
+        pd.to_numeric(summary["Shots"], errors="coerce").fillna(0)
+        / pd.to_numeric(summary["Sequences"], errors="coerce").replace(0, np.nan)
+        * 100
+    ).fillna(0).round(1)
     summary["Total_xG"] = summary["Total_xG"].round(2)
     summary["Avg_xG"] = summary["Avg_xG"].round(3)
     return summary.sort_values(["Total_xG", "Shots", "Sequences"], ascending=False)
