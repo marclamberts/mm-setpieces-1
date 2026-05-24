@@ -9,9 +9,10 @@ The app runs from a single Streamlit entry file. Use the sidebar selector inside
 Analysis.
 
 Bundled restart data lives in three folders: `Data/Corners`, `Data/SP`, and
-`Data/HOPS`. The app loads every Excel workbook in those folders, including the
-Serie A corner and SP workbooks. Corner CSV files in `Data/Corners` are loaded
-as well.
+`Data/HOPS`. Corners and SP phases load from Parquet files. `Data/SP` contains
+phase-specific files such as `Eredivisie - Freekicks.parquet` and
+`Eredivisie - Throwins.parquet`, so the app does not need separate prepared or
+archive SP folders.
 
 Exports and PDF reports are prepared on demand so normal filtering and view
 switching stay lighter.

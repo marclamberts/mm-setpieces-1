@@ -100,7 +100,7 @@ OPTA_HALF_START = 50
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR.parent / "Data"
 LOGO_PATH = BASE_DIR.parent / "assets" / "setplaypro-logo.jpg"
-DATA_VERSION = "foldered_sources_v12_sp_split_parquet"
+DATA_VERSION = "foldered_sources_v13_data_simplified"
 
 BLACK = "#0b0f14"
 RED = "#c1121f"
@@ -2295,7 +2295,7 @@ SP_SOURCE_COLUMNS = {
     "restart_y",
     "actions_checked",
 }
-SP_PREPARED_DIR = DATA_DIR / "SP_Prepared"
+SP_PREPARED_COLUMNS = {"Team", "Match", "minute", "pass_x", "pass_y", "xg", "is_shot", "match_rank"}
 
 
 def _folder_from_filename(path: Path) -> str:
@@ -2425,19 +2425,11 @@ def _sp_files_for_label(label: str) -> list[Path]:
 
 
 def _prepared_sp_files_for_label(label: str) -> list[Path]:
-    if not SP_PREPARED_DIR.exists():
-        return []
-    terms = _sp_phase_terms(label)
-    return sorted(
-        [
-            path
-            for path in SP_PREPARED_DIR.glob("*.parquet")
-            if path.is_file()
-            and not path.name.startswith(("~$", "."))
-            and (not terms or any(term in path.stem.lower().replace("_", " ") for term in terms))
-        ],
-        key=lambda path: tuple(part.lower() for part in path.parts),
-    )
+    return [
+        path
+        for path in _sp_files_for_label(label)
+        if SP_PREPARED_COLUMNS.issubset(_columns_from_data_file(path))
+    ]
 
 
 def _read_prepared_sp_data(label: str) -> pd.DataFrame:
