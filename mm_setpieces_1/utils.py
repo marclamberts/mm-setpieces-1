@@ -1879,22 +1879,7 @@ def render_empty_filter_state() -> None:
 
 
 def render_workflow_rail() -> None:
-    steps = [
-        ("1", "Filter opponent"),
-        ("2", "Read KPIs"),
-        ("3", "Check evidence"),
-        ("4", "Export brief"),
-    ]
-    html = "<div class='mm-workflow-rail'>"
-    for number, title in steps:
-        html += (
-            "<div class='mm-rail-step'>"
-            f"<div class='mm-rail-label'>Step {escape(number)}</div>"
-            f"<div class='mm-rail-title'>{escape(title)}</div>"
-            "</div>"
-        )
-    html += "</div>"
-    st.markdown(html, unsafe_allow_html=True)
+    return None
 
 
 def hero_block(eyebrow: str, title: str, copy: str) -> None:
@@ -1911,12 +1896,10 @@ def hero_block(eyebrow: str, title: str, copy: str) -> None:
 
 
 def section_header(title: str, note: str = "") -> None:
-    note_html = f'<div class="mm-section-note">{note}</div>' if note else ""
     st.markdown(
         f"""
         <div class="mm-section">
             <div class="mm-section-title">{title}</div>
-            {note_html}
         </div>
         """,
         unsafe_allow_html=True,

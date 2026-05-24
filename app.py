@@ -556,7 +556,7 @@ def render_single_app_sidebar() -> str:
     if "section" not in st.session_state:
         st.session_state["section"] = "Home"
 
-    st.sidebar.markdown("### Desk")
+    st.sidebar.markdown("### Pages")
     section = st.sidebar.radio(
         "Choose view",
         APP_SECTIONS,
@@ -566,7 +566,7 @@ def render_single_app_sidebar() -> str:
     )
     st.session_state["section"] = section
     st.sidebar.markdown("---")
-    st.sidebar.markdown(f"### {section} filters")
+    st.sidebar.markdown(f"### Filters")
     if section != "Home":
         if st.sidebar.button("Reset filters", key=f"reset_{section}", width="stretch"):
             reset_current_filters(section)
@@ -894,156 +894,54 @@ def box_chart(df: pd.DataFrame, x: str, y: str, title: str = "") -> go.Figure:
     return fig
 
 
+def simple_view_radio(key: str, options: list[str]) -> str:
+    if st.session_state.get(key) not in options:
+        st.session_state[key] = options[0]
+    return st.radio("View", options, horizontal=True, key=key)
+
+
 def render_home() -> None:
     corners, freekicks, throwins, hops = command_center_data()
     teams = _team_options(corners, freekicks, throwins, hops)
 
     hero_block(
-        "Michael Mackin · Football Intelligence",
-        "American-style soccer analysis command center",
-        "A tactical intelligence workspace for restart threats, player roles, duel profiles, timing clues, and report-ready match evidence.",
+        "Football Intelligence",
+        "Pick a team. Open a module.",
+        "Simple match-prep views for set pieces, player roles, duel profiles, league benchmarks, and timing checks.",
     )
 
-    st.markdown(
-        """
-        <div class="mm-scout-shell">
-            <div class="mm-command-panel">
-                <div class="mm-command-title">Match Prep Flow</div>
-                <div class="mm-command-row">
-                    <div class="mm-command-label">1 · Load</div>
-                    <div class="mm-command-value">Open a restart desk and narrow the opponent, phase, takers, outcome, and game-state filters.</div>
-                </div>
-                <div class="mm-command-row">
-                    <div class="mm-command-label">2 · Read</div>
-                    <div class="mm-command-value">Start with the insight cards, origin maps, role tables, and possession-level sequence rankings.</div>
-                </div>
-                <div class="mm-command-row">
-                    <div class="mm-command-label">3 · Brief</div>
-                    <div class="mm-command-value">Use the report tab to export the active view into a pre-match PDF with maps and scouting labels.</div>
-                </div>
-            </div>
-            <div class="mm-command-panel">
-                <div class="mm-command-title">Scouting Outputs</div>
-                <div class="mm-command-row">
-                    <div class="mm-command-label">Roles</div>
-                    <div class="mm-command-value">Takers, shooters, throwers, targets, delivery profiles, and duel specialists.</div>
-                </div>
-                <div class="mm-command-row">
-                    <div class="mm-command-label">Threats</div>
-                    <div class="mm-command-value">Shot value, origin zones, channel bias, final-third pressure, and delay behaviour.</div>
-                </div>
-                <div class="mm-command-row">
-                    <div class="mm-command-label">Reports</div>
-                    <div class="mm-command-value">PDF briefings, mplsoccer pitch visuals, and exportable analyst tables.</div>
-                </div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        """
-        <div class="mm-feature-strip">
-            <div class="mm-feature-pill">
-                <div class="mm-feature-value">Live feeds</div>
-                <div class="mm-feature-label">Intelligence sources</div>
-            </div>
-            <div class="mm-feature-pill">
-                <div class="mm-feature-value">Sequence level</div>
-                <div class="mm-feature-label">Possession evidence</div>
-            </div>
-            <div class="mm-feature-pill">
-                <div class="mm-feature-value">Roles + archetypes</div>
-                <div class="mm-feature-label">Player ID</div>
-            </div>
-            <div class="mm-feature-pill">
-                <div class="mm-feature-value">On-demand export</div>
-                <div class="mm-feature-label">Faster reruns</div>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    section_header("Command Center", "Team snapshot, opponent comparison, and player search")
+    section_header("Team Snapshot")
     if teams:
         default_team = teams[0]
-        command_left, command_right = st.columns([1.05, .95])
-        with command_left:
-            selected_team = st.selectbox("Team snapshot", teams, index=teams.index(default_team), key="home_team_snapshot")
-            snapshot_perspective = st.radio("Snapshot perspective", ["For", "Against"], horizontal=True, key="home_snapshot_perspective")
-            snapshot = team_snapshot_table(selected_team, corners, freekicks, throwins, snapshot_perspective)
-            total_set_pieces = int(snapshot["Set pieces"].sum())
-            total_shots = int(snapshot["Shots"].sum())
-            total_goals = int(snapshot["Goals"].sum())
-            total_xg = float(snapshot["xG"].sum())
-            xg_per_100 = (total_xg / total_set_pieces * 100) if total_set_pieces else 0
-            shot_rate = (total_shots / total_set_pieces * 100) if total_set_pieces else 0
-            phase_read, role_read, hops_read = selected_team_staff_read(selected_team, snapshot, hops)
-            st.markdown(
-                f"""
-                <div class="mm-panel">
-                    <div class="mm-panel-title">{selected_team}</div>
-                    <div class="mm-panel-copy">All restart phases in one staff-ready snapshot.</div>
-                    <div class="mm-stat-grid">
-                        <div class="mm-stat-card">
-                            <div class="mm-stat-label">Set pieces</div>
-                            <div class="mm-stat-value">{total_set_pieces:,}</div>
-                        </div>
-                        <div class="mm-stat-card is-red">
-                            <div class="mm-stat-label">Shots</div>
-                            <div class="mm-stat-value">{total_shots:,}</div>
-                        </div>
-                        <div class="mm-stat-card">
-                            <div class="mm-stat-label">Goals</div>
-                            <div class="mm-stat-value">{total_goals:,}</div>
-                        </div>
-                        <div class="mm-stat-card is-red">
-                            <div class="mm-stat-label">Total xG</div>
-                            <div class="mm-stat-value">{_fmt_num(total_xg, 2)}</div>
-                        </div>
-                        <div class="mm-stat-card">
-                            <div class="mm-stat-label">xG / 100</div>
-                            <div class="mm-stat-value">{_fmt_num(xg_per_100, 2)}</div>
-                        </div>
-                        <div class="mm-stat-card is-red">
-                            <div class="mm-stat-label">Shot rate</div>
-                            <div class="mm-stat-value">{_fmt_num(shot_rate, 1)}%</div>
-                        </div>
-                    </div>
-                    <div class="mm-profile-strip">
-                        <div class="mm-profile-card">
-                            <div class="mm-profile-title">Threat Read</div>
-                            <div class="mm-profile-copy">{escape(phase_read)}</div>
-                        </div>
-                        <div class="mm-profile-card">
-                            <div class="mm-profile-title">Role Read</div>
-                            <div class="mm-profile-copy">{escape(role_read)}</div>
-                        </div>
-                        <div class="mm-profile-card">
-                            <div class="mm-profile-title">Duel Read</div>
-                            <div class="mm-profile-copy">{escape(hops_read)}</div>
-                        </div>
-                    </div>
+        selected_team = st.selectbox("Team", teams, index=teams.index(default_team), key="home_team_snapshot")
+        snapshot_perspective = st.radio("View", ["For", "Against"], horizontal=True, key="home_snapshot_perspective")
+        snapshot = team_snapshot_table(selected_team, corners, freekicks, throwins, snapshot_perspective)
+        total_set_pieces = int(snapshot["Set pieces"].sum())
+        total_shots = int(snapshot["Shots"].sum())
+        total_goals = int(snapshot["Goals"].sum())
+        total_xg = float(snapshot["xG"].sum())
+        shot_rate = (total_shots / total_set_pieces * 100) if total_set_pieces else 0
+        phase_read, role_read, _ = selected_team_staff_read(selected_team, snapshot, hops)
+        st.markdown(
+            f"""
+            <div class="mm-panel">
+                <div class="mm-panel-title">{escape(selected_team)}</div>
+                <div class="mm-stat-grid">
+                    <div class="mm-stat-card"><div class="mm-stat-label">Set pieces</div><div class="mm-stat-value">{total_set_pieces:,}</div></div>
+                    <div class="mm-stat-card is-red"><div class="mm-stat-label">Shots</div><div class="mm-stat-value">{total_shots:,}</div></div>
+                    <div class="mm-stat-card"><div class="mm-stat-label">Goals</div><div class="mm-stat-value">{total_goals:,}</div></div>
+                    <div class="mm-stat-card is-red"><div class="mm-stat-label">xG</div><div class="mm-stat-value">{_fmt_num(total_xg, 2)}</div></div>
+                    <div class="mm-stat-card"><div class="mm-stat-label">Shot rate</div><div class="mm-stat-value">{_fmt_num(shot_rate, 1)}%</div></div>
                 </div>
-                """,
-                unsafe_allow_html=True,
-            )
-            render_analyst_table(snapshot, height=210)
-
-        with command_right:
-            compare_team = st.selectbox("Compare with", teams, index=min(1, len(teams) - 1), key="home_compare_team")
-            comparison = pd.concat(
-                [
-                    team_snapshot_table(selected_team, corners, freekicks, throwins, snapshot_perspective).assign(Team=selected_team),
-                    team_snapshot_table(compare_team, corners, freekicks, throwins, snapshot_perspective).assign(Team=compare_team),
-                ],
-                ignore_index=True,
-            )
-            fig = bar_chart(comparison, x="Phase", y="xG", color="Team", barmode="group")
-            fig.update_layout(height=345, margin=dict(l=10, r=10, t=35, b=10), legend_title_text="")
-            render_plotly_visual(polish_plotly_figure(fig), "Home team comparison", "home_team_comparison_png")
+                <div class="mm-profile-strip">
+                    <div class="mm-profile-card"><div class="mm-profile-title">Main Read</div><div class="mm-profile-copy">{escape(phase_read)}</div></div>
+                    <div class="mm-profile-card"><div class="mm-profile-title">Role Read</div><div class="mm-profile-copy">{escape(role_read)}</div></div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        render_analyst_table(snapshot, height=190)
 
         search_query = st.text_input("Search player, taker, shooter, or HOPS profile", key="home_people_search", placeholder="Type at least 2 characters")
         search_results = search_people(search_query, corners, freekicks, throwins, hops)
@@ -1053,90 +951,20 @@ def render_home() -> None:
     else:
         st.info("No team names were found in the bundled data.")
 
-    section_header("Opposition Intelligence Desks", "Primary event analysis")
-    cards = [
-        (
-            "Corners",
-            "Corner delivery dossier",
-            "Rank teams, takers, target zones, shot value, second-ball patterns, and match-ready delivery maps.",
-            "Data/Corners parquet files",
-        ),
-        (
-            "Freekicks",
-            "Dead-ball origin dossier",
-            "Free-kick origins, channel threat, taker tendencies, shooter value, and possession-level outcomes.",
-            "Data/SP workbooks · From Free Kick",
-        ),
-        (
-            "Throw-ins",
-            "Touchline restart dossier",
-            "Territory, side bias, pressure profile, thrower output, and shot creation from throw-in sequences.",
-            "Data/SP workbooks · From Throw In",
-        ),
+    section_header("Open A Module")
+    module_cols = st.columns(3)
+    modules = [
+        ("Corners", "home_open_corners"),
+        ("Freekicks", "home_open_freekicks"),
+        ("Throw-ins", "home_open_throwins"),
+        ("HOPS", "home_open_hops"),
+        ("League Comparison", "home_open_league_comparison"),
+        ("Delay Analysis", "home_open_delay"),
     ]
-
-    for col, (title, kicker, copy, source) in zip(st.columns(3), cards):
-        with col:
-            st.markdown(
-                f"""
-                <div class="mm-nav-card">
-                    <div class="mm-card-kicker">Desk · {kicker}</div>
-                    <div class="mm-nav-title">{title}</div>
-                    <div class="mm-nav-copy">{copy}</div>
-                    <div class="mm-tiny">{source}</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-            if st.button(f"Open {title}", key=f"home_open_{title}"):
+    for idx, (title, key) in enumerate(modules):
+        with module_cols[idx % 3]:
+            if st.button(title, key=key, width="stretch"):
                 set_section(title)
-
-    section_header("Specialist Scouting Modules", "Player rating model, league benchmarking, and timing audit")
-    s1, s2, s3 = st.columns(3)
-    with s1:
-        st.markdown(
-            """
-            <div class="mm-nav-card">
-                <div class="mm-card-kicker">Module · Duel model</div>
-                <div class="mm-nav-title">HOPS</div>
-                <div class="mm-nav-copy">Aerial/duel strength by player and team, with percentiles, tiers, elite profiles, and weak-side risk checks.</div>
-                <div class="mm-tiny">Data/HOPS workbooks</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        if st.button("Open HOPS", key="home_open_hops"):
-            set_section("HOPS")
-
-    with s2:
-        st.markdown(
-            """
-            <div class="mm-nav-card">
-                <div class="mm-card-kicker">Module · League benchmark</div>
-                <div class="mm-nav-title">League Comparison</div>
-                <div class="mm-nav-copy">Compare restart volume, shot rate, and xG quality across competitions and restart phases.</div>
-                <div class="mm-tiny">Corners · Freekicks · Throw-ins</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        if st.button("Open League Comparison", key="home_open_league_comparison"):
-            set_section("League Comparison")
-
-    with s3:
-        st.markdown(
-            """
-            <div class="mm-nav-card">
-                <div class="mm-card-kicker">Module · Timing model</div>
-                <div class="mm-nav-title">Delay Analysis</div>
-                <div class="mm-nav-copy">Corner timing audit with delay bands, exit events, slow match profiles, and extraction reliability checks.</div>
-                <div class="mm-tiny">Data/corner_delays (1).xlsx</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-        if st.button("Open Delay Analysis", key="home_open_delay"):
-            set_section("Delay Analysis")
 
 
 def filter_sp_page_data(df: pd.DataFrame, label: str, key_prefix: str) -> tuple[pd.DataFrame, list[tuple[str, object]]]:
@@ -1153,9 +981,6 @@ def filter_sp_page_data(df: pd.DataFrame, label: str, key_prefix: str) -> tuple[
     perspective = st.sidebar.radio("Perspective", ["For", "Against"], key=f"{key_prefix}_perspective")
     league = _league_selectbox("League", leagues, key=f"{key_prefix}_league")
     sample = st.sidebar.radio("Sample", ["Total", "Last 10 games"], key=f"{key_prefix}_sample")
-    side = st.sidebar.radio("Side", sides, key=f"{key_prefix}_side")
-    time_in_game = st.sidebar.selectbox("Time in the game", periods, key=f"{key_prefix}_period")
-
     minute_min = 0
     minute_max = 95
     if "minute" in df.columns and not df["minute"].dropna().empty:
@@ -1163,12 +988,23 @@ def filter_sp_page_data(df: pd.DataFrame, label: str, key_prefix: str) -> tuple[
         if not minute_values.empty:
             minute_min = int(min(0, minute_values.min()))
             minute_max = max(95, int(minute_values.max()))
-    minute_range = st.sidebar.slider("Minute range", minute_min, minute_max, (minute_min, minute_max), key=f"{key_prefix}_minutes")
-    taker_filter = st.sidebar.multiselect("Taker", takers, key=f"{key_prefix}_taker")
-    technique_filter = st.sidebar.multiselect("Delivery technique", techniques, key=f"{key_prefix}_technique")
-    height_filter = st.sidebar.multiselect("Delivery height", heights, key=f"{key_prefix}_height")
-    shot_outcome_filter = st.sidebar.multiselect("Shot outcome", shot_outcomes, key=f"{key_prefix}_outcome")
-    only_shots = st.sidebar.checkbox(f"Only {label.lower()} ending with a shot", value=False, key=f"{key_prefix}_shots_only")
+    side = "All"
+    time_in_game = "All"
+    minute_range = (minute_min, minute_max)
+    taker_filter = []
+    technique_filter = []
+    height_filter = []
+    shot_outcome_filter = []
+    only_shots = False
+    with st.sidebar.expander("More filters", expanded=False):
+        side = st.radio("Side", sides, key=f"{key_prefix}_side")
+        time_in_game = st.selectbox("Time in game", periods, key=f"{key_prefix}_period")
+        minute_range = st.slider("Minutes", minute_min, minute_max, (minute_min, minute_max), key=f"{key_prefix}_minutes")
+        taker_filter = st.multiselect("Taker", takers, key=f"{key_prefix}_taker")
+        technique_filter = st.multiselect("Technique", techniques, key=f"{key_prefix}_technique")
+        height_filter = st.multiselect("Height", heights, key=f"{key_prefix}_height")
+        shot_outcome_filter = st.multiselect("Shot outcome", shot_outcomes, key=f"{key_prefix}_outcome")
+        only_shots = st.checkbox("Shots only", value=False, key=f"{key_prefix}_shots_only")
 
     filtered = df.copy()
     filtered = _apply_team_perspective(filtered, team, perspective)
@@ -1214,29 +1050,27 @@ def render_corners() -> None:
     label = "Corners"
     df = load_prepared_sp_data(label, DATA_VERSION)
     hero_block(
-        "Set-piece intelligence",
+        "Set pieces",
         label,
-        "Scout team patterns, taker roles, shot output, and match-level set-piece value from the connected event workbooks.",
+        "Filter a team, read the KPIs, then open the view you need.",
     )
     if df.empty:
-        st.warning("No corner rows were found in the bundled workbook(s).")
+        st.warning("No corner rows were found.")
         return
 
-    render_workflow_rail()
     filtered, filters = filter_sp_page_data(df, label, "corners")
     render_export_controls(filtered, label, label)
-    st.caption("Corners use only Parquet files in Data/Corners.")
     render_filter_summary(label, len(df), len(filtered), filters)
     if filtered.empty:
         render_empty_filter_state()
 
     kpi_row(filtered)
     info_panel(filtered)
-    view = st.radio("View", ["Briefing", "Pitch Evidence", "PDF Brief", "Event Log"], horizontal=True, key="corners_view")
+    view = simple_view_radio("corners_view", ["Summary", "Pitch", "Report", "Rows"])
 
-    if view == "Briefing":
+    if view == "Summary":
         summary, technique_mix, outcome_mix = build_summary_tables(filtered)
-        section_header("Scouting Brief", "Team output, delivery mix, and outcome mix")
+        section_header("Summary")
         c1, c2, c3 = st.columns([1.35, 1, 1])
         with c1:
             st.markdown('<div class="mm-table-note">Ranked by total xG, goals, and shot volume.</div>', unsafe_allow_html=True)
@@ -1248,13 +1082,13 @@ def render_corners() -> None:
             st.markdown('<div class="mm-table-note">Delivery and shot result combinations.</div>', unsafe_allow_html=True)
             render_analyst_table(outcome_mix.head(20), height=320)
 
-        section_header("Staff Notes", "Automatic coaching notes from the current filter")
+        section_header("Notes")
         insight_cols = st.columns(2)
         for idx, insight in enumerate(generate_set_piece_insights(filtered, label)):
             with insight_cols[idx % 2]:
                 st.markdown(f"<div class='mm-insight-card'>{insight}</div>", unsafe_allow_html=True)
 
-        section_header("Quick Reads", "Fast visual summaries for the active filter")
+        section_header("Charts")
         qr1, qr2, qr3 = st.columns(3)
         with qr1:
             render_plotly_visual(categorical_breakdown_figure(filtered, "Taker", "Top takers", top_n=8, color="#c1121f"), "Corners top takers", "corners_top_takers_png")
@@ -1263,8 +1097,8 @@ def render_corners() -> None:
         with qr3:
             render_plotly_visual(minute_distribution_figure(filtered, "Minute distribution"), "Corners minute distribution", "corners_minute_distribution_png")
 
-        section_header("Scouting Boards", "Workbook-derived rankings and tactical pattern reads")
-        board_view = st.radio("Scouting board", ["Team Threat", "Takers", "Shot Targets", "Patterns", "Match Log"], horizontal=True, key="corners_board")
+        section_header("Boards")
+        board_view = st.radio("Board", ["Team Threat", "Takers", "Shot Targets", "Patterns", "Match Log"], horizontal=True, key="corners_board")
         if board_view == "Team Threat":
             render_analyst_table(build_team_leaderboard(filtered), height=430)
         elif board_view == "Takers":
@@ -1277,14 +1111,14 @@ def render_corners() -> None:
         elif board_view == "Match Log":
             render_analyst_table(build_match_log(filtered), height=430)
 
-        section_header("Roles & Archetypes", "Condensed scouting labels for preparation")
+        section_header("Roles")
         role_left, role_right = st.columns(2)
         with role_left:
             render_analyst_table(build_role_archetypes(filtered, label).head(15), height=360)
         with role_right:
             render_analyst_table(build_team_archetypes(filtered).head(15), height=360)
 
-    elif view == "Pitch Evidence":
+    elif view == "Pitch":
         left, right = st.columns(2)
         with left:
             render_mpl_visual(mplsoccer_delivery_figure(filtered, label), "Corners delivery map", "corners_delivery_map_png")
@@ -1293,8 +1127,8 @@ def render_corners() -> None:
 
         render_mpl_visual(mplsoccer_delivery_sp_outcome_figure(filtered, label), "Corners delivery map SP outcomes", "corners_delivery_map_sp_outcomes_png")
 
-    elif view == "PDF Brief":
-        section_header("Pre-Match PDF", "Download a staff briefing from the current filters")
+    elif view == "Report":
+        section_header("Report")
         report_left, report_right = st.columns([1, 1.2])
         with report_left:
             pdf_teams = ["All"]
@@ -1304,7 +1138,6 @@ def render_corners() -> None:
                 st.session_state["corners_pdf_team"] = "All"
             pdf_team = st.selectbox("Report team", pdf_teams, key="corners_pdf_team")
             opponent = st.text_input("Opponent / report label", value="", key="corners_pdf_label")
-            st.caption("The PDF uses the active sidebar filters plus this team selection, with text, logo, and three static pitch visuals.")
         with report_right:
             pdf_filtered = filtered.copy()
             if pdf_team != "All" and "Team" in pdf_filtered.columns:
@@ -1312,12 +1145,11 @@ def render_corners() -> None:
             pdf_label = f"{label} - {pdf_team}" if pdf_team != "All" else label
             safe_base = opponent.strip() or pdf_label
             safe_name = safe_base.lower().replace(" ", "_").replace("/", "-")
-            st.markdown('<div class="mm-table-note">PDF generation is prepared on demand because pitch images are heavier than tables.</div>', unsafe_allow_html=True)
             if st.checkbox("Prepare PDF brief", key="corners_prepare_pdf"):
                 st.download_button("Download pre-match PDF", data=_cached_report_pdf(pdf_filtered, pdf_label, opponent.strip()), file_name=f"{safe_name}_set_piece_report.pdf", mime="application/pdf", width="stretch")
 
-    elif view == "Event Log":
-        section_header("Event Log", f"{len(filtered):,} workbook rows in the current filter")
+    elif view == "Rows":
+        section_header("Rows", f"{len(filtered):,} rows")
         display_cols = [c for c in [
             "Match", "Team", "SP_Type", "Taker", "Shooter", "side", "minute", "second",
             "Technique", "Delivery height", "Shot outcome", "xg", "Delivery outcome",
@@ -1360,18 +1192,14 @@ def render_sequence_page(label: str) -> None:
         load_prepared_sp_data("Throw ins", DATA_VERSION)
     )
     hero_block(
-        "Free-kick briefing" if is_freekick else "Touchline restart intelligence",
+        "Set pieces",
         readable,
-        "Fast view with only the core free-kick volume, origin, shot, goal, and xG signals."
-        if is_freekick else
-        "Specialist view for throw-in territory, touchline pressure, taker profiles, shot creation, and possession-level output.",
+        "Filter a team, read the KPIs, then open the view you need.",
     )
     if df.empty:
-        st.warning(f"No {readable.lower()} rows were found in the bundled SP workbooks.")
+        st.warning(f"No {readable.lower()} rows were found.")
         return
 
-    if not is_freekick:
-        render_workflow_rail()
     key = "freekicks" if is_freekick else "throwins"
     leagues = _league_filter_options(df, "SP")
     teams = _set_piece_team_options(df)
@@ -1384,15 +1212,22 @@ def render_sequence_page(label: str) -> None:
     league = _league_selectbox("League", leagues, key=f"{key}_league")
     team = st.sidebar.selectbox("Team", teams, key=f"{key}_team")
     perspective = st.sidebar.radio("Perspective", ["For", "Against"], key=f"{key}_perspective")
-    period = "All" if is_freekick else st.sidebar.selectbox("Game period", periods, key=f"{key}_period")
     sample = st.sidebar.radio("Sample", ["Total", "Last 10 games"], key=f"{key}_sample")
     minute_min = int(pd.to_numeric(df["minute"], errors="coerce").fillna(0).min()) if "minute" in df.columns else 0
     minute_max = max(95, int(pd.to_numeric(df["minute"], errors="coerce").fillna(95).max())) if "minute" in df.columns else 95
-    minute_range = (minute_min, minute_max) if is_freekick else st.sidebar.slider("Minute range", minute_min, minute_max, (minute_min, minute_max), key=f"{key}_minutes")
-    taker_filter = st.sidebar.multiselect("Initial / sequence taker" if is_freekick else "Thrower / sequence starter", takers, key=f"{key}_taker")
-    shooter_filter = [] if is_freekick else st.sidebar.multiselect("Shooter", shooters, key=f"{key}_shooter")
-    height_filter = [] if is_freekick else st.sidebar.multiselect("Initial pass height", heights, key=f"{key}_height")
-    outcome_filter = [] if is_freekick else st.sidebar.multiselect("Shot outcome", outcomes, key=f"{key}_outcome")
+    period = "All"
+    minute_range = (minute_min, minute_max)
+    taker_filter = []
+    shooter_filter = []
+    height_filter = []
+    outcome_filter = []
+    with st.sidebar.expander("More filters", expanded=False):
+        period = "All" if is_freekick else st.selectbox("Game period", periods, key=f"{key}_period")
+        minute_range = (minute_min, minute_max) if is_freekick else st.slider("Minutes", minute_min, minute_max, (minute_min, minute_max), key=f"{key}_minutes")
+        taker_filter = st.multiselect("Taker" if is_freekick else "Thrower", takers, key=f"{key}_taker")
+        shooter_filter = [] if is_freekick else st.multiselect("Shooter", shooters, key=f"{key}_shooter")
+        height_filter = [] if is_freekick else st.multiselect("Height", heights, key=f"{key}_height")
+        outcome_filter = [] if is_freekick else st.multiselect("Shot outcome", outcomes, key=f"{key}_outcome")
 
     filtered = df.copy()
     if league != "All" and "League" in filtered.columns:
@@ -1424,11 +1259,6 @@ def render_sequence_page(label: str) -> None:
         filters = [("League", league), ("Team", team), ("Perspective", perspective if team != "All" else "All"), ("Sample", sample), ("Taker", taker_filter)]
 
     render_export_controls(filtered, key, readable)
-    st.caption(
-        "Source: every Excel workbook in Data/SP filtered to From Free Kick. Sequence tables group rows by match_id, possession, and team."
-        if is_freekick else
-        "Source: every Excel workbook in Data/SP filtered to From Throw In. Sequence tables group rows by match_id, possession, and team."
-    )
     render_filter_summary(readable, len(df), len(filtered), filters)
     if filtered.empty:
         render_empty_filter_state()
@@ -1469,8 +1299,8 @@ def render_sequence_page(label: str) -> None:
         render_analyst_table(priority_sequences.head(25), height=430)
         return
 
-    view = st.radio("View", ["Briefing", "Origins", "Roles", "Pitch Evidence", "Event Log"], horizontal=True, key=f"{key}_view")
-    if view == "Briefing":
+    view = simple_view_radio(f"{key}_view", ["Summary", "Origins", "Roles", "Pitch", "Rows"])
+    if view == "Summary":
         insights = generate_set_piece_insights(filtered, readable)
         if not sequences.empty:
             top_zone = sequences["Zone"].value_counts().head(1)
@@ -1533,10 +1363,10 @@ def render_sequence_page(label: str) -> None:
             section_header("Shot Targets", f"Shooters reached through {readable.lower()} possessions")
             render_analyst_table(freekick_shooter_summary(filtered) if is_freekick else throwin_shooter_summary(filtered), height=620)
 
-    elif view == "Pitch Evidence":
-        visual_view = st.radio("Pitch visual", ["Report shot view", "Interactive maps"], horizontal=True, key=f"{key}_visual")
-        if visual_view == "Report shot view":
-            section_header("Report Shot View", "Static mplsoccer shot-quality figure")
+    elif view == "Pitch":
+        visual_view = st.radio("Pitch visual", ["Shot map", "Start maps"], horizontal=True, key=f"{key}_visual")
+        if visual_view == "Shot map":
+            section_header("Shot Map")
             render_mpl_visual(mplsoccer_shot_figure(filtered, readable), f"{readable} report shot view", f"{key}_report_shot_view_png")
         else:
             left, right = st.columns(2)
@@ -1547,8 +1377,8 @@ def render_sequence_page(label: str) -> None:
                 section_header("Shot Map", f"Shot quality generated from {readable.lower()}")
                 render_plotly_visual(polish_plotly_figure(shotmap_figure(filtered, f"{readable} shot map")), f"{readable} shot map", f"{key}_shot_map_png")
 
-    elif view == "Event Log":
-        section_header("Sequence Log", "One row per match_id + possession + team")
+    elif view == "Rows":
+        section_header("Rows")
         render_analyst_table(sequences, height=430)
         with st.expander("Event-level rows", expanded=False):
             display_cols = [c for c in [
@@ -1572,9 +1402,13 @@ def render_league_comparison() -> None:
     phase = st.sidebar.selectbox("Phase", phases, key="league_comparison_phase")
     if any(league not in leagues for league in st.session_state.get("league_comparison_leagues", [])):
         st.session_state["league_comparison_leagues"] = leagues
-    selected_leagues = st.sidebar.multiselect("Leagues", leagues, default=leagues, key="league_comparison_leagues")
-    min_set_pieces = st.sidebar.slider("Minimum set pieces", min_value=1, max_value=100, value=10, key="league_comparison_min_sp")
-    top_n = st.sidebar.slider("Show top leagues", min_value=3, max_value=20, value=min(10, max(3, len(leagues))), key="league_comparison_top_n")
+    selected_leagues = leagues
+    min_set_pieces = 10
+    top_n = min(10, max(3, len(leagues)))
+    with st.sidebar.expander("More filters", expanded=False):
+        selected_leagues = st.multiselect("Leagues", leagues, default=leagues, key="league_comparison_leagues")
+        min_set_pieces = st.slider("Minimum set pieces", min_value=1, max_value=100, value=10, key="league_comparison_min_sp")
+        top_n = st.slider("Rows", min_value=3, max_value=20, value=top_n, key="league_comparison_top_n")
 
     filtered = df.copy()
     if phase != "All" and "Phase" in filtered.columns:
@@ -1613,8 +1447,8 @@ def render_league_comparison() -> None:
     c4.metric("Shot rate", f"{(shots / set_pieces * 100) if set_pieces else 0:.1f}%")
     c5.metric("xG / 100", f"{(total_xg / set_pieces * 100) if set_pieces else 0:.2f}")
 
-    view = st.radio("View", ["Briefing", "Evidence", "League Log"], horizontal=True, key="league_comparison_view")
-    if view == "Briefing":
+    view = simple_view_radio("league_comparison_view", ["Summary", "Charts", "Rows"])
+    if view == "Summary":
         left, right = st.columns([1.2, 1])
         with left:
             section_header("League Threat Board", "Restart output by competition")
@@ -1625,7 +1459,7 @@ def render_league_comparison() -> None:
         section_header("Set Piece Differences", "Goals and xG per restart by phase")
         render_analyst_table(set_piece_differences.head(top_n), height=430)
 
-    elif view == "Evidence":
+    elif view == "Charts":
         chart_left, chart_right = st.columns(2)
         chart_df = summary.head(top_n).sort_values("xG / 100")
         with chart_left:
@@ -1660,8 +1494,8 @@ def render_league_comparison() -> None:
             fig.update_layout(height=430, margin=dict(l=10, r=10, t=30, b=10), legend_title_text="")
             render_plotly_visual(polish_plotly_figure(fig), "League comparison set piece differences", "league_comparison_set_piece_differences_png")
 
-    elif view == "League Log":
-        section_header("League Event Log", f"{len(filtered):,} restart rows in the active filter")
+    elif view == "Rows":
+        section_header("Rows", f"{len(filtered):,} restart rows in the active filter")
         display_cols = [c for c in [
             "League", "Phase", "Match", "Team", "Taker", "Shooter", "side", "minute", "second",
             "Technique", "Delivery height", "Shot outcome", "xg", "Delivery outcome",
@@ -1671,7 +1505,7 @@ def render_league_comparison() -> None:
 
 def render_hops() -> None:
     df = load_hops_data(DATA_VERSION)
-    hero_block("Duel intelligence", "HOPS", "Player and team duel profiles from the HOPS workbook, ranked by rating, percentile, and squad-level depth.")
+    hero_block("Players", "HOPS", "Simple duel profile rankings.")
     if df.empty:
         st.warning("No HOPS rows were found in Data/HOPS.")
         return
@@ -1680,7 +1514,8 @@ def render_hops() -> None:
     teams = ["All"] + sorted(df["Team"].dropna().astype(str).unique().tolist())
     league = _league_selectbox("League", leagues, key="hops_league")
     team = st.sidebar.selectbox("Team", teams, key="hops_team")
-    top_n = st.sidebar.slider("Show top / bottom players", min_value=5, max_value=30, value=10, key="hops_top_n")
+    with st.sidebar.expander("More filters", expanded=False):
+        top_n = st.slider("Rows", min_value=5, max_value=30, value=10, key="hops_top_n")
 
     filtered = df.copy()
     if league != "All":
@@ -1724,8 +1559,8 @@ def render_hops() -> None:
     top_players = filtered.nlargest(top_n, "Rating")[["Player", "Team", "League", "Rating", "Percentile", "Tier"]].copy()
     bottom_players = filtered.nsmallest(top_n, "Rating")[["Player", "Team", "League", "Rating", "Percentile", "Tier"]].copy()
 
-    view = st.radio("View", ["Briefing", "Duel Evidence", "Player Log"], horizontal=True, key="hops_view")
-    if view == "Briefing":
+    view = simple_view_radio("hops_view", ["Summary", "Charts", "Rows"])
+    if view == "Summary":
         left, right = st.columns([1.15, 1])
         with left:
             section_header("Team Duel Board", "Average rating and high-end profiles by squad")
@@ -1736,7 +1571,7 @@ def render_hops() -> None:
         section_header("Risk Check", "Lowest ratings in the active filter")
         render_analyst_table(bottom_players, height=330)
 
-    elif view == "Duel Evidence":
+    elif view == "Charts":
         chart_left, chart_right = st.columns(2)
         with chart_left:
             section_header("Top Rating Evidence")
@@ -1750,8 +1585,8 @@ def render_hops() -> None:
             hist.update_layout(height=520, margin=dict(l=10, r=10, t=30, b=10), legend_title_text="")
             render_plotly_visual(polish_plotly_figure(hist), "HOPS rating distribution", "hops_rating_distribution_png")
 
-    elif view == "Player Log":
-        section_header("Player Log", f"{len(filtered):,} players")
+    elif view == "Rows":
+        section_header("Rows", f"{len(filtered):,} players")
         render_analyst_table(filtered.sort_values("Rating", ascending=False)[["Player", "Team", "League", "Rating", "Percentile", "Tier"]], height=620)
 
 
@@ -1762,7 +1597,7 @@ def render_delay() -> None:
     diagnostics = book.get("Diagnostics", pd.DataFrame()).copy()
     skipped = book.get("Skipped_Files", pd.DataFrame()).copy()
 
-    hero_block("Corner timing intelligence", "Delay Analysis", "Workbook-level timing audit for corners: matched clearances/exits, delay bands, match reliability, and diagnostic coverage.")
+    hero_block("Timing", "Delay Analysis", "Simple corner timing checks.")
     if events.empty:
         st.warning("No delay events were found in corner_delays (1).xlsx.")
         return
@@ -1774,8 +1609,11 @@ def render_delay() -> None:
 
     league = _league_selectbox("League", leagues, key="delay_league")
     match = st.sidebar.selectbox("Match", matches, key="delay_match")
-    period = st.sidebar.selectbox("Period", periods, key="delay_period")
-    out_type = st.sidebar.selectbox("Exit event", out_types, key="delay_exit")
+    period = "All"
+    out_type = "All"
+    with st.sidebar.expander("More filters", expanded=False):
+        period = st.selectbox("Period", periods, key="delay_period")
+        out_type = st.selectbox("Exit event", out_types, key="delay_exit")
 
     filtered = events.copy()
     if league != "All" and "League" in filtered.columns:
@@ -1791,7 +1629,8 @@ def render_delay() -> None:
         lo = float(filtered["delay_sec"].min())
         hi = float(filtered["delay_sec"].max())
         full_delay_range = (lo, hi)
-        delay_range = st.sidebar.slider("Delay range (seconds)", min_value=lo, max_value=hi, value=(lo, hi), key="delay_range")
+        with st.sidebar.expander("Delay range", expanded=False):
+            delay_range = st.slider("Seconds", min_value=lo, max_value=hi, value=(lo, hi), key="delay_range")
         filtered = filtered[filtered["delay_sec"].between(delay_range[0], delay_range[1])].copy()
     else:
         full_delay_range = None
@@ -1820,8 +1659,8 @@ def render_delay() -> None:
     c4.metric("Median delay", f"{median_delay:.1f}s")
     c5.metric("90th percentile", f"{p90_delay:.1f}s")
 
-    view = st.radio("View", ["Briefing", "Timing Evidence", "Audit", "Event Log"], horizontal=True, key="delay_view")
-    if view == "Briefing":
+    view = simple_view_radio("delay_view", ["Summary", "Charts", "Audit", "Rows"])
+    if view == "Summary":
         band_summary = (
             filtered.groupby("Delay band", dropna=False)
             .agg(Corners=("delay_sec", "size"), Avg_Delay=("delay_sec", "mean"), Median_Delay=("delay_sec", "median"), Min_Delay=("delay_sec", "min"), Max_Delay=("delay_sec", "max"))
@@ -1862,7 +1701,7 @@ def render_delay() -> None:
         section_header("Slowest Match Profiles", "Highest average delay in the active filter")
         render_analyst_table(match_delay.head(30), height=430)
 
-    elif view == "Timing Evidence":
+    elif view == "Charts":
         chart_left, chart_right = st.columns(2)
         with chart_left:
             section_header("Delay Evidence")
@@ -1897,8 +1736,8 @@ def render_delay() -> None:
             section_header("Skipped Files", "Files not included in the timing extraction")
             render_analyst_table(skipped, height=260)
 
-    elif view == "Event Log":
-        section_header("Matched Corner Event Log", f"{len(filtered):,} rows in the active filter")
+    elif view == "Rows":
+        section_header("Rows", f"{len(filtered):,} rows")
         display_cols = [c for c in [
             "match", "period", "out_event_type", "out_value", "gk_outcome",
             "out_time_mmss", "corner_time_mmss", "delay_sec", "Delay band",
