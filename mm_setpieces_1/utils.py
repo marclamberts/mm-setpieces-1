@@ -100,7 +100,7 @@ OPTA_HALF_START = 50
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR.parent / "Data"
 LOGO_PATH = BASE_DIR.parent / "assets" / "setplaypro-logo.jpg"
-DATA_VERSION = "foldered_sources_v10_bundesliga_ii"
+DATA_VERSION = "foldered_sources_v11_sp_parquet"
 
 BLACK = "#0b0f14"
 RED = "#c1121f"
@@ -2358,10 +2358,11 @@ def _is_data_file(path: Path, suffixes: tuple[str, ...]) -> bool:
 
 def _data_files(folder: str, suffixes: tuple[str, ...]) -> list[Path]:
     paths: list[Path] = []
-    if DATA_DIR.exists():
+    search_root = DATA_SUBFOLDERS.get(folder, DATA_DIR)
+    if search_root.exists():
         paths.extend(
             path
-            for path in DATA_DIR.rglob("*")
+            for path in search_root.rglob("*")
             if _is_data_file(path, suffixes)
             and _folder_from_file(path) == folder
         )
@@ -2399,25 +2400,18 @@ def _read_excel_path(path: Path, sheet_name=0):
         return {} if sheet_name is None else pd.DataFrame()
 
 
-def _sp_parquet_path(path: Path) -> Path:
-    return DATA_DIR / "SP_Parquet" / f"{path.stem}.parquet"
-
-
 def _read_sp_source_path(path: Path, columns: list[str] | set[str] | None = None) -> pd.DataFrame:
-    parquet_path = _sp_parquet_path(path)
-    if parquet_path.exists():
+    if path.suffix.lower() == ".parquet":
         try:
             if columns is None:
-                return pd.read_parquet(parquet_path, engine="pyarrow")
-            return pd.read_parquet(parquet_path, engine="pyarrow", columns=list(columns))
-        except ImportError:
-            pass
+                return pd.read_parquet(path, engine="pyarrow")
+            return pd.read_parquet(path, engine="pyarrow", columns=list(columns))
         except Exception:
             try:
-                source = pd.read_parquet(parquet_path, engine="pyarrow")
+                source = pd.read_parquet(path, engine="pyarrow")
                 return source[[col for col in source.columns if str(col) in columns]].copy()
             except Exception:
-                pass
+                return pd.DataFrame()
 
     try:
         if columns is None:
@@ -2568,10 +2562,10 @@ def _bundesliga_taker_team_map(_data_version: str = DATA_VERSION) -> dict[str, s
 @st.cache_data(show_spinner=False)
 def _sp_taker_team_map(league: str, _data_version: str = DATA_VERSION) -> dict[str, str]:
     sources = []
-    for path in _data_files("SP", (".xlsx", ".xlsm", ".xls")):
+    for path in _data_files("SP", (".parquet",)):
         if _league_from_filename(path) != league:
             continue
-        source = _normalise_sp_source(_with_league(_read_excel_path(path), league))
+        source = _normalise_sp_source(_with_league(_read_sp_source_path(path), league))
         if not _sp_source_matches_filename_league(source, league):
             continue
         if not source.empty:
@@ -2644,10 +2638,10 @@ def _sp_source_matches_filename_league(df: pd.DataFrame, league: str) -> bool:
 @st.cache_data(show_spinner=False)
 def _sp_match_taker_team_map(league: str, _data_version: str = DATA_VERSION) -> dict[tuple[str, str], str]:
     sources = []
-    for path in _data_files("SP", (".xlsx", ".xlsm", ".xls")):
+    for path in _data_files("SP", (".parquet",)):
         if _league_from_filename(path) != league:
             continue
-        source = _normalise_sp_source(_with_league(_read_excel_path(path), league))
+        source = _normalise_sp_source(_with_league(_read_sp_source_path(path), league))
         if not _sp_source_matches_filename_league(source, league):
             continue
         if not source.empty:
@@ -2706,7 +2700,7 @@ def load_corner_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
 @st.cache_data(show_spinner=False)
 def load_swe_sp_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
     sources = []
-    for path in _data_files("SP", (".xlsx", ".xlsm", ".xls")):
+    for path in _data_files("SP", (".parquet",)):
         league = _league_from_filename(path)
         source = _normalise_sp_source(_with_league(_read_sp_source_path(path), league))
         if not _sp_source_matches_filename_league(source, league):
@@ -2958,7 +2952,7 @@ def load_prepared_freekick_brief_data(_data_version: str = DATA_VERSION) -> pd.D
         "shot_y",
     }
     sources = []
-    for path in _data_files("SP", (".xlsx", ".xlsm", ".xls")):
+    for path in _data_files("SP", (".parquet",)):
         league = _league_from_filename(path)
         source = _read_sp_source_path(path, columns=keep_columns)
         source = _normalise_sp_source(_with_league(source, league))

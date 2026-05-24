@@ -85,7 +85,7 @@ def _safe_sorted(values: pd.Series) -> list[str]:
 
 
 def _source_league_options(folder: str) -> list[str]:
-    suffixes = (".parquet",) if folder == "Corners" else (".xlsx", ".xlsm", ".xls")
+    suffixes = (".parquet",) if folder in {"Corners", "SP"} else (".xlsx", ".xlsm", ".xls")
     return sorted({
         league
         for league in (_league_from_filename(path) for path in _data_files(folder, suffixes))
