@@ -2877,6 +2877,9 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
         _ensure_column(df, "Shooter", ["Shooter"], "Unknown")
         _ensure_column(df, "Taker", ["Taker"], "Unknown")
         _ensure_column(df, "League", ["League"], "Allsvenskan")
+        _ensure_column(df, "timestamp", ["timestamp", "pass_timestamp"], "")
+        _ensure_column(df, "pass_x", ["pass_x", "pass_location_x"], np.nan)
+        _ensure_column(df, "pass_y", ["pass_y", "pass_location_y"], np.nan)
         _ensure_column(df, "shot_x", ["shot_x", "shot_location_x"], np.nan)
         _ensure_column(df, "shot_y", ["shot_y", "shot_location_y"], np.nan)
         _ensure_column(df, "delivery_end_x", ["delivery_end_x", "pass_end_location_x", "end_x"], np.nan)
@@ -2887,13 +2890,13 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
             fill = "Allsvenskan" if col == "League" else ("No shot" if col == "Shot outcome" else "Unknown")
             df[col] = df[col].fillna(fill)
 
-        for col in ["minute", "second", "shot_x", "shot_y", "delivery_end_x", "delivery_end_y", "xg"]:
+        for col in ["minute", "second", "pass_x", "pass_y", "shot_x", "shot_y", "delivery_end_x", "delivery_end_y", "xg"]:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors="coerce")
 
         if "side" not in df.columns:
-            if "pass_location_y" in df.columns:
-                py = pd.to_numeric(df["pass_location_y"], errors="coerce")
+            if "pass_y" in df.columns:
+                py = pd.to_numeric(df["pass_y"], errors="coerce")
                 league_series = df["League"] if "League" in df.columns else pd.Series("", index=df.index)
                 threshold = np.where(league_series.astype(str).eq("UAE Pro League"), OPTA_PITCH_WIDTH / 2, PITCH_WIDTH / 2)
                 df["side"] = np.where(py <= threshold, "Left", "Right")
