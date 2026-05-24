@@ -45,31 +45,31 @@ def inject_sidebar_light_css() -> None:
             section[data-testid="stSidebar"],
             section[data-testid="stSidebar"] > div,
             section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {
-                background-color: #ffffff !important;
-                color: #111827 !important;
-                color-scheme: light !important;
+                background-color: #07111d !important;
+                color: #e5edf6 !important;
+                color-scheme: dark !important;
             }
             section[data-testid="stSidebar"] * {
-                color: #111827 !important;
+                color: #e5edf6 !important;
             }
             section[data-testid="stSidebar"] [data-baseweb="select"] > div,
             section[data-testid="stSidebar"] [data-baseweb="select"] span,
             section[data-testid="stSidebar"] [data-baseweb="select"] div {
-                background-color: #ffffff !important;
-                color: #111827 !important;
-                border-color: #d1d5db !important;
+                background-color: #0d1b2a !important;
+                color: #f8fafc !important;
+                border-color: rgba(148, 163, 184, 0.35) !important;
             }
             section[data-testid="stSidebar"] [data-baseweb="tag"] {
-                background-color: #f3f4f6 !important;
-                color: #111827 !important;
+                background-color: #14324f !important;
+                color: #f8fafc !important;
             }
             section[data-testid="stSidebar"] button {
-                background-color: #ffffff !important;
-                color: #111827 !important;
-                border: 1.5px solid #111827 !important;
+                background-color: #c1121f !important;
+                color: #ffffff !important;
+                border: 1.5px solid #c1121f !important;
             }
             section[data-testid="stSidebar"] button:hover {
-                background-color: #111827 !important;
+                background-color: #991b1b !important;
                 color: #ffffff !important;
             }
         </style>
@@ -899,9 +899,9 @@ def render_home() -> None:
     teams = _team_options(corners, freekicks, throwins, hops)
 
     hero_block(
-        "Michael Mackin · Scouting Department",
-        "Set-piece opposition desk",
-        "A match-prep workspace for restart threats, player roles, duel profiles, timing clues, and report-ready tactical evidence.",
+        "Michael Mackin · Football Intelligence",
+        "American-style soccer analysis command center",
+        "A tactical intelligence workspace for restart threats, player roles, duel profiles, timing clues, and report-ready match evidence.",
     )
 
     st.markdown(
@@ -946,8 +946,8 @@ def render_home() -> None:
         """
         <div class="mm-feature-strip">
             <div class="mm-feature-pill">
-                <div class="mm-feature-value">5 workbooks</div>
-                <div class="mm-feature-label">Live scouting sources</div>
+                <div class="mm-feature-value">Live feeds</div>
+                <div class="mm-feature-label">Intelligence sources</div>
             </div>
             <div class="mm-feature-pill">
                 <div class="mm-feature-value">Sequence level</div>
@@ -966,7 +966,7 @@ def render_home() -> None:
         unsafe_allow_html=True,
     )
 
-    section_header("Command Center", "Fast team view, comparison, and player search")
+    section_header("Command Center", "Team snapshot, opponent comparison, and player search")
     if teams:
         default_team = teams[0]
         command_left, command_right = st.columns([1.05, .95])
@@ -1053,7 +1053,7 @@ def render_home() -> None:
     else:
         st.info("No team names were found in the bundled data.")
 
-    section_header("Opposition Restart Desks", "Primary event analysis")
+    section_header("Opposition Intelligence Desks", "Primary event analysis")
     cards = [
         (
             "Corners",
