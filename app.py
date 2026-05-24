@@ -845,7 +845,12 @@ def render_landing() -> None:
 
 def render_plotly_visual(fig, label: str, key: str) -> None:
     if PLOTLY_AVAILABLE:
-        st.plotly_chart(fig, use_container_width=True, config={"displaylogo": False, "modeBarButtonsToRemove": ["toImage"]})
+        st.plotly_chart(
+            fig,
+            use_container_width=True,
+            config={"displaylogo": False, "modeBarButtonsToRemove": ["toImage"]},
+            key=f"{key}_chart",
+        )
     else:
         st.image(plotly_figure_png_bytes(fig), use_container_width=True)
     render_plotly_png_download(fig, label, key)
