@@ -1979,7 +1979,10 @@ def _folder_from_filename(path: Path) -> str:
 
 def _columns_from_data_file(path: Path) -> set[str]:
     try:
-        if path.suffix.lower() == ".csv":
+        suffix = path.suffix.lower()
+        if suffix == ".parquet":
+            cols = pd.read_parquet(path, engine="pyarrow", columns=[]).columns
+        elif suffix == ".csv":
             cols = pd.read_csv(path, nrows=0).columns
         else:
             cols = pd.read_excel(path, nrows=0, engine="openpyxl").columns
@@ -2379,15 +2382,12 @@ def _assign_corner_team_from_sp(corners: pd.DataFrame, league: str) -> pd.DataFr
 @st.cache_data(show_spinner=False)
 def load_corner_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
     sources = []
-    for path in _data_files("Corners", (".xlsx", ".xlsm", ".xls")):
+    for path in _data_files("Corners", (".parquet",)):
         league = _league_from_filename(path)
-        corners = _with_league(_read_excel_path(path), league)
-        corners = _assign_corner_team_from_sp(corners, league)
-        sources.append(corners)
-
-    for path in _data_files("Corners", (".csv",)):
-        league = _league_from_filename(path)
-        corners = _with_league(pd.read_csv(path), league)
+        try:
+            corners = _with_league(pd.read_parquet(path, engine="pyarrow"), league)
+        except Exception:
+            corners = pd.DataFrame()
         corners = _assign_corner_team_from_sp(corners, league)
         sources.append(corners)
 

@@ -85,7 +85,7 @@ def _safe_sorted(values: pd.Series) -> list[str]:
 
 
 def _source_league_options(folder: str) -> list[str]:
-    suffixes = (".xlsx", ".xlsm", ".xls", ".csv") if folder == "Corners" else (".xlsx", ".xlsm", ".xls")
+    suffixes = (".parquet",) if folder == "Corners" else (".xlsx", ".xlsm", ".xls")
     return sorted({
         league
         for league in (_league_from_filename(path) for path in _data_files(folder, suffixes))
@@ -213,14 +213,11 @@ def _match_name_lookup(_data_version: str = DATA_VERSION) -> dict[str, str]:
 
     corners_dir = data_dir / "Corners"
     for source in sorted(corners_dir.glob("*")) if corners_dir.exists() else []:
-        if source.name.startswith("~$") or source.suffix.lower() not in {".xlsx", ".xlsm", ".xls", ".csv"}:
+        if source.name.startswith("~$") or source.suffix.lower() != ".parquet":
             continue
         try:
-            if source.suffix.lower() == ".csv":
-                corner_matches = pd.read_csv(source, usecols=["match_id", "Match"])
-            else:
-                corner_matches = pd.read_excel(source, usecols=["match_id", "Match"])
-        except (ValueError, FileNotFoundError):
+            corner_matches = pd.read_parquet(source, columns=["match_id", "Match"], engine="pyarrow")
+        except Exception:
             continue
         corner_matches = corner_matches.dropna(subset=["match_id", "Match"]).copy()
         corner_matches["match_id"] = corner_matches["match_id"].astype(str).str.replace(r"\.0$", "", regex=True)
@@ -1062,7 +1059,7 @@ def render_home() -> None:
             "Corners",
             "Corner delivery dossier",
             "Rank teams, takers, target zones, shot value, second-ball patterns, and match-ready delivery maps.",
-            "Data/Corners workbooks",
+            "Data/Corners parquet files",
         ),
         (
             "Freekicks",
@@ -1228,7 +1225,7 @@ def render_corners() -> None:
     render_workflow_rail()
     filtered, filters = filter_sp_page_data(df, label, "corners")
     render_export_controls(filtered, label, label)
-    st.caption("Corners use every Excel workbook in Data/Corners, plus any corner CSV files in the same folder.")
+    st.caption("Corners use only Parquet files in Data/Corners.")
     render_filter_summary(label, len(df), len(filtered), filters)
     if filtered.empty:
         render_empty_filter_state()
