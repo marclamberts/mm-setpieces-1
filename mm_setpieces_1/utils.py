@@ -100,7 +100,7 @@ OPTA_HALF_START = 50
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR.parent / "Data"
 LOGO_PATH = BASE_DIR.parent / "assets" / "setplaypro-logo.jpg"
-DATA_VERSION = "foldered_sources_v13_data_simplified"
+DATA_VERSION = "foldered_sources_v14_a_league"
 
 BLACK = "#0b0f14"
 RED = "#c1121f"
@@ -2361,6 +2361,8 @@ def _league_from_generic_filename(path: Path) -> str:
     candidate = " ".join(candidate.split())
     if not candidate or candidate.lower() in {"all", "data", "corners", "sp", "hops"}:
         return "Unknown"
+    if candidate.lower().replace("-", " ") in {"a league", "aleague"}:
+        return "A-League"
     return _title_from_token(candidate)
 
 
@@ -2663,6 +2665,12 @@ def _sp_taker_team_map(league: str, _data_version: str = DATA_VERSION) -> dict[s
 def _normalise_league_name(value: object) -> str:
     text = str(value).strip().lower()
     replacements = {
+        "a league": "a-league",
+        "a-league men": "a-league",
+        "australia - a-league": "a-league",
+        "australia - a-league men": "a-league",
+        "australia - a league": "a-league",
+        "australia - a league men": "a-league",
         "italy - serie a": "serie a",
         "germany - bundesliga": "bundesliga",
         "germany - 2. bundesliga": "bundesliga ii",
@@ -2672,10 +2680,17 @@ def _normalise_league_name(value: object) -> str:
         "uae - uae pro league": "uae",
     }
     text = replacements.get(text, text)
-    for prefix in ["italy - ", "germany - ", "sweden - ", "czech republic - ", "croatia - ", "uae - "]:
+    for prefix in ["australia - ", "italy - ", "germany - ", "sweden - ", "czech republic - ", "croatia - ", "uae - "]:
         if text.startswith(prefix):
             text = text[len(prefix):]
-    return text.replace("2. bundesliga", "bundesliga ii").replace("uae pro league", "uae").strip()
+    return (
+        text.replace("a league men", "a-league")
+        .replace("a-league men", "a-league")
+        .replace("a league", "a-league")
+        .replace("2. bundesliga", "bundesliga ii")
+        .replace("uae pro league", "uae")
+        .strip()
+    )
 
 
 @st.cache_data(show_spinner=False)
