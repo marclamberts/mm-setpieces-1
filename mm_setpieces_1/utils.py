@@ -2366,7 +2366,7 @@ def _assign_corner_team_from_sp(corners: pd.DataFrame, league: str) -> pd.DataFr
         return corners
 
     corners = corners.copy()
-    corners["Team"] = np.nan
+    corners["Team"] = pd.Series(np.nan, index=corners.index, dtype="object")
     if "match_id" in corners.columns:
         match_map = _sp_match_taker_team_map(league)
         if match_map:
@@ -2462,7 +2462,9 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
             pass_team = df["pass_team_name"].astype("object")
             valid_pass_team = pass_team.notna() & pass_team.astype(str).str.strip().ne("")
             if "Team" not in df.columns:
-                df["Team"] = np.nan
+                df["Team"] = pd.Series(np.nan, index=df.index, dtype="object")
+            else:
+                df["Team"] = df["Team"].astype("object")
             df.loc[valid_pass_team, "Team"] = pass_team.loc[valid_pass_team]
         _ensure_column(df, "Team", ["Team", "pass_team_name", "shot_team_name"], "Unknown")
         _ensure_column(df, "Match", ["Match"], "Unknown")
