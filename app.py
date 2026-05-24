@@ -847,17 +847,17 @@ def render_plotly_visual(fig, label: str, key: str) -> None:
     if PLOTLY_AVAILABLE:
         st.plotly_chart(
             fig,
-            use_container_width=True,
+            width="stretch",
             config={"displaylogo": False, "modeBarButtonsToRemove": ["toImage"]},
             key=f"{key}_chart",
         )
     else:
-        st.image(plotly_figure_png_bytes(fig), use_container_width=True)
+        st.image(plotly_figure_png_bytes(fig), width="stretch")
     render_plotly_png_download(fig, label, key)
 
 
 def render_mpl_visual(fig, label: str, key: str) -> None:
-    st.pyplot(fig, use_container_width=True)
+    st.pyplot(fig, width="stretch")
     render_matplotlib_png_download(fig, label, key)
 
 
