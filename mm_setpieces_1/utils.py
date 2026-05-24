@@ -100,7 +100,7 @@ OPTA_HALF_START = 50
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR.parent / "Data"
 LOGO_PATH = BASE_DIR.parent / "assets" / "setplaypro-logo.jpg"
-DATA_VERSION = "foldered_sources_v11_sp_parquet"
+DATA_VERSION = "foldered_sources_v12_sp_split_parquet"
 
 BLACK = "#0b0f14"
 RED = "#c1121f"
@@ -2271,6 +2271,32 @@ DATA_SUBFOLDERS = {
     "HOPS": DATA_DIR / "HOPS",
 }
 
+SP_SOURCE_COLUMNS = {
+    "match_id",
+    "possession",
+    "team.name",
+    "type.name",
+    "SP_Type",
+    "location.pass",
+    "pass.height.name",
+    "timestamp",
+    "Taker",
+    "Shooter",
+    "location.shot",
+    "shot.statsbomb_xg",
+    "shot.outcome.name",
+    "shot_x",
+    "shot_y",
+    "Restart_Profile",
+    "Start_Third",
+    "Next_3_Box_Entry",
+    "Next_3_Retain_Possession",
+    "restart_x",
+    "restart_y",
+    "actions_checked",
+}
+SP_PREPARED_DIR = DATA_DIR / "SP_Prepared"
+
 
 def _folder_from_filename(path: Path) -> str:
     text = " ".join([path.name, *path.parent.parts]).lower().replace("_", " ").replace("-", " ")
@@ -2367,6 +2393,61 @@ def _data_files(folder: str, suffixes: tuple[str, ...]) -> list[Path]:
             and _folder_from_file(path) == folder
         )
     return sorted(set(paths), key=lambda path: tuple(part.lower() for part in path.parts))
+
+
+def _sp_phase_terms(label: str) -> tuple[str, ...]:
+    if label == "Freekicks":
+        return ("freekicks", "free kicks", "free-kicks")
+    if label == "Throw ins":
+        return ("throwins", "throw ins", "throw-ins")
+    return ()
+
+
+def _sp_files_for_label(label: str) -> list[Path]:
+    paths = _data_files("SP", (".parquet",))
+    terms = _sp_phase_terms(label)
+    if not terms:
+        return paths
+
+    preferred = [
+        path
+        for path in paths
+        if any(term in path.stem.lower().replace("_", " ") for term in terms)
+    ]
+    if preferred:
+        return preferred
+
+    return [
+        path
+        for path in paths
+        if not any(term in path.stem.lower().replace("_", " ") for term in ("freekicks", "free kicks", "free-kicks", "throwins", "throw ins", "throw-ins"))
+    ]
+
+
+def _prepared_sp_files_for_label(label: str) -> list[Path]:
+    if not SP_PREPARED_DIR.exists():
+        return []
+    terms = _sp_phase_terms(label)
+    return sorted(
+        [
+            path
+            for path in SP_PREPARED_DIR.glob("*.parquet")
+            if path.is_file()
+            and not path.name.startswith(("~$", "."))
+            and (not terms or any(term in path.stem.lower().replace("_", " ") for term in terms))
+        ],
+        key=lambda path: tuple(part.lower() for part in path.parts),
+    )
+
+
+def _read_prepared_sp_data(label: str) -> pd.DataFrame:
+    sources = []
+    for path in _prepared_sp_files_for_label(label):
+        league = _league_from_filename(path)
+        source = _normalise_sp_source(_with_league(_read_sp_source_path(path), league))
+        if not source.empty:
+            sources.append(source)
+    return pd.concat(sources, ignore_index=True, sort=False) if sources else pd.DataFrame()
 
 
 def _league_from_filename(path: Path) -> str:
@@ -2702,7 +2783,7 @@ def load_swe_sp_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
     sources = []
     for path in _data_files("SP", (".parquet",)):
         league = _league_from_filename(path)
-        source = _normalise_sp_source(_with_league(_read_sp_source_path(path), league))
+        source = _normalise_sp_source(_with_league(_read_sp_source_path(path, columns=SP_SOURCE_COLUMNS), league))
         if not _sp_source_matches_filename_league(source, league):
             continue
         sources.append(source)
@@ -2714,7 +2795,16 @@ def load_sp_data(label: str, _data_version: str = DATA_VERSION) -> pd.DataFrame:
     if label == "Corners":
         return load_corner_data(_data_version).copy()
 
-    raw = load_swe_sp_data(_data_version).copy()
+    sources = []
+    for path in _sp_files_for_label(label):
+        league = _league_from_filename(path)
+        source = _normalise_sp_source(_with_league(_read_sp_source_path(path, columns=SP_SOURCE_COLUMNS), league))
+        if not _sp_source_matches_filename_league(source, league):
+            continue
+        if not source.empty:
+            sources.append(source)
+
+    raw = pd.concat(sources, ignore_index=True, sort=False) if sources else pd.DataFrame()
     if raw.empty or "SP_Type" not in raw.columns:
         return pd.DataFrame()
 
@@ -2928,33 +3018,48 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
 
 @st.cache_data(show_spinner=False)
 def load_prepared_sp_data(label: str, _data_version: str = DATA_VERSION) -> pd.DataFrame:
+    if label != "Corners":
+        prepared = _read_prepared_sp_data(label)
+        if not prepared.empty:
+            return filter_by_sp_type(prepared, label)
+
     raw = load_sp_data(label, _data_version)
     return filter_by_sp_type(prepare_sp_dataframe(raw, label=label), label)
 
 
 @st.cache_data(show_spinner=False)
 def load_prepared_freekick_brief_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
-    keep_columns = {
-        "match_id",
-        "possession",
-        "team.name",
-        "type.name",
-        "SP_Type",
-        "location.pass",
-        "pass.height.name",
-        "timestamp",
-        "Taker",
-        "Shooter",
-        "location.shot",
-        "shot.statsbomb_xg",
-        "shot.outcome.name",
-        "shot_x",
-        "shot_y",
-    }
+    prepared_source = _read_prepared_sp_data("Freekicks")
+    if not prepared_source.empty:
+        prepared_source = filter_by_sp_type(prepared_source, "Freekicks")
+        vital_columns = [
+            "match_id",
+            "possession",
+            "Team",
+            "Match",
+            "League",
+            "minute",
+            "second",
+            "game_period",
+            "match_rank",
+            "pass_x",
+            "pass_y",
+            "Taker",
+            "Delivery height",
+            "Shooter",
+            "shot_x",
+            "shot_y",
+            "xg",
+            "Shot outcome",
+            "is_shot",
+            "is_goal",
+        ]
+        return prepared_source[[c for c in vital_columns if c in prepared_source.columns]].copy()
+
     sources = []
-    for path in _data_files("SP", (".parquet",)):
+    for path in _sp_files_for_label("Freekicks"):
         league = _league_from_filename(path)
-        source = _read_sp_source_path(path, columns=keep_columns)
+        source = _read_sp_source_path(path, columns=SP_SOURCE_COLUMNS)
         source = _normalise_sp_source(_with_league(source, league))
         if not _sp_source_matches_filename_league(source, league):
             continue
