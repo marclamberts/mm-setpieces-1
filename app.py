@@ -1052,7 +1052,7 @@ def render_corners() -> None:
     hero_block(
         "Set pieces",
         label,
-        "Filter a team, read the KPIs, then open the view you need.",
+        "Choose a team or league and read the full dashboard on one page.",
     )
     if df.empty:
         st.warning("No corner rows were found.")
@@ -1066,97 +1066,78 @@ def render_corners() -> None:
 
     kpi_row(filtered)
     info_panel(filtered)
-    view = simple_view_radio("corners_view", ["Summary", "Pitch", "Report", "Rows"])
 
-    if view == "Summary":
-        summary, technique_mix, outcome_mix = build_summary_tables(filtered)
-        section_header("Summary")
-        c1, c2, c3 = st.columns([1.35, 1, 1])
-        with c1:
-            st.markdown('<div class="mm-table-note">Ranked by total xG, goals, and shot volume.</div>', unsafe_allow_html=True)
-            render_analyst_table(summary, height=320)
-        with c2:
-            st.markdown('<div class="mm-table-note">Most common delivery type combinations.</div>', unsafe_allow_html=True)
-            render_analyst_table(technique_mix.head(20), height=320)
-        with c3:
-            st.markdown('<div class="mm-table-note">Delivery and shot result combinations.</div>', unsafe_allow_html=True)
-            render_analyst_table(outcome_mix.head(20), height=320)
+    filter_lookup = {str(name): value for name, value in filters}
+    selected_team = str(filter_lookup.get("Team", "All"))
+    selected_league = str(filter_lookup.get("League", "All"))
+    scope = selected_team if selected_team != "All" else selected_league if selected_league != "All" else "All teams"
+    summary, technique_mix, outcome_mix = build_summary_tables(filtered)
 
-        section_header("Notes")
-        insight_cols = st.columns(2)
-        for idx, insight in enumerate(generate_set_piece_insights(filtered, label)):
-            with insight_cols[idx % 2]:
-                st.markdown(f"<div class='mm-insight-card'>{insight}</div>", unsafe_allow_html=True)
+    section_header(f"{scope} Dashboard")
+    c1, c2, c3 = st.columns([1.35, 1, 1])
+    with c1:
+        render_analyst_table(summary.head(12), height=300)
+    with c2:
+        render_analyst_table(technique_mix.head(12), height=300)
+    with c3:
+        render_analyst_table(outcome_mix.head(12), height=300)
 
-        section_header("Charts")
-        qr1, qr2, qr3 = st.columns(3)
-        with qr1:
-            render_plotly_visual(categorical_breakdown_figure(filtered, "Taker", "Top takers", top_n=8, color="#c1121f"), "Corners top takers", "corners_top_takers_png")
-        with qr2:
-            render_plotly_visual(categorical_breakdown_figure(filtered, "Shot outcome", "Shot outcomes", top_n=8, color="#1d4ed8"), "Corners shot outcomes", "corners_shot_outcomes_png")
-        with qr3:
-            render_plotly_visual(minute_distribution_figure(filtered, "Minute distribution"), "Corners minute distribution", "corners_minute_distribution_png")
+    section_header("Notes")
+    insight_cols = st.columns(2)
+    for idx, insight in enumerate(generate_set_piece_insights(filtered, label)[:4]):
+        with insight_cols[idx % 2]:
+            st.markdown(f"<div class='mm-insight-card'>{insight}</div>", unsafe_allow_html=True)
 
-        section_header("Boards")
-        board_view = st.radio("Board", ["Team Threat", "Takers", "Shot Targets", "Patterns", "Match Log"], horizontal=True, key="corners_board")
-        if board_view == "Team Threat":
-            render_analyst_table(build_team_leaderboard(filtered), height=430)
-        elif board_view == "Takers":
-            render_analyst_table(build_taker_leaderboard(filtered), height=430)
-        elif board_view == "Shot Targets":
-            render_analyst_table(build_shooter_leaderboard(filtered), height=430)
-        elif board_view == "Patterns":
-            st.markdown('<div class="mm-table-note">Pattern rows combine team, side, technique, height, target zone, and outcome.</div>', unsafe_allow_html=True)
-            render_analyst_table(build_pattern_library(filtered), height=430)
-        elif board_view == "Match Log":
-            render_analyst_table(build_match_log(filtered), height=430)
+    section_header("Charts")
+    qr1, qr2, qr3 = st.columns(3)
+    with qr1:
+        render_plotly_visual(categorical_breakdown_figure(filtered, "Taker", "Top takers", top_n=8, color="#c1121f"), "Corners top takers", "corners_top_takers_png")
+    with qr2:
+        render_plotly_visual(categorical_breakdown_figure(filtered, "Shot outcome", "Shot outcomes", top_n=8, color="#1d4ed8"), "Corners shot outcomes", "corners_shot_outcomes_png")
+    with qr3:
+        render_plotly_visual(minute_distribution_figure(filtered, "Minute distribution"), "Corners minute distribution", "corners_minute_distribution_png")
 
-        section_header("Roles")
-        role_left, role_right = st.columns(2)
-        with role_left:
-            render_analyst_table(build_role_archetypes(filtered, label).head(15), height=360)
-        with role_right:
-            render_analyst_table(build_team_archetypes(filtered).head(15), height=360)
+    section_header("Pitch")
+    pitch_left, pitch_right = st.columns(2)
+    with pitch_left:
+        render_mpl_visual(mplsoccer_delivery_figure(filtered, label), "Corners delivery map", "corners_delivery_map_png")
+    with pitch_right:
+        render_mpl_visual(mplsoccer_shot_figure(filtered, label), "Corners shot quality", "corners_shot_quality_png")
+    render_mpl_visual(mplsoccer_delivery_sp_outcome_figure(filtered, label), "Corners delivery map SP outcomes", "corners_delivery_map_sp_outcomes_png")
 
-    elif view == "Pitch":
-        left, right = st.columns(2)
-        with left:
-            render_mpl_visual(mplsoccer_delivery_figure(filtered, label), "Corners delivery map", "corners_delivery_map_png")
-        with right:
-            render_mpl_visual(mplsoccer_shot_figure(filtered, label), "Corners shot quality", "corners_shot_quality_png")
+    section_header("Boards")
+    board_left, board_right = st.columns(2)
+    with board_left:
+        render_analyst_table(build_taker_leaderboard(filtered).head(20), height=360)
+    with board_right:
+        render_analyst_table(build_shooter_leaderboard(filtered).head(20), height=360)
+    render_analyst_table(build_pattern_library(filtered).head(30), height=360)
 
-        render_mpl_visual(mplsoccer_delivery_sp_outcome_figure(filtered, label), "Corners delivery map SP outcomes", "corners_delivery_map_sp_outcomes_png")
+    with st.expander("Report", expanded=False):
+        pdf_teams = ["All"]
+        if "Team" in filtered.columns:
+            pdf_teams += _safe_sorted(filtered["Team"])
+        if st.session_state.get("corners_pdf_team") not in pdf_teams:
+            st.session_state["corners_pdf_team"] = "All"
+        pdf_team = st.selectbox("Report team", pdf_teams, key="corners_pdf_team")
+        opponent = st.text_input("Opponent / report label", value="", key="corners_pdf_label")
+        pdf_filtered = filtered.copy()
+        if pdf_team != "All" and "Team" in pdf_filtered.columns:
+            pdf_filtered = pdf_filtered[pdf_filtered["Team"].astype(str).eq(pdf_team)].copy()
+        pdf_label = f"{label} - {pdf_team}" if pdf_team != "All" else label
+        safe_base = opponent.strip() or pdf_label
+        safe_name = safe_base.lower().replace(" ", "_").replace("/", "-")
+        if st.checkbox("Prepare PDF brief", key="corners_prepare_pdf"):
+            st.download_button("Download pre-match PDF", data=_cached_report_pdf(pdf_filtered, pdf_label, opponent.strip()), file_name=f"{safe_name}_set_piece_report.pdf", mime="application/pdf", width="stretch")
 
-    elif view == "Report":
-        section_header("Report")
-        report_left, report_right = st.columns([1, 1.2])
-        with report_left:
-            pdf_teams = ["All"]
-            if "Team" in filtered.columns:
-                pdf_teams += _safe_sorted(filtered["Team"])
-            if st.session_state.get("corners_pdf_team") not in pdf_teams:
-                st.session_state["corners_pdf_team"] = "All"
-            pdf_team = st.selectbox("Report team", pdf_teams, key="corners_pdf_team")
-            opponent = st.text_input("Opponent / report label", value="", key="corners_pdf_label")
-        with report_right:
-            pdf_filtered = filtered.copy()
-            if pdf_team != "All" and "Team" in pdf_filtered.columns:
-                pdf_filtered = pdf_filtered[pdf_filtered["Team"].astype(str).eq(pdf_team)].copy()
-            pdf_label = f"{label} - {pdf_team}" if pdf_team != "All" else label
-            safe_base = opponent.strip() or pdf_label
-            safe_name = safe_base.lower().replace(" ", "_").replace("/", "-")
-            if st.checkbox("Prepare PDF brief", key="corners_prepare_pdf"):
-                st.download_button("Download pre-match PDF", data=_cached_report_pdf(pdf_filtered, pdf_label, opponent.strip()), file_name=f"{safe_name}_set_piece_report.pdf", mime="application/pdf", width="stretch")
-
-    elif view == "Rows":
-        section_header("Rows", f"{len(filtered):,} rows")
+    with st.expander("Rows", expanded=False):
         display_cols = [c for c in [
             "Match", "Team", "SP_Type", "Taker", "Shooter", "side", "minute", "second",
             "Technique", "Delivery height", "Shot outcome", "xg", "Delivery outcome",
             "Defensive_setup", "Occupation_Rating", "Proximity_Rating", "Duel_Win_Prob",
             "OPS_Opponent_Rating", "timestamp",
         ] if c in filtered.columns]
-        render_analyst_table(filtered[display_cols], height=620)
+        render_analyst_table(filtered[display_cols], height=520)
 
 
 def _freekick_zone_summary_from_sequences(sequences: pd.DataFrame) -> pd.DataFrame:
@@ -1194,7 +1175,7 @@ def render_sequence_page(label: str) -> None:
     hero_block(
         "Set pieces",
         readable,
-        "Filter a team, read the KPIs, then open the view you need.",
+        "Choose a team or league and read the full dashboard on one page.",
     )
     if df.empty:
         st.warning(f"No {readable.lower()} rows were found.")
@@ -1271,122 +1252,74 @@ def render_sequence_page(label: str) -> None:
     best_seq_xg = float(sequences["Total xG"].max()) if not sequences.empty else 0.0
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("FK sequences" if is_freekick else "Throw-in sequences", seq_count)
+    c1.metric("Sequences", seq_count)
     c2.metric("Avg actions", f"{avg_actions:.1f}")
-    c3.metric("Direct threat share" if is_freekick else "Final-third share", f"{third_metric:.1f}%")
-    c4.metric("Wide delivery share" if is_freekick else "Long throw share", f"{profile_metric:.1f}%")
+    c3.metric("Direct threat" if is_freekick else "Final third", f"{third_metric:.1f}%")
+    c4.metric("Wide delivery" if is_freekick else "Long throw", f"{profile_metric:.1f}%")
     st.metric("Best sequence xG", f"{best_seq_xg:.3f}")
 
-    if is_freekick:
-        insights = generate_set_piece_insights(filtered, readable)
-        zone_summary = _freekick_zone_summary_from_sequences(sequences)
-        priority_cols = [
-            "Match", "Team", "Minute", "Zone", "Channel", "Initial taker",
-            "Actions", "Shots", "Goals", "Total xG", "Best shooter", "Best shot xG", "Shot outcome",
-        ]
-        priority_sequences = sequences[[c for c in priority_cols if c in sequences.columns]] if not sequences.empty else sequences
+    scope = team if team != "All" else league if league != "All" else "All teams"
+    insights = generate_set_piece_insights(filtered, readable)
+    if not sequences.empty:
+        top_zone = sequences["Zone"].value_counts().head(1)
+        if not top_zone.empty:
+            insights.insert(0, f"Most common zone is {top_zone.index[0].lower()} ({top_zone.iloc[0]} sequences).")
 
-        top_left, top_right = st.columns([0.9, 1.25])
-        with top_left:
-            section_header("Vital Notes", "Core signals only")
-            for insight in insights[:4]:
-                st.markdown(f"<div class='mm-insight-card'>{insight}</div>", unsafe_allow_html=True)
-        with top_right:
-            section_header("Origin Threat", "Where value is coming from")
-            render_analyst_table(zone_summary.head(10), height=300)
+    section_header(f"{scope} Dashboard")
+    dash_left, dash_right = st.columns([0.9, 1.3])
+    with dash_left:
+        for insight in insights[:5]:
+            st.markdown(f"<div class='mm-insight-card'>{insight}</div>", unsafe_allow_html=True)
+    with dash_right:
+        zone_table = freekick_zone_summary(filtered) if is_freekick else throwin_zone_summary(filtered)
+        render_analyst_table(zone_table.head(12), height=330)
 
-        section_header("Priority Sequences", "Best free-kick possessions by xG")
-        render_analyst_table(priority_sequences.head(25), height=430)
-        return
+    section_header("Priority Sequences")
+    base_cols = [
+        "Match", "Team", "Minute", "Zone", "Channel" if is_freekick else "Side",
+        "Initial taker", "Initial height", "Actions", "Shots", "Goals", "Total xG",
+        "Best shooter", "Best shot xG", "Shot outcome",
+    ]
+    if not is_freekick:
+        base_cols.insert(5, "Profile")
+    priority = sequences[[c for c in base_cols if c in sequences.columns]] if not sequences.empty else sequences
+    render_analyst_table(priority.head(30), height=360)
 
-    view = simple_view_radio(f"{key}_view", ["Summary", "Origins", "Roles", "Pitch", "Rows"])
-    if view == "Summary":
-        insights = generate_set_piece_insights(filtered, readable)
-        if not sequences.empty:
-            top_zone = sequences["Zone"].value_counts().head(1)
-            if not top_zone.empty:
-                insights.insert(0, f"Most common {'origin profile' if is_freekick else 'territory'} is {top_zone.index[0].lower()} ({top_zone.iloc[0]} sequences).")
+    section_header("Charts")
+    chart_left, chart_right = st.columns(2)
+    with chart_left:
+        fig = freekick_origin_map_figure(filtered) if is_freekick else throwin_origin_map_figure(filtered)
+        render_plotly_visual(polish_plotly_figure(fig), f"{readable} origin map", f"{key}_origin_map_png")
+    with chart_right:
+        group_col = "Channel" if is_freekick else "Profile"
+        mix = sequences.groupby(group_col, dropna=False).size().reset_index(name="Sequences") if not sequences.empty else pd.DataFrame()
+        if not mix.empty:
+            fig = bar_chart(mix.sort_values("Sequences", ascending=False), x=group_col, y="Sequences", color=group_col)
+            fig.update_layout(showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
+            render_plotly_visual(polish_plotly_figure(fig), f"{readable} mix", f"{key}_mix_png")
 
-        top_left, top_right = st.columns([0.9, 1.35])
-        with top_left:
-            section_header(f"{readable} Brief", "Highest-signal notes")
-            for insight in insights[:5]:
-                st.markdown(f"<div class='mm-insight-card'>{insight}</div>", unsafe_allow_html=True)
-        with top_right:
-            section_header("Origin Map", "Starting points sized by sequence xG")
-            render_analyst_table((freekick_zone_summary(filtered) if is_freekick else throwin_zone_summary(filtered)).head(12), height=310)
+    section_header("Pitch")
+    pitch_left, pitch_right = st.columns(2)
+    with pitch_left:
+        render_plotly_visual(polish_plotly_figure(starting_location_map_figure(filtered, f"{readable} start locations")), f"{readable} start locations", f"{key}_start_locations_png")
+    with pitch_right:
+        render_plotly_visual(polish_plotly_figure(shotmap_figure(filtered, f"{readable} shot map")), f"{readable} shot map", f"{key}_shot_map_png")
 
-        left, right = st.columns([1.1, 1])
-        with left:
-            section_header("Origin Threat Board" if is_freekick else "Territory Threat Board", "Sequence value by restart location")
-            render_analyst_table(freekick_zone_summary(filtered) if is_freekick else throwin_zone_summary(filtered), height=390)
-        with right:
-            section_header("Priority Sequences", f"Best possession-level {readable.lower()} outcomes")
-            base_cols = [
-                "Match", "Team", "Minute", "Zone", "Channel" if is_freekick else "Side",
-                "Initial taker", "Initial height", "Actions", "Shots", "Goals", "Total xG",
-                "Best shooter", "Best shot xG", "Shot outcome",
-            ]
-            if not is_freekick:
-                base_cols.insert(5, "Profile")
-            display = sequences[[c for c in base_cols if c in sequences.columns]] if not sequences.empty else sequences
-            render_analyst_table(display.head(30), height=390)
+    section_header("Roles")
+    role_left, role_right = st.columns(2)
+    with role_left:
+        render_analyst_table((freekick_taker_summary(filtered) if is_freekick else throwin_taker_summary(filtered)).head(25), height=420)
+    with role_right:
+        render_analyst_table((freekick_shooter_summary(filtered) if is_freekick else throwin_shooter_summary(filtered)).head(25), height=420)
 
-    elif view == "Origins":
-        left, right = st.columns([1.55, 1])
-        with left:
-            section_header("Origin Map", f"{readable} starting points sized by possession xG")
-            fig = freekick_origin_map_figure(filtered) if is_freekick else throwin_origin_map_figure(filtered)
-            render_plotly_visual(polish_plotly_figure(fig), f"{readable} origin map", f"{key}_origin_map_png")
-        with right:
-            mix_col = "Zone"
-            section_header("Zone Mix" if is_freekick else "Territory Mix", "Volume by restart territory")
-            zone_mix = sequences.groupby(mix_col, dropna=False).size().reset_index(name="Sequences") if not sequences.empty else pd.DataFrame()
-            if not zone_mix.empty:
-                fig = bar_chart(zone_mix.sort_values("Sequences", ascending=False), x=mix_col, y="Sequences", color=mix_col)
-                fig.update_layout(showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
-                render_plotly_visual(polish_plotly_figure(fig), f"{readable} zone mix", f"{key}_zone_mix_png")
-            section_header("Channel Mix" if is_freekick else "Profile Mix", "How teams use the restart")
-            group_col = "Channel" if is_freekick else "Profile"
-            group_mix = sequences.groupby(group_col, dropna=False).size().reset_index(name="Sequences") if not sequences.empty else pd.DataFrame()
-            if not group_mix.empty:
-                fig = bar_chart(group_mix.sort_values("Sequences", ascending=False), x=group_col, y="Sequences", color=group_col)
-                fig.update_layout(showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
-                render_plotly_visual(polish_plotly_figure(fig), f"{readable} channel profile mix", f"{key}_channel_profile_mix_png")
-
-    elif view == "Roles":
-        left, right = st.columns(2)
-        with left:
-            section_header("Taker Roles" if is_freekick else "Thrower Roles", "Sequences started, value created, and preferred zones")
-            render_analyst_table(freekick_taker_summary(filtered) if is_freekick else throwin_taker_summary(filtered), height=620)
-        with right:
-            section_header("Shot Targets", f"Shooters reached through {readable.lower()} possessions")
-            render_analyst_table(freekick_shooter_summary(filtered) if is_freekick else throwin_shooter_summary(filtered), height=620)
-
-    elif view == "Pitch":
-        visual_view = st.radio("Pitch visual", ["Shot map", "Start maps"], horizontal=True, key=f"{key}_visual")
-        if visual_view == "Shot map":
-            section_header("Shot Map")
-            render_mpl_visual(mplsoccer_shot_figure(filtered, readable), f"{readable} report shot view", f"{key}_report_shot_view_png")
-        else:
-            left, right = st.columns(2)
-            with left:
-                section_header("Start Locations", f"Where {readable.lower()} possessions begin")
-                render_plotly_visual(polish_plotly_figure(starting_location_map_figure(filtered, f"{readable} start locations")), f"{readable} start locations", f"{key}_start_locations_png")
-            with right:
-                section_header("Shot Map", f"Shot quality generated from {readable.lower()}")
-                render_plotly_visual(polish_plotly_figure(shotmap_figure(filtered, f"{readable} shot map")), f"{readable} shot map", f"{key}_shot_map_png")
-
-    elif view == "Rows":
-        section_header("Rows")
+    with st.expander("Rows", expanded=False):
         render_analyst_table(sequences, height=430)
-        with st.expander("Event-level rows", expanded=False):
-            display_cols = [c for c in [
-                "Match", "Team", "Taker", "Shooter", "minute", "second", "pass_x", "pass_y",
-                "Delivery height", "Shot outcome", "xg", "Occupation_Rating", "Proximity_Rating",
-                "Duel_Win_Prob", "OPS_Opponent_Rating", "timestamp",
-            ] if c in filtered.columns]
-            render_analyst_table(filtered[display_cols], height=620)
+        display_cols = [c for c in [
+            "Match", "Team", "Taker", "Shooter", "minute", "second", "pass_x", "pass_y",
+            "Delivery height", "Shot outcome", "xg", "Occupation_Rating", "Proximity_Rating",
+            "Duel_Win_Prob", "OPS_Opponent_Rating", "timestamp",
+        ] if c in filtered.columns]
+        render_analyst_table(filtered[display_cols], height=520)
 
 
 def render_league_comparison() -> None:
