@@ -1286,8 +1286,10 @@ def render_sequence_page(label: str) -> None:
     section_header("Charts")
     chart_left, chart_right = st.columns(2)
     with chart_left:
-        fig = freekick_origin_map_figure(filtered) if is_freekick else throwin_origin_map_figure(filtered)
-        render_plotly_visual(polish_plotly_figure(fig), f"{readable} origin map", f"{key}_origin_map_png")
+        if is_freekick:
+            render_mpl_visual(freekick_origin_map_figure(filtered), f"{readable} origin map", f"{key}_origin_map_png")
+        else:
+            render_plotly_visual(polish_plotly_figure(throwin_origin_map_figure(filtered)), f"{readable} origin map", f"{key}_origin_map_png")
     with chart_right:
         group_col = "Channel" if is_freekick else "Profile"
         mix = sequences.groupby(group_col, dropna=False).size().reset_index(name="Sequences") if not sequences.empty else pd.DataFrame()

@@ -3987,17 +3987,48 @@ def freekick_shooter_summary(df: pd.DataFrame) -> pd.DataFrame:
     return summary.sort_values(["Total_xG", "Shots", "Goals"], ascending=False)
 
 
-def freekick_origin_map_figure(df: pd.DataFrame, title: str = "Freekick origins") -> go.Figure:
-    fig = go.Figure()
-    pitch = pitch_dimensions(df)
-    pitch_length = float(pitch["length"])
-    pitch_width = float(pitch["width"])
-    seq = freekick_sequence_summary(df)
-    if seq.empty:
-        fig.add_annotation(text="No freekick origins available", x=pitch_length / 2, y=pitch_width / 2, showarrow=False, font=dict(size=16, color=MUTED))
-        return add_full_pitch_layout(fig, title, source_df=df)
+def freekick_origin_map_figure(df: pd.DataFrame, title: str = "Freekick origins"):
+    import matplotlib.pyplot as plt
+    from mplsoccer import VerticalPitch
 
-    colors = {
+    # Lane boundaries along the pitch width (StatsBomb y = VerticalPitch x)
+    LANE_BOUNDS = [0, 18, 30, 50, 62, 80]
+    LANE_LABELS = ["Left\nwide", "Left half\nspace", "Central\narea", "Right half\nspace", "Right\nwide"]
+    LANE_BG = ["#dbeafe", "#fef9c3", "#dcfce7", "#fef9c3", "#dbeafe"]
+
+    fig, ax = plt.subplots(figsize=(6, 9), dpi=130)
+    pitch_plot = VerticalPitch(
+        pitch_type="statsbomb",
+        pitch_color="#f8fafc",
+        line_color="#374151",
+        linewidth=1.2,
+        line_zorder=3,
+    )
+    pitch_plot.draw(ax=ax)
+
+    # Extend bottom of axes to give room for lane labels
+    ax.set_ylim([-14, ax.get_ylim()[1]])
+
+    # Lane background tints
+    for i, (x0, x1) in enumerate(zip(LANE_BOUNDS[:-1], LANE_BOUNDS[1:])):
+        ax.axvspan(x0, x1, ymin=0, ymax=1, alpha=0.15, color=LANE_BG[i], zorder=1)
+
+    # Dashed lane dividers
+    for x in LANE_BOUNDS[1:-1]:
+        ax.axvline(x=x, color="#94a3b8", linestyle="--", linewidth=0.9, alpha=0.65, zorder=2)
+
+    # Lane labels below the pitch
+    for label, x0, x1 in zip(LANE_LABELS, LANE_BOUNDS[:-1], LANE_BOUNDS[1:]):
+        ax.text(
+            (x0 + x1) / 2, -7,
+            label,
+            ha="center", va="center",
+            fontsize=6.5, color="#374151", fontweight="bold",
+        )
+
+    ax.set_title(title, fontsize=12, fontweight="bold", color="#111827", pad=8)
+
+    ZONE_COLORS = {
         "Direct threat": RED,
         "Wide delivery": "#1d4ed8",
         "Advanced central": "#15803d",
@@ -4005,37 +4036,41 @@ def freekick_origin_map_figure(df: pd.DataFrame, title: str = "Freekick origins"
         "Deep restart": "#64748b",
         "Unknown": "#94a3b8",
     }
+
+    seq = freekick_sequence_summary(df)
+    if seq.empty or "Origin x" not in seq.columns:
+        ax.text(40, 60, "No freekick origins available", ha="center", va="center", color="#94a3b8", fontsize=11)
+        fig.tight_layout()
+        return fig
+
     seq = seq.copy()
     seq["Plot x"], seq["Plot y"] = coords_to_statsbomb(seq, "Origin x", "Origin y")
-    for zone, part in seq.groupby("Zone", dropna=False):
-        fig.add_trace(
-            go.Scatter(
-                x=part["Plot x"],
-                y=part["Plot y"],
-                mode="markers",
-                name=str(zone),
-                marker=dict(
-                    size=np.clip(part["Total xG"].fillna(0) * 180 + 8, 8, 38),
-                    color=colors.get(str(zone), "#64748b"),
-                    opacity=0.78,
-                    line=dict(width=0.8, color="white"),
-                ),
-                customdata=np.stack(
-                    [
-                        part["Team"].fillna("Unknown"),
-                        part["Initial taker"].fillna("Unknown"),
-                        part["Total xG"].fillna(0).round(3),
-                        part["Shot outcome"].fillna("Unknown"),
-                        part["Match"].fillna("Unknown"),
-                    ],
-                    axis=1,
-                ),
-                hovertemplate="<b>%{customdata[0]}</b><br>Taker: %{customdata[1]}<br>xG: %{customdata[2]}<br>%{customdata[3]}<br>%{customdata[4]}<extra></extra>",
-            )
+    plot_df = seq.dropna(subset=["Plot x", "Plot y"])
+
+    for zone, part in plot_df.groupby("Zone", dropna=False):
+        sizes = np.clip(part["Total xG"].fillna(0).to_numpy() * 180 + 28, 28, 130)
+        pitch_plot.scatter(
+            part["Plot y"],   # StatsBomb y → VerticalPitch x (width/lane direction)
+            part["Plot x"],   # StatsBomb x → VerticalPitch y (length direction)
+            s=sizes,
+            color=ZONE_COLORS.get(str(zone), "#64748b"),
+            edgecolors="white",
+            linewidth=0.8,
+            alpha=0.82,
+            label=str(zone),
+            ax=ax,
+            zorder=4,
         )
 
-    fig = add_full_pitch_layout(fig, title, source_df=df)
-    fig.update_layout(legend_title_text="Origin zone")
+    ax.legend(
+        loc="upper right",
+        fontsize=7,
+        frameon=True,
+        framealpha=0.9,
+        title="Origin zone",
+        title_fontsize=7,
+    )
+    fig.tight_layout()
     return fig
 
 
