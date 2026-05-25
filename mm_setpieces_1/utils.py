@@ -4355,43 +4355,14 @@ def throwin_outcome_zone_figure(df: pd.DataFrame, title: str = "Throw-in outcome
     plot_df = seq.dropna(subset=["Origin x", "Origin y"]).copy()
     plot_df["ox"], plot_df["oy"] = coords_to_statsbomb(plot_df, "Origin x", "Origin y")
 
-    # Real delivery ends from shot coords (where available)
+    # Real delivery ends only — no estimation
     if {"delivery_end_x", "delivery_end_y"}.issubset(plot_df.columns):
         plot_df["ex"], plot_df["ey"] = coords_to_statsbomb(plot_df, "delivery_end_x", "delivery_end_y")
     else:
         plot_df["ex"] = np.nan
         plot_df["ey"] = np.nan
 
-    # Estimate endpoints for non-shot rows from outcome flags
-    no_real = plot_df["ex"].isna()
-    if no_real.any():
-        sub = plot_df.loc[no_real]
-        ox_v = sub["ox"].values.astype(float)
-        oy_v = sub["oy"].values.astype(float)
-        box_v = sub["Box entry"].astype(bool).values if "Box entry" in sub.columns else np.zeros(len(sub), dtype=bool)
-        ret_v = sub["Next_3_Retain_Possession"].astype(bool).values if "Next_3_Retain_Possession" in sub.columns else np.zeros(len(sub), dtype=bool)
-
-        # Left touchline (oy < 40) → infield toward y=25; right → y=55
-        est_ey = np.where(oy_v < 40, 25.0, 55.0)
-        est_ex = ox_v.copy()
-
-        # Box entry: delivery aimed into penalty area
-        est_ex = np.where(box_v, 108.0, est_ex)
-        est_ey = np.where(box_v, np.where(oy_v < 40, 30.0, 50.0), est_ey)
-
-        # Defensive throw that retained: advance arrow toward middle third
-        is_def = ox_v < 40
-        est_ex = np.where(is_def & ret_v & ~box_v, 55.0, est_ex)
-
-        # Defensive throw with no notable outcome: no arrow
-        no_outcome = is_def & ~ret_v & ~box_v
-        est_ex = np.where(no_outcome, np.nan, est_ex)
-        est_ey = np.where(no_outcome, np.nan, est_ey)
-
-        plot_df.loc[no_real, "ex"] = est_ex
-        plot_df.loc[no_real, "ey"] = est_ey
-
-    # _advanced: used by outcome color for defensive throws
+    # _advanced: defensive throw that reached middle third (real end only)
     plot_df["_advanced"] = pd.to_numeric(plot_df["ex"], errors="coerce").fillna(0) >= 40
 
     def _outcome_color(row) -> str:
