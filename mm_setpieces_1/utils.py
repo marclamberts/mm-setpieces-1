@@ -4097,67 +4097,62 @@ def throwin_side(y: object, pitch_name: str = "statsbomb") -> str:
 
 
 def throwin_sequence_summary(df: pd.DataFrame) -> pd.DataFrame:
+    """Vectorised: one row in the prepared data == one sequence."""
     if df.empty:
         return pd.DataFrame()
 
-    base = df.copy()
-    if "pass_x" not in base.columns or "pass_y" not in base.columns:
-        return pd.DataFrame()
+    seq = df.copy()
 
-    group_cols = [c for c in ["match_id", "possession", "Team"] if c in base.columns]
-    if len(group_cols) < 2:
-        return pd.DataFrame()
+    # Side from pre-computed column or pass_y
+    if "side" in seq.columns:
+        seq["Side"] = seq["side"].map({"Left": "Left touchline", "Right": "Right touchline"}).fillna("Unknown")
+    elif "pass_y" in seq.columns:
+        seq["Side"] = np.where(pd.to_numeric(seq["pass_y"], errors="coerce").fillna(40) <= 40, "Left touchline", "Right touchline")
+    else:
+        seq["Side"] = "Unknown"
 
-    sort_cols = ["minute", "second"] if {"minute", "second"}.issubset(base.columns) else group_cols
-    rows = []
-    for keys, part in base.sort_values(sort_cols).groupby(group_cols, dropna=False):
-        if not isinstance(keys, tuple):
-            keys = (keys,)
-        record = dict(zip(group_cols, keys))
-        first = part.iloc[0]
-        pitch_name = "opta" if str(first.get("League", "")) == "UAE Pro League" else "statsbomb"
-        shots = unique_shot_events(part)
-        total_xg = float(shots["xg"].fillna(0).sum()) if "xg" in shots.columns and not shots.empty else 0.0
-        goals = int(shots["is_goal"].sum()) if "is_goal" in shots.columns and not shots.empty else 0
-        best = shots.sort_values("xg", ascending=False).iloc[0] if not shots.empty and "xg" in shots.columns else None
-        initial_height = first.get("Delivery height", "Unknown")
-        origin_x = first.get("pass_x", np.nan)
-        origin_y = first.get("pass_y", np.nan)
-        zone = throwin_zone(origin_x, pitch_name)
-        side = throwin_side(origin_y, pitch_name)
-        if zone == "Final-third pressure" and str(initial_height).lower().startswith("high"):
-            profile = "Long throw threat"
-        elif zone in ["Final-third pressure", "Attacking channel"]:
-            profile = "High press restart"
-        elif str(initial_height).lower().startswith("ground"):
-            profile = "Retain and combine"
-        else:
-            profile = "Territory reset"
+    # Zone from Start_Third where available, else pass_x thresholds
+    if "Start_Third" in seq.columns:
+        zone_map = {"Attacking third": "Attacking channel", "Middle third": "Middle-third platform", "Defensive third": "Defensive throw"}
+        seq["Zone"] = seq["Start_Third"].map(zone_map).fillna("Unknown")
+    elif "pass_x" in seq.columns:
+        px = pd.to_numeric(seq["pass_x"], errors="coerce")
+        seq["Zone"] = pd.cut(
+            px,
+            bins=[-np.inf, 36, 60, 84, 102, np.inf],
+            labels=["Defensive throw", "Build-up restart", "Middle-third platform", "Attacking channel", "Final-third pressure"],
+        ).astype(str)
+    else:
+        seq["Zone"] = "Unknown"
 
-        record.update(
-            {
-                "Match": first.get("Match", record.get("match_id", "Unknown")),
-                "League": first.get("League", ""),
-                "Minute": int(first.get("minute", 0)) if pd.notna(first.get("minute", np.nan)) else 0,
-                "Origin x": round(float(origin_x), 1) if pd.notna(origin_x) else np.nan,
-                "Origin y": round(float(origin_y), 1) if pd.notna(origin_y) else np.nan,
-                "Zone": zone,
-                "Side": side,
-                "Profile": profile,
-                "Initial taker": first.get("Taker", "Unknown"),
-                "Initial height": initial_height,
-                "Actions": int(len(part)),
-                "Shots": int(len(shots)),
-                "Goals": goals,
-                "Total xG": round(total_xg, 3),
-                "Best shooter": best.get("Shooter", "Unknown") if best is not None else "Unknown",
-                "Best shot xG": round(float(best.get("xg", 0)), 3) if best is not None else 0.0,
-                "Shot outcome": best.get("Shot outcome", "No shot") if best is not None else "No shot",
-            }
-        )
-        rows.append(record)
+    # Box entry flag
+    seq["Box entry"] = seq["Next_3_Box_Entry"].astype(bool) if "Next_3_Box_Entry" in seq.columns else False
 
-    return pd.DataFrame(rows).sort_values(["Total xG", "Shots", "Minute"], ascending=[False, False, True])
+    # Shot/goal/xG — already one row per event in prepared data
+    seq["Shots"] = seq["is_shot"].astype(int) if "is_shot" in seq.columns else 0
+    seq["Goals"] = seq["is_goal"].astype(int) if "is_goal" in seq.columns else 0
+    xg_col = "xg" if "xg" in seq.columns else ("shot.statsbomb_xg" if "shot.statsbomb_xg" in seq.columns else None)
+    seq["Total xG"] = pd.to_numeric(seq[xg_col], errors="coerce").fillna(0).round(3) if xg_col else 0.0
+    seq["Best shot xG"] = seq["Total xG"]
+    seq["Best shooter"] = seq.get("Shooter", pd.Series("Unknown", index=seq.index)).fillna("Unknown")
+    seq["Shot outcome"] = seq.get("Shot outcome", pd.Series("No shot", index=seq.index)).fillna("No shot")
+
+    seq["Actions"] = 1
+    seq["Initial taker"] = seq.get("Taker", pd.Series("Unknown", index=seq.index)).fillna("Unknown")
+    seq["Initial height"] = seq.get("Delivery height", pd.Series("Unknown", index=seq.index)).fillna("Unknown")
+    seq["Minute"] = pd.to_numeric(seq.get("minute", pd.Series(0, index=seq.index)), errors="coerce").fillna(0).astype(int)
+
+    if "pass_x" in seq.columns:
+        seq["Origin x"] = pd.to_numeric(seq["pass_x"], errors="coerce").round(1)
+        seq["Origin y"] = pd.to_numeric(seq["pass_y"], errors="coerce").round(1)
+    elif "restart_x" in seq.columns:
+        seq["Origin x"] = pd.to_numeric(seq["restart_x"], errors="coerce").round(1)
+        seq["Origin y"] = pd.to_numeric(seq["restart_y"], errors="coerce").round(1)
+    else:
+        seq["Origin x"] = np.nan
+        seq["Origin y"] = np.nan
+
+    return seq.sort_values(["Box entry", "Total xG", "Shots", "Minute"], ascending=[False, False, False, True])
 
 
 def throwin_zone_summary(df: pd.DataFrame) -> pd.DataFrame:
@@ -4165,49 +4160,54 @@ def throwin_zone_summary(df: pd.DataFrame) -> pd.DataFrame:
     if seq.empty:
         return pd.DataFrame()
     summary = (
-        seq.groupby(["Zone", "Side", "Profile"], dropna=False)
+        seq.groupby(["Zone", "Side"], dropna=False)
         .agg(
             Sequences=("Zone", "size"),
             Shots=("Shots", "sum"),
             Goals=("Goals", "sum"),
             Total_xG=("Total xG", "sum"),
             Avg_xG=("Total xG", "mean"),
-            Avg_Actions=("Actions", "mean"),
+            Box_entries=("Box entry", "sum"),
         )
         .reset_index()
     )
     summary["Shots / seq"] = (summary["Shots"] / summary["Sequences"]).replace([np.inf, -np.inf], 0).fillna(0).round(2)
+    summary["Box entry %"] = (summary["Box_entries"] / summary["Sequences"] * 100).round(1)
     summary["Total_xG"] = summary["Total_xG"].round(2)
     summary["Avg_xG"] = summary["Avg_xG"].round(3)
-    summary["Avg_Actions"] = summary["Avg_Actions"].round(1)
-    return summary.sort_values(["Total_xG", "Shots / seq", "Sequences"], ascending=False)
+    summary = summary.drop(columns=["Box_entries"])
+    return summary.sort_values(["Box entry %", "Shots / seq", "Sequences"], ascending=False)
 
 
 def throwin_taker_summary(df: pd.DataFrame) -> pd.DataFrame:
     seq = throwin_sequence_summary(df)
     if seq.empty:
         return pd.DataFrame()
-    summary = (
-        seq.groupby("Initial taker", dropna=False)
-        .agg(
-            Team=("Team", lambda s: s.mode().iloc[0] if not s.mode().empty else "Unknown"),
-            Sequences=("Initial taker", "size"),
-            Shots=("Shots", "sum"),
-            Goals=("Goals", "sum"),
-            Total_xG=("Total xG", "sum"),
-            Avg_xG=("Total xG", "mean"),
-            Main_zone=("Zone", lambda s: s.mode().iloc[0] if not s.mode().empty else "Unknown"),
-            Main_side=("Side", lambda s: s.mode().iloc[0] if not s.mode().empty else "Unknown"),
-            Main_profile=("Profile", lambda s: s.mode().iloc[0] if not s.mode().empty else "Unknown"),
-            Main_height=("Initial height", lambda s: s.mode().iloc[0] if not s.mode().empty else "Unknown"),
-        )
-        .reset_index()
-        .rename(columns={"Initial taker": "Taker"})
-    )
+
+    grp = seq.groupby("Initial taker", dropna=False)
+    summary = grp.agg(
+        Sequences=("Initial taker", "size"),
+        Shots=("Shots", "sum"),
+        Goals=("Goals", "sum"),
+        Total_xG=("Total xG", "sum"),
+        Avg_xG=("Total xG", "mean"),
+        Box_entries=("Box entry", "sum"),
+    ).reset_index().rename(columns={"Initial taker": "Taker"})
+
+    # Fastest-mode columns via value_counts on the first element of each group
+    for col, target in [("Team", "Team"), ("Zone", "Main_zone"), ("Side", "Main_side"), ("Initial height", "Main_height")]:
+        if col in seq.columns:
+            first_vals = seq.groupby("Initial taker", dropna=False)[col].agg(lambda s: s.value_counts().index[0] if len(s) else "Unknown")
+            summary = summary.merge(first_vals.rename(target).reset_index().rename(columns={"Initial taker": "Taker"}), on="Taker", how="left")
+        else:
+            summary[target] = "Unknown"
+
     summary["Shots / seq"] = (summary["Shots"] / summary["Sequences"]).replace([np.inf, -np.inf], 0).fillna(0).round(2)
+    summary["Box entry %"] = (summary["Box_entries"] / summary["Sequences"] * 100).round(1)
     summary["Total_xG"] = summary["Total_xG"].round(2)
     summary["Avg_xG"] = summary["Avg_xG"].round(3)
-    return summary.sort_values(["Total_xG", "Sequences", "Avg_xG"], ascending=False)
+    summary = summary.drop(columns=["Box_entries"])
+    return summary.sort_values(["Box entry %", "Sequences", "Shots / seq"], ascending=False)
 
 
 def throwin_shooter_summary(df: pd.DataFrame) -> pd.DataFrame:
@@ -4232,55 +4232,64 @@ def throwin_shooter_summary(df: pd.DataFrame) -> pd.DataFrame:
     return summary.sort_values(["Total_xG", "Shots", "Goals"], ascending=False)
 
 
-def throwin_origin_map_figure(df: pd.DataFrame, title: str = "Throw-in origins") -> go.Figure:
-    fig = go.Figure()
-    pitch = pitch_dimensions(df)
-    pitch_length = float(pitch["length"])
-    pitch_width = float(pitch["width"])
-    seq = throwin_sequence_summary(df)
-    if seq.empty:
-        fig.add_annotation(text="No throw-in origins available", x=pitch_length / 2, y=pitch_width / 2, showarrow=False, font=dict(size=16, color=MUTED))
-        return add_full_pitch_layout(fig, title, source_df=df)
+def throwin_delivery_map_figure(df: pd.DataFrame, title: str = "Throw-in deliveries") -> object:
+    import matplotlib.pyplot as plt
+    from mplsoccer import Pitch
 
-    colors = {
-        "Final-third pressure": RED,
-        "Attacking channel": "#1d4ed8",
-        "Middle-third platform": "#15803d",
-        "Build-up restart": "#b45309",
-        "Defensive throw": "#64748b",
-        "Unknown": "#94a3b8",
-    }
-    seq = seq.copy()
-    seq["Plot x"], seq["Plot y"] = coords_to_statsbomb(seq, "Origin x", "Origin y")
-    for zone, part in seq.groupby("Zone", dropna=False):
-        fig.add_trace(
-            go.Scatter(
-                x=part["Plot x"],
-                y=part["Plot y"],
-                mode="markers",
-                name=str(zone),
-                marker=dict(
-                    size=np.clip(part["Total xG"].fillna(0) * 180 + 8, 8, 40),
-                    color=colors.get(str(zone), "#64748b"),
-                    opacity=0.78,
-                    line=dict(width=0.8, color="white"),
-                ),
-                customdata=np.stack(
-                    [
-                        part["Team"].fillna("Unknown"),
-                        part["Initial taker"].fillna("Unknown"),
-                        part["Profile"].fillna("Unknown"),
-                        part["Total xG"].fillna(0).round(3),
-                        part["Match"].fillna("Unknown"),
-                    ],
-                    axis=1,
-                ),
-                hovertemplate="<b>%{customdata[0]}</b><br>Taker: %{customdata[1]}<br>%{customdata[2]}<br>xG: %{customdata[3]}<br>%{customdata[4]}<extra></extra>",
-            )
+    SIDE_COLORS = {"Left touchline": "#2563eb", "Right touchline": "#dc2626", "Unknown": "#94a3b8"}
+
+    fig, ax = plt.subplots(figsize=(10, 7), dpi=120)
+    pitch_plot = Pitch(
+        pitch_type="statsbomb",
+        pitch_color="#f8fafc",
+        line_color="#374151",
+        linewidth=1.2,
+        line_zorder=3,
+    )
+    pitch_plot.draw(ax=ax)
+    ax.set_title(title, fontsize=12, fontweight="bold", color="#111827", pad=8)
+
+    seq = throwin_sequence_summary(df)
+    if seq.empty or "Origin x" not in seq.columns:
+        ax.text(60, 40, "No throw-in data available", ha="center", va="center", color="#94a3b8", fontsize=11)
+        fig.tight_layout()
+        return fig
+
+    has_end = {"delivery_end_x", "delivery_end_y"}.issubset(seq.columns)
+    plot_df = seq.dropna(subset=["Origin x", "Origin y"]).copy()
+    plot_df["ox"], plot_df["oy"] = coords_to_statsbomb(plot_df, "Origin x", "Origin y")
+
+    if has_end:
+        end_df = plot_df.dropna(subset=["delivery_end_x", "delivery_end_y"]).copy()
+        end_df["ex"], end_df["ey"] = coords_to_statsbomb(end_df, "delivery_end_x", "delivery_end_y")
+    else:
+        end_df = pd.DataFrame()
+
+    for side, part in plot_df.groupby("Side", dropna=False):
+        color = SIDE_COLORS.get(str(side), "#94a3b8")
+        if not end_df.empty:
+            arrows = end_df[end_df["Side"] == side]
+            if not arrows.empty:
+                pitch_plot.arrows(
+                    arrows["ox"], arrows["oy"],
+                    arrows["ex"], arrows["ey"],
+                    color=color, alpha=0.3, width=1.0, headwidth=3, headlength=3,
+                    ax=ax, zorder=4,
+                )
+        pitch_plot.scatter(
+            part["ox"], part["oy"],
+            s=np.clip(part["Total xG"].fillna(0) * 200 + 18, 18, 90),
+            color=color,
+            edgecolors="white",
+            linewidth=0.6,
+            alpha=0.75,
+            label=str(side),
+            ax=ax,
+            zorder=5,
         )
 
-    fig = add_full_pitch_layout(fig, title, source_df=df)
-    fig.update_layout(legend_title_text="Origin zone")
+    ax.legend(loc="lower right", fontsize=8, frameon=True, framealpha=0.9, title="Side", title_fontsize=8)
+    fig.tight_layout()
     return fig
 
 def kpi_row(df: pd.DataFrame) -> None:

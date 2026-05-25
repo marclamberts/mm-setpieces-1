@@ -1244,17 +1244,28 @@ def render_sequence_page(label: str) -> None:
 
     kpi_row(filtered)
     seq_count = int(len(sequences))
-    avg_actions = float(sequences["Actions"].mean()) if not sequences.empty else 0.0
-    third_metric = float((sequences["Zone"].eq("Direct threat" if is_freekick else "Final-third pressure")).mean() * 100) if not sequences.empty else 0.0
-    profile_metric = float((sequences["Zone"].eq("Wide delivery")).mean() * 100) if is_freekick and not sequences.empty else float((sequences["Profile"].eq("Long throw threat")).mean() * 100) if not is_freekick and not sequences.empty else 0.0
-    best_seq_xg = float(sequences["Total xG"].max()) if not sequences.empty else 0.0
-
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Sequences", seq_count)
-    c2.metric("Avg actions", f"{avg_actions:.1f}")
-    c3.metric("Direct threat" if is_freekick else "Final third", f"{third_metric:.1f}%")
-    c4.metric("Wide delivery" if is_freekick else "Long throw", f"{profile_metric:.1f}%")
-    st.metric("Best sequence xG", f"{best_seq_xg:.3f}")
+    if is_freekick:
+        avg_actions = float(sequences["Actions"].mean()) if not sequences.empty else 0.0
+        third_metric = float((sequences["Zone"].eq("Direct threat")).mean() * 100) if not sequences.empty else 0.0
+        profile_metric = float((sequences["Zone"].eq("Wide delivery")).mean() * 100) if not sequences.empty else 0.0
+        best_seq_xg = float(sequences["Total xG"].max()) if not sequences.empty else 0.0
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Sequences", seq_count)
+        c2.metric("Avg actions", f"{avg_actions:.1f}")
+        c3.metric("Direct threat", f"{third_metric:.1f}%")
+        c4.metric("Wide delivery", f"{profile_metric:.1f}%")
+        st.metric("Best sequence xG", f"{best_seq_xg:.3f}")
+    else:
+        box_entry_rate = float(sequences["Box entry"].mean() * 100) if not sequences.empty and "Box entry" in sequences.columns else 0.0
+        attack_zone_rate = float((sequences["Zone"].eq("Attacking channel")).mean() * 100) if not sequences.empty else 0.0
+        shots_total = int(sequences["Shots"].sum()) if not sequences.empty else 0
+        best_seq_xg = float(sequences["Total xG"].max()) if not sequences.empty else 0.0
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Sequences", seq_count)
+        c2.metric("Box entry %", f"{box_entry_rate:.1f}%")
+        c3.metric("Attacking third", f"{attack_zone_rate:.1f}%")
+        c4.metric("Shots", shots_total)
+        st.metric("Best sequence xG", f"{best_seq_xg:.3f}")
 
     scope = team if team != "All" else league if league != "All" else "All teams"
     insights = generate_set_piece_insights(filtered, readable)
@@ -1273,13 +1284,10 @@ def render_sequence_page(label: str) -> None:
         render_analyst_table(zone_table.head(12), height=330)
 
     section_header("Priority Sequences")
-    base_cols = [
-        "Match", "Team", "Minute", "Zone", "Channel" if is_freekick else "Side",
-        "Initial taker", "Initial height", "Actions", "Shots", "Goals", "Total xG",
-        "Best shooter", "Best shot xG", "Shot outcome",
-    ]
-    if not is_freekick:
-        base_cols.insert(5, "Profile")
+    if is_freekick:
+        base_cols = ["Match", "Team", "Minute", "Zone", "Channel", "Initial taker", "Initial height", "Actions", "Shots", "Goals", "Total xG", "Best shooter", "Best shot xG", "Shot outcome"]
+    else:
+        base_cols = ["Match", "Team", "Minute", "Zone", "Side", "Initial taker", "Initial height", "Box entry", "Shots", "Goals", "Total xG", "Best shooter", "Best shot xG", "Shot outcome"]
     priority = sequences[[c for c in base_cols if c in sequences.columns]] if not sequences.empty else sequences
     render_analyst_table(priority.head(30), height=360)
 
@@ -1289,14 +1297,22 @@ def render_sequence_page(label: str) -> None:
         if is_freekick:
             render_mpl_visual(freekick_origin_map_figure(filtered), f"{readable} origin map", f"{key}_origin_map_png")
         else:
-            render_plotly_visual(polish_plotly_figure(throwin_origin_map_figure(filtered)), f"{readable} origin map", f"{key}_origin_map_png")
+            render_mpl_visual(throwin_delivery_map_figure(filtered), "Throw-in deliveries", f"{key}_delivery_map_png")
     with chart_right:
-        group_col = "Channel" if is_freekick else "Profile"
-        mix = sequences.groupby(group_col, dropna=False).size().reset_index(name="Sequences") if not sequences.empty else pd.DataFrame()
-        if not mix.empty:
-            fig = bar_chart(mix.sort_values("Sequences", ascending=False), x=group_col, y="Sequences", color=group_col)
-            fig.update_layout(showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
-            render_plotly_visual(polish_plotly_figure(fig), f"{readable} mix", f"{key}_mix_png")
+        if is_freekick:
+            group_col = "Channel"
+            mix = sequences.groupby(group_col, dropna=False).size().reset_index(name="Sequences") if not sequences.empty else pd.DataFrame()
+            if not mix.empty:
+                fig = bar_chart(mix.sort_values("Sequences", ascending=False), x=group_col, y="Sequences", color=group_col)
+                fig.update_layout(showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
+                render_plotly_visual(polish_plotly_figure(fig), f"{readable} mix", f"{key}_mix_png")
+        else:
+            side_mix = sequences.groupby("Side", dropna=False).agg(Sequences=("Side", "size"), Box_entries=("Box entry", "sum")).reset_index() if not sequences.empty else pd.DataFrame()
+            if not side_mix.empty:
+                side_mix["Box entry %"] = (side_mix["Box_entries"] / side_mix["Sequences"] * 100).round(1)
+                fig = bar_chart(side_mix, x="Side", y="Box entry %", color="Side")
+                fig.update_layout(showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
+                render_plotly_visual(polish_plotly_figure(fig), "Box entry % by side", f"{key}_side_box_png")
 
     section_header("Pitch")
     pitch_left, pitch_right = st.columns(2)
