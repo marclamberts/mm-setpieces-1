@@ -1316,7 +1316,9 @@ def render_sequence_page(label: str) -> None:
 
     section_header("Pitch")
     if not is_freekick:
-        render_mpl_visual(throwin_outcome_zone_figure(filtered), "Throw-in outcome zones", f"{key}_outcome_zones_png")
+        _outcome_fn = globals().get("throwin_outcome_zone_figure")
+        if callable(_outcome_fn):
+            render_mpl_visual(_outcome_fn(filtered), "Throw-in outcome zones", f"{key}_outcome_zones_png")
         pitch_left, pitch_right = st.columns(2)
         with pitch_left:
             render_plotly_visual(polish_plotly_figure(starting_location_map_figure(filtered, f"{readable} start locations")), f"{readable} start locations", f"{key}_start_locations_png")
