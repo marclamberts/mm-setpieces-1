@@ -28,13 +28,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-
-st.set_page_config(
-    page_title="Michael Mackin Set Piece",
-    page_icon="⚽",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
 inject_app_style()
 
 # ── DEFINE first ──
@@ -568,7 +561,7 @@ def render_single_app_sidebar() -> str:
     st.sidebar.markdown("---")
     st.sidebar.markdown(f"### Filters")
     if section != "Home":
-        if st.sidebar.button("Reset filters", key=f"reset_{section}", width="stretch"):
+        if st.sidebar.button("Reset filters", key=f"reset_{section}", use_container_width=True):
             reset_current_filters(section)
     return section
 
@@ -833,7 +826,7 @@ def render_landing() -> None:
         )
 
     st.markdown('<div class="mm-landing-action">', unsafe_allow_html=True)
-    if st.button("Go to portal", key="portal_submit", width="stretch"):
+    if st.button("Go to portal", key="portal_submit", use_container_width=True):
         st.session_state["authenticated"] = True
         st.session_state["show_playform"] = True
         st.session_state["section"] = "Home"
@@ -847,17 +840,17 @@ def render_plotly_visual(fig, label: str, key: str) -> None:
     if PLOTLY_AVAILABLE:
         st.plotly_chart(
             fig,
-            width="stretch",
+            use_container_width=True,
             config={"displaylogo": False, "modeBarButtonsToRemove": ["toImage"]},
             key=f"{key}_chart",
         )
     else:
-        st.image(plotly_figure_png_bytes(fig), width="stretch")
+        st.image(plotly_figure_png_bytes(fig), use_container_width=True)
     render_plotly_png_download(fig, label, key)
 
 
 def render_mpl_visual(fig, label: str, key: str) -> None:
-    st.pyplot(fig, width="stretch")
+    st.pyplot(fig, use_container_width=True)
     render_matplotlib_png_download(fig, label, key)
 
 
@@ -968,7 +961,7 @@ def render_home() -> None:
     ]
     for idx, (title, key) in enumerate(modules):
         with module_cols[idx % 3]:
-            if st.button(title, key=key, width="stretch"):
+            if st.button(title, key=key, use_container_width=True):
                 set_section(title)
 
 
@@ -1133,7 +1126,7 @@ def render_corners() -> None:
         safe_base = opponent.strip() or pdf_label
         safe_name = safe_base.lower().replace(" ", "_").replace("/", "-")
         if st.checkbox("Prepare PDF brief", key="corners_prepare_pdf"):
-            st.download_button("Download pre-match PDF", data=_cached_report_pdf(pdf_filtered, pdf_label, opponent.strip()), file_name=f"{safe_name}_set_piece_report.pdf", mime="application/pdf", width="stretch")
+            st.download_button("Download pre-match PDF", data=_cached_report_pdf(pdf_filtered, pdf_label, opponent.strip()), file_name=f"{safe_name}_set_piece_report.pdf", mime="application/pdf", use_container_width=True)
 
     with st.expander("Rows", expanded=False):
         display_cols = [c for c in [
