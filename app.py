@@ -81,7 +81,7 @@ def _safe_sorted(values: pd.Series) -> list[str]:
 
 
 def _source_league_options(folder: str) -> list[str]:
-    suffixes = (".parquet",) if folder in {"Corners", "SP"} else (".xlsx", ".xlsm", ".xls")
+    suffixes = (".parquet",) if folder in {"Corners", "SP", "HOPS"} else (".xlsx", ".xlsm", ".xls")
     return sorted({
         league
         for league in (_league_from_filename(path) for path in _data_files(folder, suffixes))
@@ -109,10 +109,13 @@ def _cached_report_pdf(df: pd.DataFrame, label: str, opponent: str) -> bytes:
 
 @st.cache_data(show_spinner=False)
 def load_hops_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
-    sources = [
-        _with_league(_read_excel_path(path), _league_from_filename(path))
-        for path in _data_files("HOPS", (".xlsx", ".xlsm", ".xls"))
-    ]
+    sources = []
+    for path in _data_files("HOPS", (".parquet",)):
+        try:
+            df = pd.read_parquet(path, engine="fastparquet")
+        except Exception:
+            df = pd.read_parquet(path, engine="pyarrow")
+        sources.append(_with_league(df, _league_from_filename(path)))
     sources = [source for source in sources if not source.empty]
     if not sources:
         return pd.DataFrame(columns=["Player", "Team", "League", "Rating", "Percentile", "Tier"])
