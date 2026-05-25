@@ -3868,6 +3868,9 @@ def freekick_sequence_summary(df: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame()
 
     base = df.copy()
+    if "pass_x" not in base.columns and "restart_x" in base.columns:
+        base["pass_x"] = base["restart_x"]
+        base["pass_y"] = base["restart_y"]
     if "pass_x" not in base.columns or "pass_y" not in base.columns:
         return pd.DataFrame()
 
@@ -3991,10 +3994,14 @@ def freekick_origin_map_figure(df: pd.DataFrame, title: str = "Freekick origins"
     import matplotlib.pyplot as plt
     from mplsoccer import VerticalPitch
 
-    # Lane boundaries along the pitch width (StatsBomb y = VerticalPitch x)
-    LANE_BOUNDS = [0, 18, 30, 50, 62, 80]
-    LANE_LABELS = ["Left\nwide", "Left half\nspace", "Central\narea", "Right half\nspace", "Right\nwide"]
-    LANE_BG = ["#dbeafe", "#fef9c3", "#dcfce7", "#fef9c3", "#dbeafe"]
+    # Lane definitions: (boundary_start, boundary_end, label, bg_color, dot_color)
+    LANES = [
+        (0,  18, "Left\nwide",        "#dbeafe", "#1d4ed8"),
+        (18, 30, "Left half\nspace",  "#fef9c3", "#b45309"),
+        (30, 50, "Central\narea",     "#dcfce7", "#15803d"),
+        (50, 62, "Right half\nspace", "#fef9c3", "#b45309"),
+        (62, 80, "Right\nwide",       "#dbeafe", "#1d4ed8"),
+    ]
 
     fig, ax = plt.subplots(figsize=(6, 9), dpi=130)
     pitch_plot = VerticalPitch(
@@ -4006,36 +4013,17 @@ def freekick_origin_map_figure(df: pd.DataFrame, title: str = "Freekick origins"
     )
     pitch_plot.draw(ax=ax)
 
-    # Extend bottom of axes to give room for lane labels
     ax.set_ylim([-14, ax.get_ylim()[1]])
 
-    # Lane background tints
-    for i, (x0, x1) in enumerate(zip(LANE_BOUNDS[:-1], LANE_BOUNDS[1:])):
-        ax.axvspan(x0, x1, ymin=0, ymax=1, alpha=0.15, color=LANE_BG[i], zorder=1)
-
-    # Dashed lane dividers
-    for x in LANE_BOUNDS[1:-1]:
-        ax.axvline(x=x, color="#94a3b8", linestyle="--", linewidth=0.9, alpha=0.65, zorder=2)
-
-    # Lane labels below the pitch
-    for label, x0, x1 in zip(LANE_LABELS, LANE_BOUNDS[:-1], LANE_BOUNDS[1:]):
-        ax.text(
-            (x0 + x1) / 2, -7,
-            label,
-            ha="center", va="center",
-            fontsize=6.5, color="#374151", fontweight="bold",
-        )
+    # Lane background tints and dashed dividers
+    for i, (x0, x1, label, bg, _) in enumerate(LANES):
+        ax.axvspan(x0, x1, alpha=0.15, color=bg, zorder=1)
+        if i > 0:
+            ax.axvline(x=x0, color="#94a3b8", linestyle="--", linewidth=0.9, alpha=0.65, zorder=2)
+        ax.text((x0 + x1) / 2, -7, label, ha="center", va="center",
+                fontsize=6.5, color="#374151", fontweight="bold")
 
     ax.set_title(title, fontsize=12, fontweight="bold", color="#111827", pad=8)
-
-    ZONE_COLORS = {
-        "Direct threat": RED,
-        "Wide delivery": "#1d4ed8",
-        "Advanced central": "#15803d",
-        "Middle third": "#b45309",
-        "Deep restart": "#64748b",
-        "Unknown": "#94a3b8",
-    }
 
     seq = freekick_sequence_summary(df)
     if seq.empty or "Origin x" not in seq.columns:
@@ -4045,19 +4033,31 @@ def freekick_origin_map_figure(df: pd.DataFrame, title: str = "Freekick origins"
 
     seq = seq.copy()
     seq["Plot x"], seq["Plot y"] = coords_to_statsbomb(seq, "Origin x", "Origin y")
-    plot_df = seq.dropna(subset=["Plot x", "Plot y"])
+    plot_df = seq.dropna(subset=["Plot x", "Plot y"]).copy()
 
-    for zone, part in plot_df.groupby("Zone", dropna=False):
+    # Assign each point its lane based on StatsBomb y (= VerticalPitch x)
+    def _lane_for_y(y: float) -> int:
+        for i, (x0, x1, *_) in enumerate(LANES):
+            if x0 <= y < x1:
+                return i
+        return len(LANES) - 1
+
+    plot_df["Lane"] = plot_df["Plot y"].apply(_lane_for_y)
+
+    for i, (x0, x1, label, _, dot_color) in enumerate(LANES):
+        part = plot_df[plot_df["Lane"] == i]
+        if part.empty:
+            continue
         sizes = np.clip(part["Total xG"].fillna(0).to_numpy() * 180 + 28, 28, 130)
         pitch_plot.scatter(
-            part["Plot y"],   # StatsBomb y → VerticalPitch x (width/lane direction)
-            part["Plot x"],   # StatsBomb x → VerticalPitch y (length direction)
+            part["Plot x"],  # StatsBomb x (length) — VerticalPitch rotates this to vertical axis
+            part["Plot y"],  # StatsBomb y (width)  — VerticalPitch rotates this to horizontal axis
             s=sizes,
-            color=ZONE_COLORS.get(str(zone), "#64748b"),
+            color=dot_color,
             edgecolors="white",
             linewidth=0.8,
             alpha=0.82,
-            label=str(zone),
+            label=label.replace("\n", " "),
             ax=ax,
             zorder=4,
         )
@@ -4067,7 +4067,7 @@ def freekick_origin_map_figure(df: pd.DataFrame, title: str = "Freekick origins"
         fontsize=7,
         frameon=True,
         framealpha=0.9,
-        title="Origin zone",
+        title="Lane",
         title_fontsize=7,
     )
     fig.tight_layout()
