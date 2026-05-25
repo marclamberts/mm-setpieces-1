@@ -4350,10 +4350,10 @@ def throwin_outcome_zone_figure(df: pd.DataFrame, title: str = "Throw-in outcome
     plot_df = seq.dropna(subset=["Origin x", "Origin y"]).copy()
     plot_df["ox"], plot_df["oy"] = coords_to_statsbomb(plot_df, "Origin x", "Origin y")
 
-    # Derive advance flag for defensive throws
-    if "delivery_end_x" in plot_df.columns:
-        end_x, _ = coords_to_statsbomb(plot_df, "delivery_end_x", "delivery_end_y" if "delivery_end_y" in plot_df.columns else "Origin y")
-        plot_df["_advanced"] = end_x >= 40
+    has_end = {"delivery_end_x", "delivery_end_y"}.issubset(plot_df.columns)
+    if has_end:
+        plot_df["ex"], plot_df["ey"] = coords_to_statsbomb(plot_df, "delivery_end_x", "delivery_end_y")
+        plot_df["_advanced"] = plot_df["ex"] >= 40
     else:
         plot_df["_advanced"] = False
 
@@ -4364,34 +4364,40 @@ def throwin_outcome_zone_figure(df: pd.DataFrame, title: str = "Throw-in outcome
         if row.get("Shots", 0):
             return C_SHOT
         if ox >= 80:
-            # Attacking third: box entry is the floor (all positive by data)
             return C_BOX
         if ox >= 40:
-            # Middle third: box entry upgrade or just retain
-            if row.get("Box entry", False):
-                return C_BOX
-            return C_RETAIN
-        # Defensive third
+            return C_BOX if row.get("Box entry", False) else C_RETAIN
         return C_ADVANCE if row.get("_advanced", False) else C_NONE
 
     plot_df["_color"] = plot_df.apply(_outcome_color, axis=1)
 
     # Draw in reverse priority order (best outcomes on top)
     for color, label, zorder in [
-        (C_NONE,   "No advance",     5),
-        (C_ADVANCE,"Into middle",    6),
-        (C_RETAIN, "Retain",         7),
-        (C_BOX,    "Box entry",      8),
-        (C_SHOT,   "Shot",           9),
-        (C_GOAL,   "Goal",          10),
+        (C_NONE,   "No advance",  5),
+        (C_ADVANCE,"Into middle", 6),
+        (C_RETAIN, "Retain",      7),
+        (C_BOX,    "Box entry",   8),
+        (C_SHOT,   "Shot",        9),
+        (C_GOAL,   "Goal",       10),
     ]:
         pts = plot_df[plot_df["_color"] == color]
         if pts.empty:
             continue
+        # Arrows origin → delivery end
+        if has_end:
+            end_pts = pts.dropna(subset=["ex", "ey"])
+            if not end_pts.empty:
+                pitch_plot.arrows(
+                    end_pts["ox"], end_pts["oy"],
+                    end_pts["ex"], end_pts["ey"],
+                    color=color, alpha=0.25, width=0.8,
+                    headwidth=3, headlength=3,
+                    ax=ax, zorder=zorder,
+                )
         pitch_plot.scatter(
             pts["ox"], pts["oy"],
             s=22, color=color, edgecolors="white", linewidth=0.5,
-            alpha=0.72, ax=ax, zorder=zorder,
+            alpha=0.82, ax=ax, zorder=zorder + 10,
         )
 
     ax.set_title(title, fontsize=12, fontweight="bold", color="#111827", pad=8)
