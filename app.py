@@ -6,6 +6,9 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
+import importlib, sys as _sys
+import mm_setpieces_1.utils as _utils_mod
+importlib.reload(_utils_mod)
 from mm_setpieces_1.utils import *
 from mm_setpieces_1.utils import DATA_VERSION, _data_files, _league_from_filename, _read_excel_if_exists, _read_excel_path, _with_league
 
@@ -1316,9 +1319,7 @@ def render_sequence_page(label: str) -> None:
 
     section_header("Pitch")
     if not is_freekick:
-        _outcome_fn = globals().get("throwin_outcome_zone_figure")
-        if callable(_outcome_fn):
-            render_mpl_visual(_outcome_fn(filtered), "Throw-in outcome zones", f"{key}_outcome_zones_png")
+        render_mpl_visual(throwin_outcome_zone_figure(filtered), "Throw-in outcome zones", f"{key}_outcome_zones_png")
         pitch_left, pitch_right = st.columns(2)
         with pitch_left:
             render_plotly_visual(polish_plotly_figure(starting_location_map_figure(filtered, f"{readable} start locations")), f"{readable} start locations", f"{key}_start_locations_png")
