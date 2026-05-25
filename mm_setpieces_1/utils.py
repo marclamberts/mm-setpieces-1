@@ -2459,8 +2459,18 @@ def _league_from_filename(path: Path) -> str:
         return "Czech First League"
     if "denmark ii" in text or "denmark 2" in text or "denmark second" in text or "danish 2" in text or "dnk ii" in text:
         return "Denmark II"
+    if "1. division" in text or "1 division" in text or "danish 1" in text:
+        return "1. Division"
+    if "superliga" in text:
+        return "Superliga"
     if "denmark" in text or "danish" in text or "dnk" in tokens or "den" in tokens:
         return "Denmark"
+    if "challenger pro" in text:
+        return "Challenger Pro League"
+    if "jupiler" in text or "pro league" in text:
+        return "Jupiler Pro League"
+    if "belgium" in text or "belgian" in text or "bel" in tokens:
+        return "Jupiler Pro League"
     if "uae" in tokens or "emirates" in text:
         return "UAE Pro League"
     return _league_from_generic_filename(path)
