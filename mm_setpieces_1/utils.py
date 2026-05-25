@@ -4152,20 +4152,10 @@ def throwin_sequence_summary(df: pd.DataFrame) -> pd.DataFrame:
         seq["Origin x"] = np.nan
         seq["Origin y"] = np.nan
 
-    # Ensure delivery end coords for arrow drawing.
-    # Use real shot location when available; otherwise estimate infield (~20 units from touchline).
-    if "delivery_end_x" not in seq.columns or seq["delivery_end_x"].isna().all():
-        shot_x_col = "shot_x" if "shot_x" in seq.columns else None
-        shot_y_col = "shot_y" if "shot_y" in seq.columns else None
-        seq["delivery_end_x"] = pd.to_numeric(seq[shot_x_col], errors="coerce") if shot_x_col else np.nan
-        seq["delivery_end_y"] = pd.to_numeric(seq[shot_y_col], errors="coerce") if shot_y_col else np.nan
-
-    no_end = seq["delivery_end_x"].isna()
-    if no_end.any():
-        ox = pd.to_numeric(seq.loc[no_end, "Origin x"], errors="coerce").fillna(60.0)
-        oy = pd.to_numeric(seq.loc[no_end, "Origin y"], errors="coerce").fillna(40.0)
-        seq.loc[no_end, "delivery_end_x"] = ox
-        seq.loc[no_end, "delivery_end_y"] = np.where(oy < 40, 20.0, 60.0)
+    # Carry through shot coords as delivery end when no dedicated end column exists
+    if "delivery_end_x" not in seq.columns:
+        seq["delivery_end_x"] = pd.to_numeric(seq["shot_x"], errors="coerce") if "shot_x" in seq.columns else np.nan
+        seq["delivery_end_y"] = pd.to_numeric(seq["shot_y"], errors="coerce") if "shot_y" in seq.columns else np.nan
 
     return seq.sort_values(["Box entry", "Total xG", "Shots", "Minute"], ascending=[False, False, False, True])
 
