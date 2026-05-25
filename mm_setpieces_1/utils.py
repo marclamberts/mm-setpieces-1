@@ -4292,6 +4292,123 @@ def throwin_delivery_map_figure(df: pd.DataFrame, title: str = "Throw-in deliver
     fig.tight_layout()
     return fig
 
+
+def throwin_outcome_zone_figure(df: pd.DataFrame, title: str = "Throw-in outcomes by zone") -> object:
+    """Pitch map: throw-in origins coloured by tiered outcome within 3 actions.
+    Attacking third  → goal > shot > box entry
+    Middle third     → goal > shot > box entry > retain
+    Defensive third  → moved into middle third (delivery_end_x ≥ 40)
+    """
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as mpatches
+    from mplsoccer import Pitch
+
+    ZONES = [
+        (80, 120, "Attacking\nthird",   "→ Into box",             "#dcfce7"),
+        (40,  80, "Middle\nthird",      "→ Retain possession",    "#fef9c3"),
+        ( 0,  40, "Defensive\nthird",   "→ Into middle third",    "#dbeafe"),
+    ]
+
+    # Tiered outcome colours (best → worst)
+    C_GOAL    = "#15803d"  # dark green
+    C_SHOT    = "#86efac"  # light green
+    C_BOX     = "#f59e0b"  # amber — box entry, no shot
+    C_RETAIN  = "#93c5fd"  # light blue — retained, no box entry
+    C_ADVANCE = "#6366f1"  # indigo — defensive: advanced to middle third
+    C_NONE    = "#e5e7eb"  # gray — nothing notable
+
+    fig, ax = plt.subplots(figsize=(13, 7.5), dpi=120)
+    pitch_plot = Pitch(
+        pitch_type="statsbomb",
+        pitch_color="#f8fafc",
+        line_color="#374151",
+        linewidth=1.2,
+        line_zorder=4,
+    )
+    pitch_plot.draw(ax=ax)
+    ax.set_ylim([-14, 80])
+
+    # Zone bands + labels above pitch
+    for x0, x1, zone_label, target_label, bg in ZONES:
+        ax.axvspan(x0, x1, alpha=0.10, color=bg, zorder=1)
+        cx = (x0 + x1) / 2
+        ax.text(cx, -4, zone_label, ha="center", va="center",
+                fontsize=8, fontweight="bold", color="#374151")
+        ax.text(cx, -10, target_label, ha="center", va="center",
+                fontsize=6.5, color="#6b7280", style="italic")
+
+    for xb in [40, 80]:
+        ax.axvline(x=xb, color="#94a3b8", linestyle="--", linewidth=0.9, alpha=0.7, zorder=3)
+
+    seq = throwin_sequence_summary(df)
+    if seq.empty or "Origin x" not in seq.columns:
+        ax.text(60, 40, "No throw-in data available", ha="center", va="center", color="#94a3b8", fontsize=11)
+        ax.set_title(title, fontsize=12, fontweight="bold", color="#111827", pad=8)
+        fig.tight_layout()
+        return fig
+
+    plot_df = seq.dropna(subset=["Origin x", "Origin y"]).copy()
+    plot_df["ox"], plot_df["oy"] = coords_to_statsbomb(plot_df, "Origin x", "Origin y")
+
+    # Derive advance flag for defensive throws
+    if "delivery_end_x" in plot_df.columns:
+        end_x, _ = coords_to_statsbomb(plot_df, "delivery_end_x", "delivery_end_y" if "delivery_end_y" in plot_df.columns else "Origin y")
+        plot_df["_advanced"] = end_x >= 40
+    else:
+        plot_df["_advanced"] = False
+
+    def _outcome_color(row) -> str:
+        ox = row.get("ox", 60)
+        if row.get("Goals", 0):
+            return C_GOAL
+        if row.get("Shots", 0):
+            return C_SHOT
+        if ox >= 80:
+            # Attacking third: box entry is the floor (all positive by data)
+            return C_BOX
+        if ox >= 40:
+            # Middle third: box entry upgrade or just retain
+            if row.get("Box entry", False):
+                return C_BOX
+            return C_RETAIN
+        # Defensive third
+        return C_ADVANCE if row.get("_advanced", False) else C_NONE
+
+    plot_df["_color"] = plot_df.apply(_outcome_color, axis=1)
+
+    # Draw in reverse priority order (best outcomes on top)
+    for color, label, zorder in [
+        (C_NONE,   "No advance",     5),
+        (C_ADVANCE,"Into middle",    6),
+        (C_RETAIN, "Retain",         7),
+        (C_BOX,    "Box entry",      8),
+        (C_SHOT,   "Shot",           9),
+        (C_GOAL,   "Goal",          10),
+    ]:
+        pts = plot_df[plot_df["_color"] == color]
+        if pts.empty:
+            continue
+        pitch_plot.scatter(
+            pts["ox"], pts["oy"],
+            s=22, color=color, edgecolors="white", linewidth=0.5,
+            alpha=0.72, ax=ax, zorder=zorder,
+        )
+
+    ax.set_title(title, fontsize=12, fontweight="bold", color="#111827", pad=8)
+    legend_patches = [
+        mpatches.Patch(color=C_GOAL,    label="Goal"),
+        mpatches.Patch(color=C_SHOT,    label="Shot (no goal)"),
+        mpatches.Patch(color=C_BOX,     label="Box entry (no shot)"),
+        mpatches.Patch(color=C_RETAIN,  label="Retain (no box entry)"),
+        mpatches.Patch(color=C_ADVANCE, label="Into middle third"),
+        mpatches.Patch(color=C_NONE,    label="No advance"),
+    ]
+    ax.legend(handles=legend_patches, loc="upper right", fontsize=7.5,
+              frameon=True, framealpha=0.9, ncol=1)
+    fig.tight_layout()
+    return fig
+
+
 def kpi_row(df: pd.DataFrame) -> None:
     render_set_piece_kpi_deck(df)
 

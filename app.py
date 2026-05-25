@@ -1315,11 +1315,19 @@ def render_sequence_page(label: str) -> None:
                 render_plotly_visual(polish_plotly_figure(fig), "Box entry % by side", f"{key}_side_box_png")
 
     section_header("Pitch")
-    pitch_left, pitch_right = st.columns(2)
-    with pitch_left:
-        render_plotly_visual(polish_plotly_figure(starting_location_map_figure(filtered, f"{readable} start locations")), f"{readable} start locations", f"{key}_start_locations_png")
-    with pitch_right:
-        render_plotly_visual(polish_plotly_figure(shotmap_figure(filtered, f"{readable} shot map")), f"{readable} shot map", f"{key}_shot_map_png")
+    if not is_freekick:
+        render_mpl_visual(throwin_outcome_zone_figure(filtered), "Throw-in outcome zones", f"{key}_outcome_zones_png")
+        pitch_left, pitch_right = st.columns(2)
+        with pitch_left:
+            render_plotly_visual(polish_plotly_figure(starting_location_map_figure(filtered, f"{readable} start locations")), f"{readable} start locations", f"{key}_start_locations_png")
+        with pitch_right:
+            render_plotly_visual(polish_plotly_figure(shotmap_figure(filtered, f"{readable} shot map")), f"{readable} shot map", f"{key}_shot_map_png")
+    else:
+        pitch_left, pitch_right = st.columns(2)
+        with pitch_left:
+            render_plotly_visual(polish_plotly_figure(starting_location_map_figure(filtered, f"{readable} start locations")), f"{readable} start locations", f"{key}_start_locations_png")
+        with pitch_right:
+            render_plotly_visual(polish_plotly_figure(shotmap_figure(filtered, f"{readable} shot map")), f"{readable} shot map", f"{key}_shot_map_png")
 
     section_header("Roles")
     role_left, role_right = st.columns(2)
