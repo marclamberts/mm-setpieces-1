@@ -1,4 +1,4 @@
-"""Corners section — tabbed layout with Compare tab."""
+"""Corners section — maximum analytical depth."""
 from __future__ import annotations
 
 import streamlit as st
@@ -18,6 +18,9 @@ from mm_setpieces_1.utils import (
     build_shooter_leaderboard,
     build_pattern_library,
     build_match_log,
+    build_team_leaderboard,
+    build_team_archetypes,
+    build_role_archetypes,
     categorical_breakdown_figure,
     minute_distribution_figure,
     mplsoccer_delivery_figure,
@@ -30,6 +33,7 @@ from mm_setpieces_1.utils import (
     polish_plotly_figure,
     set_piece_kpi_values,
     unique_start_events,
+    add_delivery_zones,
     shotmap_figure,
     starting_location_map_figure,
 )
@@ -121,9 +125,124 @@ def _filter_data(df: pd.DataFrame, key_prefix: str):
     return filtered, filters, team, league
 
 
-# ── Compare helpers ──────────────────────────────────────────────────────────
+# ── Zone breakdown helper ────────────────────────────────────────────────────
 
-def _kpi_compare_row(label: str, val_a, val_b, fmt: str = "{:.1f}") -> None:
+def _zone_summary(df: pd.DataFrame) -> pd.DataFrame:
+    base = add_delivery_zones(unique_start_events(df))
+    if base.empty or "Delivery zone" not in base.columns:
+        return pd.DataFrame()
+    rows = []
+    for zone, part in base.groupby("Delivery zone", dropna=False):
+        events = int(len(part))
+        shots = int(part["is_shot"].sum()) if "is_shot" in part.columns else 0
+        goals = int(part["is_goal"].sum()) if "is_goal" in part.columns else 0
+        xg = float(part["xg"].fillna(0).sum()) if "xg" in part.columns else 0.0
+        rows.append({
+            "Delivery zone": zone,
+            "Corners": events,
+            "Shots": shots,
+            "Goals": goals,
+            "Shot rate %": round(shots / events * 100, 2) if events else 0.0,
+            "Total xG": round(xg, 2),
+            "xG / corner": round(xg / events, 3) if events else 0.0,
+            "xG / shot": round(xg / shots, 3) if shots else 0.0,
+            "Conv %": round(goals / shots * 100, 2) if shots else 0.0,
+        })
+    return pd.DataFrame(rows).sort_values("xG / corner", ascending=False)
+
+
+def _side_breakdown(df: pd.DataFrame) -> pd.DataFrame:
+    base = unique_start_events(df)
+    if base.empty or "side" not in base.columns:
+        return pd.DataFrame()
+    rows = []
+    for side, part in base.groupby("side", dropna=False):
+        events = int(len(part))
+        shots = int(part["is_shot"].sum()) if "is_shot" in part.columns else 0
+        goals = int(part["is_goal"].sum()) if "is_goal" in part.columns else 0
+        xg = float(part["xg"].fillna(0).sum()) if "xg" in part.columns else 0.0
+        rows.append({
+            "Side": side,
+            "Corners": events,
+            "Shots": shots,
+            "Goals": goals,
+            "Shot rate %": round(shots / events * 100, 2) if events else 0.0,
+            "Total xG": round(xg, 2),
+            "xG / corner": round(xg / events, 3) if events else 0.0,
+        })
+    return pd.DataFrame(rows).sort_values("xG / corner", ascending=False)
+
+
+def _technique_breakdown(df: pd.DataFrame) -> pd.DataFrame:
+    base = add_delivery_zones(unique_start_events(df))
+    if base.empty:
+        return pd.DataFrame()
+    rows = []
+    for (tech, height), part in base.groupby(
+        [c for c in ["Technique", "Delivery height"] if c in base.columns], dropna=False
+    ):
+        events = int(len(part))
+        shots = int(part["is_shot"].sum()) if "is_shot" in part.columns else 0
+        goals = int(part["is_goal"].sum()) if "is_goal" in part.columns else 0
+        xg = float(part["xg"].fillna(0).sum()) if "xg" in part.columns else 0.0
+        rows.append({
+            "Technique": tech,
+            "Height": height,
+            "Corners": events,
+            "Shots": shots,
+            "Goals": goals,
+            "Shot rate %": round(shots / events * 100, 2) if events else 0.0,
+            "Total xG": round(xg, 2),
+            "xG / corner": round(xg / events, 3) if events else 0.0,
+            "xG / shot": round(xg / shots, 3) if shots else 0.0,
+        })
+    return pd.DataFrame(rows).sort_values("xG / corner", ascending=False)
+
+
+def _outcome_breakdown(df: pd.DataFrame) -> pd.DataFrame:
+    base = unique_start_events(df)
+    cols = [c for c in ["Delivery outcome", "Shot outcome"] if c in base.columns]
+    if base.empty or not cols:
+        return pd.DataFrame()
+    rows = []
+    for keys, part in base.groupby(cols, dropna=False):
+        if not isinstance(keys, tuple):
+            keys = (keys,)
+        record = dict(zip(cols, keys))
+        events = int(len(part))
+        xg = float(part["xg"].fillna(0).sum()) if "xg" in part.columns else 0.0
+        record["Count"] = events
+        record["Total xG"] = round(xg, 2)
+        record["xG / corner"] = round(xg / events, 3) if events else 0.0
+        rows.append(record)
+    return pd.DataFrame(rows).sort_values("Count", ascending=False)
+
+
+def _period_breakdown(df: pd.DataFrame) -> pd.DataFrame:
+    base = unique_start_events(df)
+    if base.empty or "game_period" not in base.columns:
+        return pd.DataFrame()
+    rows = []
+    for period, part in base.groupby("game_period", dropna=False):
+        events = int(len(part))
+        shots = int(part["is_shot"].sum()) if "is_shot" in part.columns else 0
+        goals = int(part["is_goal"].sum()) if "is_goal" in part.columns else 0
+        xg = float(part["xg"].fillna(0).sum()) if "xg" in part.columns else 0.0
+        rows.append({
+            "Period": period,
+            "Corners": events,
+            "Shots": shots,
+            "Goals": goals,
+            "Shot rate %": round(shots / events * 100, 2) if events else 0.0,
+            "Total xG": round(xg, 2),
+            "xG / corner": round(xg / events, 3) if events else 0.0,
+        })
+    return pd.DataFrame(rows).sort_values("xG / corner", ascending=False)
+
+
+# ── Compare helper ───────────────────────────────────────────────────────────
+
+def _kpi_compare_row(label: str, val_a, val_b, fmt: str = "{:.2f}") -> None:
     better_a = val_a >= val_b if isinstance(val_a, (int, float)) else None
     def _f(v):
         try: return fmt.format(v)
@@ -144,7 +263,7 @@ def _team_kpis(df: pd.DataFrame, team: str) -> dict:
 def render_corners() -> None:
     label = "Corners"
     df = load_prepared_sp_data(label, DATA_VERSION)
-    hero_block("Set pieces", label, "Corner delivery, shot creation, patterns, and role breakdown.")
+    hero_block("Set pieces", label, "Corner delivery, shot creation, zones, patterns, taker archetypes, and tactical intelligence.")
     if df.empty:
         st.warning("No corner rows were found.")
         return
@@ -158,109 +277,189 @@ def render_corners() -> None:
 
     scope = selected_team if selected_team != "All" else selected_league if selected_league != "All" else "All teams"
 
-    tab_overview, tab_delivery, tab_roles, tab_patterns, tab_trends, tab_compare, tab_report, tab_rows = st.tabs([
-        "📊 Overview", "🎯 Delivery", "👤 Roles", "🔁 Patterns", "📈 Trends", "⚖️ Compare", "📋 Report", "🗃️ Rows"
+    tabs = st.tabs([
+        "📊 Overview",
+        "🎯 Delivery",
+        "🗺️ Zones",
+        "👤 Takers",
+        "🔁 Patterns",
+        "📈 Trends",
+        "⚖️ Compare",
+        "🧠 Archetypes",
+        "📋 Report",
+        "🗃️ Rows",
     ])
+    (
+        tab_overview, tab_delivery, tab_zones, tab_takers,
+        tab_patterns, tab_trends, tab_compare, tab_archetypes,
+        tab_report, tab_rows,
+    ) = tabs
 
     # ── Overview ────────────────────────────────────────────────────────────
     with tab_overview:
         kpi_row(filtered)
         info_panel(filtered)
 
-        summary, technique_mix, outcome_mix = build_summary_tables(filtered)
-        section_header(f"{scope} — Summary tables")
-        c1, c2, c3 = st.columns([1.35, 1, 1])
-        with c1:
-            st.caption("Teams")
-            render_analyst_table(summary.head(15), height=320)
-        with c2:
-            st.caption("Technique × Height")
-            render_analyst_table(technique_mix.head(15), height=320)
-        with c3:
-            st.caption("Delivery × Shot outcome")
-            render_analyst_table(outcome_mix.head(15), height=320)
+        section_header(f"{scope} — Team board", "Volume, shots, xG ranked by performance")
+        team_board = build_team_leaderboard(filtered)
+        render_analyst_table(
+            team_board.head(30), height=420,
+            color_cols=["Shot rate %", "Total xG", "xG / event", "xG / 100", "xG / shot", "Goals / shot %"],
+        )
+
+        section_header("Technique × Height mix")
+        _, technique_mix, outcome_mix = build_summary_tables(filtered)
+        col_t, col_o = st.columns(2)
+        with col_t:
+            render_analyst_table(technique_mix.head(20), height=320)
+        with col_o:
+            render_analyst_table(outcome_mix.head(20), height=320)
 
         section_header("Key insights")
         cols = st.columns(2)
-        for idx, insight in enumerate(generate_set_piece_insights(filtered, label)[:6]):
+        for idx, insight in enumerate(generate_set_piece_insights(filtered, label)[:8]):
             with cols[idx % 2]:
                 st.markdown(f"<div class='mm-insight-card'>{insight}</div>", unsafe_allow_html=True)
 
     # ── Delivery ────────────────────────────────────────────────────────────
     with tab_delivery:
-        section_header("Delivery maps", "Where corners land and what happens")
+        section_header("Pitch maps")
         d1, d2 = st.columns(2)
         with d1:
-            render_mpl_visual(mplsoccer_delivery_figure(filtered, label), "Corners delivery map", "corners_delivery_map_png")
+            render_mpl_visual(mplsoccer_delivery_figure(filtered, label), "Delivery map", "corners_delivery_map_png")
         with d2:
-            render_mpl_visual(mplsoccer_shot_figure(filtered, label), "Corners shot quality", "corners_shot_quality_png")
-        render_mpl_visual(mplsoccer_delivery_sp_outcome_figure(filtered, label), "Corners delivery SP outcomes", "corners_delivery_sp_outcomes_png")
+            render_mpl_visual(mplsoccer_shot_figure(filtered, label), "Shot quality map", "corners_shot_quality_png")
+        render_mpl_visual(mplsoccer_delivery_sp_outcome_figure(filtered, label), "Delivery SP outcomes", "corners_delivery_sp_outcomes_png")
 
         section_header("Shot map")
         render_plotly_visual(
-            polish_plotly_figure(shotmap_figure(filtered, f"{scope} — corner shot map")),
-            "Corners shot map", "corners_shot_map_png",
+            polish_plotly_figure(shotmap_figure(filtered, f"{scope} — corner shots")),
+            "Shot map", "corners_shot_map_png",
         )
 
-        section_header("Technique and height breakdown")
+        section_header("Technique, height & side breakdown")
         ch1, ch2, ch3 = st.columns(3)
         with ch1:
-            render_plotly_visual(categorical_breakdown_figure(filtered, "Technique", "Technique", top_n=8, color="#111827"), "Corners technique", "corners_technique_png")
+            render_plotly_visual(categorical_breakdown_figure(filtered, "Technique", "Technique", top_n=8, color="#111827"), "Technique", "corners_technique_png")
         with ch2:
-            render_plotly_visual(categorical_breakdown_figure(filtered, "Delivery height", "Height", top_n=8, color="#1d4ed8"), "Corners height", "corners_height_png")
+            render_plotly_visual(categorical_breakdown_figure(filtered, "Delivery height", "Height", top_n=8, color="#1d4ed8"), "Height", "corners_height_png")
         with ch3:
-            render_plotly_visual(categorical_breakdown_figure(filtered, "side", "Side", top_n=6, color="#c1121f"), "Corners side", "corners_side_png")
+            render_plotly_visual(categorical_breakdown_figure(filtered, "side", "Side", top_n=6, color="#c1121f"), "Side", "corners_side_png")
 
-    # ── Roles ────────────────────────────────────────────────────────────────
-    with tab_roles:
-        section_header("Taker leaderboard")
-        render_analyst_table(build_taker_leaderboard(filtered).head(25), height=420)
-
-        section_header("Shooter leaderboard")
-        render_analyst_table(build_shooter_leaderboard(filtered).head(25), height=420)
-
-        section_header("Top takers chart")
-        render_plotly_visual(
-            categorical_breakdown_figure(filtered, "Taker", "Top takers", top_n=12, color="#c1121f"),
-            "Corners top takers", "corners_top_takers_png",
+        section_header("Technique × Height — detailed table")
+        render_analyst_table(
+            _technique_breakdown(filtered), height=420,
+            color_cols=["Shot rate %", "Total xG", "xG / corner", "xG / shot"],
         )
+
+        section_header("Delivery & shot outcome combinations")
+        render_analyst_table(_outcome_breakdown(filtered), height=340)
+
+    # ── Zones ────────────────────────────────────────────────────────────────
+    with tab_zones:
+        section_header("Delivery zone analysis", "Where the ball lands and what that produces")
+        zone_df = _zone_summary(filtered)
+        render_analyst_table(
+            zone_df, height=380,
+            color_cols=["Shot rate %", "Total xG", "xG / corner", "xG / shot", "Conv %"],
+        )
+
+        if not zone_df.empty and "Delivery zone" in zone_df.columns:
+            zc1, zc2 = st.columns(2)
+            with zc1:
+                section_header("xG / corner by zone")
+                fig = bar_chart(zone_df.sort_values("xG / corner"), x="xG / corner", y="Delivery zone", orientation="h")
+                fig.update_layout(height=380, margin=dict(l=8, r=8, t=24, b=8), showlegend=False)
+                render_plotly_visual(polish_plotly_figure(fig), "Zone xG per corner", "corners_zone_xg_png")
+            with zc2:
+                section_header("Shot rate by zone")
+                fig2 = bar_chart(zone_df.sort_values("Shot rate %"), x="Shot rate %", y="Delivery zone", orientation="h")
+                fig2.update_layout(height=380, margin=dict(l=8, r=8, t=24, b=8), showlegend=False)
+                render_plotly_visual(polish_plotly_figure(fig2), "Zone shot rate", "corners_zone_shot_rate_png")
+
+        section_header("Side breakdown")
+        side_df = _side_breakdown(filtered)
+        render_analyst_table(
+            side_df, height=240,
+            color_cols=["Shot rate %", "Total xG", "xG / corner"],
+        )
+
+        section_header("Period breakdown")
+        period_df = _period_breakdown(filtered)
+        render_analyst_table(
+            period_df, height=260,
+            color_cols=["Shot rate %", "Total xG", "xG / corner"],
+        )
+
+    # ── Takers ───────────────────────────────────────────────────────────────
+    with tab_takers:
+        section_header("Taker leaderboard", "Ranked by xG / 100 corners")
+        render_analyst_table(
+            build_taker_leaderboard(filtered).head(35), height=460,
+            color_cols=["Events", "Shots", "Goals", "Shot rate", "xG / event", "xG / 100"],
+        )
+
+        section_header("Shooter leaderboard", "Ranked by total xG")
+        render_analyst_table(
+            build_shooter_leaderboard(filtered).head(35), height=420,
+            color_cols=["Shots", "Goals", "Total xG", "xG / shot", "Conversion %"],
+        )
+
+        section_header("Top takers by volume")
+        render_plotly_visual(
+            categorical_breakdown_figure(filtered, "Taker", "Top takers", top_n=15, color="#c1121f"),
+            "Top takers", "corners_top_takers_png",
+        )
+
         section_header("Shot outcomes by player")
         render_plotly_visual(
-            categorical_breakdown_figure(filtered, "Shot outcome", "Shot outcomes", top_n=10, color="#1d4ed8"),
-            "Corners shot outcomes", "corners_shot_outcomes_png",
+            categorical_breakdown_figure(filtered, "Shooter", "Top shooters", top_n=15, color="#1d4ed8"),
+            "Top shooters", "corners_top_shooters_png",
         )
 
     # ── Patterns ─────────────────────────────────────────────────────────────
     with tab_patterns:
-        section_header("Pattern library", "Technique × height × outcome combinations")
-        render_analyst_table(build_pattern_library(filtered).head(40), height=480)
+        section_header("Full pattern library", "Every Technique × Height × Zone × Outcome combination")
+        render_analyst_table(
+            build_pattern_library(filtered).head(60), height=520,
+            color_cols=["Events", "Shots", "Goals", "Shot rate %", "Total xG", "xG / event", "xG / 100", "xG / shot"],
+        )
 
-        section_header("Delivery outcome breakdown")
+        section_header("Delivery outcome chart")
         if "Delivery outcome" in filtered.columns:
             render_plotly_visual(
-                categorical_breakdown_figure(filtered, "Delivery outcome", "Delivery outcomes", top_n=12, color="#15803d"),
-                "Corners delivery outcomes", "corners_delivery_outcomes_png",
+                categorical_breakdown_figure(filtered, "Delivery outcome", "Delivery outcomes", top_n=14, color="#15803d"),
+                "Delivery outcomes", "corners_delivery_outcomes_png",
             )
-        else:
-            st.info("No delivery outcome column in this dataset.")
+
+        section_header("Shot outcome chart")
+        if "Shot outcome" in filtered.columns:
+            render_plotly_visual(
+                categorical_breakdown_figure(filtered, "Shot outcome", "Shot outcomes", top_n=12, color="#b45309"),
+                "Shot outcomes", "corners_shot_outcomes_png",
+            )
 
     # ── Trends ───────────────────────────────────────────────────────────────
     with tab_trends:
-        section_header("Minute distribution", "When corners are taken through the match")
-        render_plotly_visual(minute_distribution_figure(filtered, "Minute distribution"), "Corners minute distribution", "corners_minute_distribution_png")
+        section_header("Minute distribution", "When corners are taken across 90 minutes")
+        render_plotly_visual(minute_distribution_figure(filtered, "Minute distribution"), "Minute distribution", "corners_minute_distribution_png")
 
-        if "match_rank" in filtered.columns and filtered["match_rank"].notna().any():
-            section_header("Recent form", "xG and shots across last matches")
-            match_log = build_match_log(filtered)
-            if not match_log.empty:
-                render_analyst_table(match_log, height=420)
+        section_header("Match log", "Per-match corner output")
+        match_log = build_match_log(filtered)
+        if not match_log.empty:
+            render_analyst_table(
+                match_log, height=460,
+                color_cols=["Events", "Shots", "Goals", "Shot rate %", "Total xG"],
+            )
+
+            section_header("xG per match — top 20")
+            top_matches = match_log.sort_values("Total xG", ascending=False).head(20)
+            match_col = "Match" if "Match" in top_matches.columns else top_matches.columns[0]
+            fig = bar_chart(top_matches.sort_values("Total xG"), x="Total xG", y=match_col, orientation="h")
+            fig.update_layout(height=480, margin=dict(l=8, r=8, t=24, b=8), showlegend=False)
+            render_plotly_visual(polish_plotly_figure(fig), "xG per match", "corners_match_xg_png")
         else:
-            section_header("Match log")
-            match_log = build_match_log(filtered)
-            if not match_log.empty:
-                render_analyst_table(match_log, height=420)
-            else:
-                st.info("No match-level log available for this filter.")
+            st.info("No match-level log available for this filter.")
 
     # ── Compare ──────────────────────────────────────────────────────────────
     with tab_compare:
@@ -288,33 +487,79 @@ def render_corners() -> None:
             _kpi_compare_row("Shots", kpi_a["shots"], kpi_b["shots"], "{:,}")
             _kpi_compare_row("Goals", kpi_a["goals"], kpi_b["goals"], "{:,}")
             _kpi_compare_row("xG", kpi_a["total_xg"], kpi_b["total_xg"], "{:.2f}")
-            _kpi_compare_row("Shot rate %", kpi_a["shot_rate"], kpi_b["shot_rate"], "{:.1f}")
+            _kpi_compare_row("Shot rate %", kpi_a["shot_rate"], kpi_b["shot_rate"], "{:.2f}")
             _kpi_compare_row("xG / 100", kpi_a["xg_per_100"], kpi_b["xg_per_100"], "{:.2f}")
             _kpi_compare_row("xG / shot", kpi_a["xg_per_shot"], kpi_b["xg_per_shot"], "{:.3f}")
-            _kpi_compare_row("Goal conv %", kpi_a["goal_conversion"], kpi_b["goal_conversion"], "{:.1f}")
+            _kpi_compare_row("Goal conv %", kpi_a["goal_conversion"], kpi_b["goal_conversion"], "{:.2f}")
 
             st.divider()
             section_header("Delivery maps")
             mc1, mc2 = st.columns(2)
             with mc1:
                 st.caption(f"**{team_a}**")
-                if df_a.empty:
-                    st.info("No data for Team A.")
-                else:
-                    render_mpl_visual(mplsoccer_delivery_figure(df_a, team_a), f"{team_a} delivery", "corners_cmp_a_delivery")
+                render_mpl_visual(mplsoccer_delivery_figure(df_a, team_a), f"{team_a} delivery", "corners_cmp_a_delivery") if not df_a.empty else st.info("No data.")
             with mc2:
                 st.caption(f"**{team_b}**")
-                if df_b.empty:
-                    st.info("No data for Team B.")
-                else:
-                    render_mpl_visual(mplsoccer_delivery_figure(df_b, team_b), f"{team_b} delivery", "corners_cmp_b_delivery")
+                render_mpl_visual(mplsoccer_delivery_figure(df_b, team_b), f"{team_b} delivery", "corners_cmp_b_delivery") if not df_b.empty else st.info("No data.")
+
+            section_header("Zone breakdown comparison")
+            zc1, zc2 = st.columns(2)
+            with zc1:
+                st.caption(f"**{team_a}**")
+                render_analyst_table(_zone_summary(df_a), height=300, color_cols=["xG / corner", "Shot rate %"])
+            with zc2:
+                st.caption(f"**{team_b}**")
+                render_analyst_table(_zone_summary(df_b), height=300, color_cols=["xG / corner", "Shot rate %"])
 
             section_header("Taker comparison")
             tc1, tc2 = st.columns(2)
             with tc1:
-                render_analyst_table(build_taker_leaderboard(df_a).head(10), height=300)
+                st.caption(f"**{team_a}**")
+                render_analyst_table(build_taker_leaderboard(df_a).head(12), height=320, color_cols=["xG / 100", "Shot rate", "xG / event"])
             with tc2:
-                render_analyst_table(build_taker_leaderboard(df_b).head(10), height=300)
+                st.caption(f"**{team_b}**")
+                render_analyst_table(build_taker_leaderboard(df_b).head(12), height=320, color_cols=["xG / 100", "Shot rate", "xG / event"])
+
+            section_header("Pattern comparison")
+            pc1, pc2 = st.columns(2)
+            with pc1:
+                st.caption(f"**{team_a}**")
+                render_analyst_table(build_pattern_library(df_a).head(15), height=340, color_cols=["xG / event", "Shot rate %"])
+            with pc2:
+                st.caption(f"**{team_b}**")
+                render_analyst_table(build_pattern_library(df_b).head(15), height=340, color_cols=["xG / event", "Shot rate %"])
+
+    # ── Archetypes ────────────────────────────────────────────────────────────
+    with tab_archetypes:
+        section_header("Team archetypes", "Tactical profile for every team in the current filter")
+        team_arch = build_team_archetypes(filtered)
+        if not team_arch.empty:
+            render_analyst_table(
+                team_arch, height=420,
+                color_cols=["Events", "Shots", "Goals", "Shot rate %", "xG / event", "xG / 100"],
+            )
+
+        section_header("Taker role archetypes", "Individual taker profiles with role classification")
+        role_arch = build_role_archetypes(filtered)
+        if not role_arch.empty:
+            render_analyst_table(
+                role_arch.head(50), height=500,
+                color_cols=["Events", "Shots", "Goals", "Shot rate", "xG / event", "xG / 100"],
+            )
+        else:
+            st.info("No taker archetype data available for this filter.")
+
+        section_header("Technique chart — full breakdown")
+        render_plotly_visual(
+            categorical_breakdown_figure(filtered, "Technique", "Technique share", top_n=12, color="#0f172a"),
+            "Technique share", "corners_tech_arch_png",
+        )
+
+        section_header("Delivery height chart")
+        render_plotly_visual(
+            categorical_breakdown_figure(filtered, "Delivery height", "Delivery height", top_n=8, color="#c1121f"),
+            "Delivery height", "corners_height_arch_png",
+        )
 
     # ── Report ───────────────────────────────────────────────────────────────
     with tab_report:
@@ -323,7 +568,7 @@ def render_corners() -> None:
         if st.session_state.get("corners_pdf_team") not in pdf_teams:
             st.session_state["corners_pdf_team"] = "All"
         pdf_team = st.selectbox("Report team", pdf_teams, key="corners_pdf_team")
-        opponent = st.text_input("Opponent / label for report filename", value="", key="corners_pdf_label")
+        opponent = st.text_input("Opponent / label for filename", value="", key="corners_pdf_label")
         pdf_filtered = filtered[filtered["Team"].astype(str).eq(pdf_team)].copy() if pdf_team != "All" and "Team" in filtered.columns else filtered.copy()
         pdf_label = f"Corners – {pdf_team}" if pdf_team != "All" else "Corners"
         safe_name = (opponent.strip() or pdf_label).lower().replace(" ", "_").replace("/", "-")
@@ -343,6 +588,9 @@ def render_corners() -> None:
             "Match", "Team", "SP_Type", "Taker", "Shooter", "side", "minute", "second",
             "Technique", "Delivery height", "Shot outcome", "xg", "Delivery outcome",
             "Defensive_setup", "Occupation_Rating", "Proximity_Rating", "Duel_Win_Prob",
-            "OPS_Opponent_Rating", "timestamp",
+            "OPS_Opponent_Rating", "League", "game_period", "timestamp",
         ] if c in filtered.columns]
-        render_analyst_table(filtered[display_cols], height=560)
+        render_analyst_table(
+            filtered[display_cols], height=600,
+            color_cols=["xg", "Occupation_Rating", "Proximity_Rating", "Duel_Win_Prob", "OPS_Opponent_Rating"],
+        )

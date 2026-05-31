@@ -2207,17 +2207,15 @@ def render_analyst_table(
 
     styler = display_df.style.hide(axis="index")
 
-    # Format numeric columns cleanly
+    # Format numeric columns — always 2 dp for floats, comma-separated integers
     for col in all_numeric:
         sample = display_df[col].dropna()
         if len(sample) == 0:
             continue
         if pd.api.types.is_integer_dtype(display_df[col]):
             styler = styler.format({col: "{:,.0f}"})
-        elif sample.abs().max() < 10:
-            styler = styler.format({col: "{:.2f}"})
         else:
-            styler = styler.format({col: "{:,.1f}"})
+            styler = styler.format({col: "{:,.2f}"})
 
     # Apply per-column gradients
     for col in target_cols:
