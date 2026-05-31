@@ -122,10 +122,10 @@ def render_delay() -> None:
         left, right = st.columns(2)
         with left:
             section_header("Delay bands", "Distribution across time windows")
-            render_analyst_table(band_summary, height=320)
+            render_analyst_table(band_summary, height=320, invert_cols=["Avg_Delay", "Median_Delay", "Min_Delay", "Max_Delay"])
         with right:
             section_header("Exit profile", "What event follows the corner")
-            render_analyst_table(out_summary, height=320)
+            render_analyst_table(out_summary, height=320, invert_cols=["Avg_Delay", "Median_Delay"])
 
     # ── Charts ────────────────────────────────────────────────────────────────
     with tab_charts:
@@ -162,7 +162,7 @@ def render_delay() -> None:
         match_delay[["Avg_Delay", "Median_Delay", "Max_Delay"]] = match_delay[["Avg_Delay", "Median_Delay", "Max_Delay"]].round(1)
         if not match_delay.empty:
             st.markdown(f"<div class='mm-insight-card'>Slowest match: <strong>{match_delay.iloc[0]['match']}</strong> — avg {match_delay.iloc[0]['Avg_Delay']:.1f}s</div>", unsafe_allow_html=True)
-        render_analyst_table(match_delay.head(35), height=460)
+        render_analyst_table(match_delay.head(35), height=460, invert_cols=["Avg_Delay", "Median_Delay", "Max_Delay"])
 
         avg_by_match = match_delay.sort_values("Avg_Delay").tail(20)
         match_fig = bar_chart(avg_by_match, x="Avg_Delay", y="match", orientation="h")

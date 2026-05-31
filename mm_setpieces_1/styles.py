@@ -1820,6 +1820,20 @@ def inject_app_style() -> None:
             div[data-testid="stDataFrameResizable"] {{
                 background: #ffffff !important;
             }}
+            /* Styled analyst table — smooth scrolling dataframe */
+            [data-testid="stDataFrame"] > div {{
+                border-radius: 8px !important;
+                overflow: hidden !important;
+            }}
+            [data-testid="stDataFrame"] iframe {{
+                border: 0 !important;
+            }}
+            [data-testid="stDataFrameResizable"] {{
+                border-radius: 8px !important;
+                border: 1px solid #e2e8f0 !important;
+                overflow: hidden !important;
+                box-shadow: 0 1px 4px rgba(15,23,42,0.06) !important;
+            }}
             .mm-table-note {{
                 color: var(--sp-muted) !important;
                 font-size: .78rem !important;

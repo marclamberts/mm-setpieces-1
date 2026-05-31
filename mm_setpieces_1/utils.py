@@ -2142,16 +2142,112 @@ def build_match_log(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows).sort_values(["Match", "Total xG"], ascending=[True, False])
 
 
-def render_analyst_table(df: pd.DataFrame, *, height: int = 360, max_rows: int = 500) -> None:
+def render_analyst_table(
+    df: pd.DataFrame,
+    *,
+    height: int = 360,
+    max_rows: int = 500,
+    color_cols: list[str] | None = None,
+    invert_cols: list[str] | None = None,
+) -> None:
+    """Render a styled analyst table.
+
+    color_cols:  columns to apply a heatmap to (default: all numeric)
+    invert_cols: numeric columns where low = good (reversed colour scale)
+    """
     if df.empty:
         st.info("No rows available for this view.")
         return
-    display_df = df
+
+    display_df = df.head(max_rows)
     if len(df) > max_rows:
-        display_df = df.head(max_rows)
-        st.caption(f"Showing the first {max_rows:,} of {len(df):,} rows for faster rendering. Use exports for the full table.")
+        st.caption(f"Showing {max_rows:,} of {len(df):,} rows. Use exports for the full table.")
+
+    # Identify numeric columns eligible for colouring
+    all_numeric = [c for c in display_df.columns if pd.api.types.is_numeric_dtype(display_df[c])]
+    target_cols = color_cols if color_cols is not None else all_numeric
+    target_cols = [c for c in target_cols if c in display_df.columns and pd.api.types.is_numeric_dtype(display_df[c])]
+    inverted = set(invert_cols or [])
+
+    # Base colour palette: white → steel-blue; inverted: white → rose-red
+    BLUE_MAP = ["#ffffff", "#dbeafe", "#93c5fd", "#3b82f6", "#1d4ed8"]
+    RED_MAP  = ["#ffffff", "#fee2e2", "#fca5a5", "#ef4444", "#b91c1c"]
+
+    def _col_gradient(s: pd.Series, cmap: list[str]) -> list[str]:
+        """Return CSS background-color strings for a numeric series."""
+        vals = pd.to_numeric(s, errors="coerce")
+        lo, hi = vals.min(), vals.max()
+        if pd.isna(lo) or pd.isna(hi) or lo == hi:
+            return [""] * len(s)
+        n = len(cmap) - 1
+        styles = []
+        for v in vals:
+            if pd.isna(v):
+                styles.append("")
+            else:
+                t = (v - lo) / (hi - lo)
+                idx = min(int(t * n), n - 1)
+                lo_c, hi_c = cmap[idx], cmap[idx + 1]
+                # linear interpolation within the swatch
+                frac = t * n - idx
+                def _blend(a: str, b: str, f: float) -> str:
+                    def _hex2rgb(h: str) -> tuple[int, int, int]:
+                        h = h.lstrip("#")
+                        return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+                    ra, ga, ba = _hex2rgb(a)
+                    rb, gb, bb = _hex2rgb(b)
+                    r = int(ra + (rb - ra) * f)
+                    g = int(ga + (gb - ga) * f)
+                    b_ = int(ba + (bb - ba) * f)
+                    lum = 0.299 * r + 0.587 * g + 0.114 * b_
+                    txt = "#0b0f14" if lum > 140 else "#ffffff"
+                    return f"background-color:#{r:02x}{g:02x}{b_:02x};color:{txt}"
+                styles.append(_blend(lo_c, hi_c, frac))
+        return styles
+
+    styler = display_df.style.hide(axis="index")
+
+    # Format numeric columns cleanly
+    for col in all_numeric:
+        sample = display_df[col].dropna()
+        if len(sample) == 0:
+            continue
+        if pd.api.types.is_integer_dtype(display_df[col]):
+            styler = styler.format({col: "{:,.0f}"})
+        elif sample.abs().max() < 10:
+            styler = styler.format({col: "{:.2f}"})
+        else:
+            styler = styler.format({col: "{:,.1f}"})
+
+    # Apply per-column gradients
+    for col in target_cols:
+        cmap = RED_MAP if col in inverted else BLUE_MAP
+        styler = styler.apply(lambda s, c=col, cm=cmap: _col_gradient(s, cm), subset=[col])
+
+    # Table chrome — clean, dunkandtrees-style
+    styler = styler.set_table_styles([
+        {"selector": "thead th", "props": [
+            ("background", "#0f172a"), ("color", "#f8fafc"),
+            ("font-size", ".70rem"), ("font-weight", "800"),
+            ("letter-spacing", ".05em"), ("text-transform", "uppercase"),
+            ("padding", ".45rem .65rem"), ("border", "none"),
+            ("white-space", "nowrap"),
+        ]},
+        {"selector": "tbody td", "props": [
+            ("font-size", ".82rem"), ("font-weight", "600"),
+            ("padding", ".38rem .65rem"), ("border-bottom", "1px solid #f1f5f9"),
+            ("border-right", "none"), ("white-space", "nowrap"),
+        ]},
+        {"selector": "tbody tr:hover td", "props": [
+            ("filter", "brightness(0.95)"),
+        ]},
+        {"selector": "table", "props": [
+            ("border-collapse", "collapse"), ("width", "100%"),
+        ]},
+    ])
+
     st.dataframe(
-        display_df,
+        styler,
         use_container_width=True,
         hide_index=True,
         height=height,
