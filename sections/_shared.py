@@ -32,7 +32,7 @@ except Exception:
 from mm_setpieces_1.utils import plotly_figure_png_bytes  # noqa: F401
 
 
-APP_SECTIONS = ["Home", "Corners", "Freekicks", "Throw-ins", "HOPS", "League Comparison", "Delay Analysis"]
+APP_SECTIONS = ["Home", "Corners", "Freekicks", "Throw-ins", "HOPS", "League Comparison", "Delay Analysis", "Match Prep"]
 
 FILTER_PREFIXES = {
     "Corners": "corners",
@@ -41,6 +41,7 @@ FILTER_PREFIXES = {
     "HOPS": "hops",
     "League Comparison": "league_comparison",
     "Delay Analysis": "delay",
+    "Match Prep": "match_prep",
 }
 
 # ---------------------------------------------------------------------------

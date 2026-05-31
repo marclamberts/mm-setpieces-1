@@ -118,6 +118,7 @@ def render_home() -> None:
         ("Throw-ins", "home_open_throwins"),
         ("HOPS", "home_open_hops"),
         ("League Comparison", "home_open_league_comparison"),
+        ("Match Prep", "home_open_match_prep"),
         ("Delay Analysis", "home_open_delay"),
     ]
     for idx, (title, key) in enumerate(modules):

@@ -25,6 +25,7 @@ from sections.throwins import render_throwins
 from sections.hops import render_hops
 from sections.league_comparison import render_league_comparison
 from sections.delay import render_delay
+from sections.match_prep import render_match_prep
 
 LOGO_PATH = Path(__file__).resolve().parent / "assets" / "setplaypro-logo.jpg"
 
@@ -199,3 +200,5 @@ elif section == "League Comparison":
     render_league_comparison()
 elif section == "Delay Analysis":
     render_delay()
+elif section == "Match Prep":
+    render_match_prep()

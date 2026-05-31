@@ -1,4 +1,4 @@
-"""Delay Analysis section."""
+"""Delay Analysis section — tabbed layout."""
 from __future__ import annotations
 
 import streamlit as st
@@ -22,20 +22,19 @@ from sections._shared import (
     box_chart,
     bar_chart,
     render_plotly_visual,
-    simple_view_radio,
 )
 
 
 def render_delay() -> None:
     book = _load_delay_workbook()
     events = _clean_delay_events(book.get("All_Corners", pd.DataFrame()))
-    summary = book.get("Summary", pd.DataFrame()).copy()
+    summary_sheet = book.get("Summary", pd.DataFrame()).copy()
     diagnostics = book.get("Diagnostics", pd.DataFrame()).copy()
     skipped = book.get("Skipped_Files", pd.DataFrame()).copy()
 
-    hero_block("Timing", "Delay Analysis", "Simple corner timing checks.")
+    hero_block("Timing", "Delay Analysis", "How long it takes from ball out to corner kick — by match, band, and exit event.")
     if events.empty:
-        st.warning("No delay events were found. Place a corner_delays*.xlsx file in the Data/ folder.")
+        st.warning("No delay events found. Place a `corner_delays*.xlsx` file in the Data/ folder.")
         return
 
     leagues = ["All"] + sorted(events["League"].dropna().astype(str).unique().tolist()) if "League" in events.columns else ["All"]
@@ -45,8 +44,7 @@ def render_delay() -> None:
 
     league = _league_selectbox("League", leagues, key="delay_league")
     match = st.sidebar.selectbox("Match", matches, key="delay_match")
-    period = "All"
-    out_type = "All"
+    period = "All"; out_type = "All"
     with st.sidebar.expander("More filters", expanded=False):
         period = st.selectbox("Period", periods, key="delay_period")
         out_type = st.selectbox("Exit event", out_types, key="delay_exit")
@@ -61,8 +59,7 @@ def render_delay() -> None:
     if out_type != "All" and "out_event_type" in filtered.columns:
         filtered = filtered[filtered["out_event_type"].astype(str).eq(out_type)].copy()
 
-    full_delay_range = None
-    delay_range = None
+    full_delay_range = None; delay_range = None
     if not filtered.empty and "delay_sec" in filtered.columns:
         lo = float(filtered["delay_sec"].min())
         hi = float(filtered["delay_sec"].max())
@@ -77,7 +74,6 @@ def render_delay() -> None:
         ("Delay", f"{delay_range[0]:.1f}-{delay_range[1]:.1f}s" if delay_range and delay_range != full_delay_range else "All"),
     ]
     render_filter_summary("Delay Analysis", len(events), len(filtered), filters)
-
     if filtered.empty:
         render_empty_filter_state()
         return
@@ -92,10 +88,14 @@ def render_delay() -> None:
     c2.metric("Matches", matches_count)
     c3.metric("Avg delay", f"{avg_delay:.1f}s")
     c4.metric("Median delay", f"{median_delay:.1f}s")
-    c5.metric("90th percentile", f"{p90_delay:.1f}s")
+    c5.metric("90th pct", f"{p90_delay:.1f}s")
 
-    view = simple_view_radio("delay_view", ["Summary", "Charts", "Audit", "Rows"])
-    if view == "Summary":
+    tab_summary, tab_charts, tab_match, tab_audit, tab_rows = st.tabs([
+        "📊 Summary", "📈 Charts", "🏟️ Match view", "🔍 Audit", "🗃️ Rows"
+    ])
+
+    # ── Summary ───────────────────────────────────────────────────────────────
+    with tab_summary:
         band_summary = (
             filtered.groupby("Delay band", dropna=False)
             .agg(Corners=("delay_sec", "size"), Avg_Delay=("delay_sec", "mean"),
@@ -105,89 +105,96 @@ def render_delay() -> None:
         for col in ["Avg_Delay", "Median_Delay", "Min_Delay", "Max_Delay"]:
             if col in band_summary.columns:
                 band_summary[col] = band_summary[col].round(1)
+
         out_summary = (
             filtered.groupby("out_event_type", dropna=False)
             .agg(Corners=("delay_sec", "size"), Avg_Delay=("delay_sec", "mean"), Median_Delay=("delay_sec", "median"))
-            .reset_index()
-            .sort_values(["Corners", "Avg_Delay"], ascending=False)
+            .reset_index().sort_values(["Corners", "Avg_Delay"], ascending=False)
         )
         out_summary[["Avg_Delay", "Median_Delay"]] = out_summary[["Avg_Delay", "Median_Delay"]].round(1)
+
+        if not band_summary.empty:
+            top_band = band_summary.sort_values("Corners", ascending=False).iloc[0]["Delay band"]
+            st.markdown(f"<div class='mm-insight-card'>Most common delay band: <strong>{top_band}</strong></div>", unsafe_allow_html=True)
+        if not out_summary.empty:
+            st.markdown(f"<div class='mm-insight-card'>Most common exit event: <strong>{out_summary.iloc[0]['out_event_type']}</strong></div>", unsafe_allow_html=True)
+
+        left, right = st.columns(2)
+        with left:
+            section_header("Delay bands", "Distribution across time windows")
+            render_analyst_table(band_summary, height=320)
+        with right:
+            section_header("Exit profile", "What event follows the corner")
+            render_analyst_table(out_summary, height=320)
+
+    # ── Charts ────────────────────────────────────────────────────────────────
+    with tab_charts:
+        chart_left, chart_right = st.columns(2)
+        with chart_left:
+            section_header("Delay distribution")
+            fig = histogram_chart(filtered, "delay_sec", nbins=28)
+            fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False, xaxis_title="Delay (s)", yaxis_title="Corners")
+            render_plotly_visual(polish_plotly_figure(fig), "Delay distribution", "delay_hist_png")
+        with chart_right:
+            section_header("Delay by exit event")
+            box = box_chart(filtered, x="out_event_type", y="delay_sec")
+            box.update_layout(margin=dict(l=10, r=10, t=30, b=10), xaxis_title="", yaxis_title="Delay (s)")
+            render_plotly_visual(polish_plotly_figure(box), "Delay by exit event", "delay_box_png")
+
+        if "Delay band" in filtered.columns:
+            section_header("Band breakdown")
+            band_fig = bar_chart(
+                filtered.groupby("Delay band", dropna=False).size().reset_index(name="Corners"),
+                x="Delay band", y="Corners", color="Delay band",
+            )
+            band_fig.update_layout(showlegend=False, margin=dict(l=10, r=10, t=30, b=10))
+            render_plotly_visual(polish_plotly_figure(band_fig), "Delay bands chart", "delay_band_chart_png")
+
+    # ── Match view ────────────────────────────────────────────────────────────
+    with tab_match:
+        section_header("Per-match averages", "Slowest matches in the filter")
         match_delay = (
             filtered.groupby("match", dropna=False)
             .agg(Corners=("delay_sec", "size"), Avg_Delay=("delay_sec", "mean"),
                  Median_Delay=("delay_sec", "median"), Max_Delay=("delay_sec", "max"))
-            .reset_index()
-            .sort_values(["Avg_Delay", "Corners"], ascending=False)
+            .reset_index().sort_values(["Avg_Delay", "Corners"], ascending=False)
         )
         match_delay[["Avg_Delay", "Median_Delay", "Max_Delay"]] = match_delay[["Avg_Delay", "Median_Delay", "Max_Delay"]].round(1)
+        if not match_delay.empty:
+            st.markdown(f"<div class='mm-insight-card'>Slowest match: <strong>{match_delay.iloc[0]['match']}</strong> — avg {match_delay.iloc[0]['Avg_Delay']:.1f}s</div>", unsafe_allow_html=True)
+        render_analyst_table(match_delay.head(35), height=460)
 
-        insight_cols = st.columns(3)
-        with insight_cols[0]:
-            top_band = band_summary.sort_values("Corners", ascending=False).iloc[0]["Delay band"] if not band_summary.empty else "Unknown"
-            st.markdown(f"<div class='mm-insight-card'>Most common delay band: <strong>{top_band}</strong>.</div>", unsafe_allow_html=True)
-        with insight_cols[1]:
-            top_exit = out_summary.iloc[0]["out_event_type"] if not out_summary.empty else "Unknown"
-            st.markdown(f"<div class='mm-insight-card'>Most common exit event: <strong>{top_exit}</strong>.</div>", unsafe_allow_html=True)
-        with insight_cols[2]:
-            slowest = match_delay.iloc[0]["match"] if not match_delay.empty else "Unknown"
-            st.markdown(f"<div class='mm-insight-card'>Slowest average match in filter: <strong>{slowest}</strong>.</div>", unsafe_allow_html=True)
-
-        left, right = st.columns(2)
-        with left:
-            section_header("Delay Bands", "How long corners take before the matched exit event")
-            render_analyst_table(band_summary, height=310)
-        with right:
-            section_header("Exit Profile", "Matched event type following the corner")
-            render_analyst_table(out_summary, height=310)
-        section_header("Slowest Match Profiles", "Highest average delay in the active filter")
-        render_analyst_table(match_delay.head(30), height=430)
-
-    elif view == "Charts":
-        chart_left, chart_right = st.columns(2)
-        with chart_left:
-            section_header("Delay Evidence")
-            fig = histogram_chart(filtered, "delay_sec", nbins=24)
-            fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False, xaxis_title="Delay seconds", yaxis_title="Corners")
-            render_plotly_visual(polish_plotly_figure(fig), "Delay evidence", "delay_evidence_png")
-        with chart_right:
-            section_header("Exit Event Evidence")
-            box = box_chart(filtered, x="out_event_type", y="delay_sec")
-            box.update_layout(margin=dict(l=10, r=10, t=30, b=10), legend_title_text="", xaxis_title="", yaxis_title="Delay seconds")
-            render_plotly_visual(polish_plotly_figure(box), "Delay exit event evidence", "delay_exit_event_evidence_png")
-
-        section_header("Match Comparison", "Average delay by match")
-        avg_by_match = filtered.groupby("match", dropna=False)["delay_sec"].mean().reset_index(name="Avg delay").sort_values("Avg delay", ascending=False).head(20)
-        match_fig = bar_chart(avg_by_match.sort_values("Avg delay"), x="Avg delay", y="match", orientation="h")
-        match_fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False, xaxis_title="Average delay (s)", yaxis_title="")
+        avg_by_match = match_delay.sort_values("Avg_Delay").tail(20)
+        match_fig = bar_chart(avg_by_match, x="Avg_Delay", y="match", orientation="h")
+        match_fig.update_layout(margin=dict(l=10, r=10, t=30, b=10), showlegend=False, xaxis_title="Avg delay (s)", yaxis_title="")
         render_plotly_visual(polish_plotly_figure(match_fig), "Delay match comparison", "delay_match_comparison_png")
 
-    elif view == "Audit":
-        section_header("Workbook Summary Sheet", "Match-level extraction performance")
-        if not summary.empty:
-            summary_view = summary.copy()
+    # ── Audit ─────────────────────────────────────────────────────────────────
+    with tab_audit:
+        section_header("Workbook summary", "Match-level extraction coverage")
+        if not summary_sheet.empty:
+            sv = summary_sheet.copy()
             for col in ["avg_delay_sec", "median_delay_sec", "min_delay_sec", "max_delay_sec"]:
-                if col in summary_view.columns:
-                    summary_view[col] = pd.to_numeric(summary_view[col], errors="coerce").round(1)
-            render_analyst_table(
-                summary_view.sort_values("avg_delay_sec", ascending=False) if "avg_delay_sec" in summary_view.columns else summary_view,
-                height=420,
-            )
+                if col in sv.columns:
+                    sv[col] = pd.to_numeric(sv[col], errors="coerce").round(1)
+            render_analyst_table(sv.sort_values("avg_delay_sec", ascending=False) if "avg_delay_sec" in sv.columns else sv, height=440)
         else:
-            st.info("No Summary sheet found.")
-        section_header("Diagnostics Sheet", "Coverage checks from source event files")
+            st.info("No Summary sheet found in workbook.")
+        section_header("Diagnostics")
         if not diagnostics.empty:
             render_analyst_table(diagnostics, height=360)
         else:
             st.info("No Diagnostics sheet found.")
         if not skipped.empty:
-            section_header("Skipped Files", "Files not included in the timing extraction")
+            section_header("Skipped files")
             render_analyst_table(skipped, height=260)
 
-    elif view == "Rows":
-        section_header("Rows", f"{len(filtered):,} rows")
+    # ── Rows ──────────────────────────────────────────────────────────────────
+    with tab_rows:
+        section_header("Raw rows", f"{len(filtered):,} events")
         display_cols = [c for c in [
             "match", "period", "out_event_type", "out_value", "gk_outcome",
             "out_time_mmss", "corner_time_mmss", "delay_sec", "Delay band",
             "corner_event_index", "out_event_index",
         ] if c in filtered.columns]
-        render_analyst_table(filtered[display_cols], height=620)
+        render_analyst_table(filtered[display_cols], height=640)
