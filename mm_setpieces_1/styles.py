@@ -1409,49 +1409,47 @@ def inject_app_style() -> None:
                 }}
             }}
 
-            /* Football intelligence command-center skin */
+            /* ── Final product skin ─────────────────────────────── */
             :root {{
-                --fi-ink: #07111d;
-                --fi-panel: #0d1b2a;
-                --fi-panel-2: #10233a;
-                --fi-line: rgba(148, 163, 184, 0.24);
-                --fi-text: #e5edf6;
-                --fi-muted: #8fa3b8;
-                --fi-card: #f8fafc;
-                --fi-red: #c1121f;
-                --fi-cyan: #0ea5e9;
-                --fi-green: #16a34a;
-                --fi-gold: #eab308;
+                --sp-bg: #f2f4f7;
+                --sp-surface: #ffffff;
+                --sp-sidebar: #0f172a;
+                --sp-sidebar-border: rgba(148,163,184,0.18);
+                --sp-ink: #0b0f14;
+                --sp-muted: #64748b;
+                --sp-line: #e2e8f0;
+                --sp-red: #c1121f;
+                --sp-red-d: #991b1b;
+                --sp-accent: #c1121f;
             }}
+
+            /* Body & chrome */
             .stApp {{
-                background:
-                    linear-gradient(rgba(7,17,29,0.86), rgba(7,17,29,0.86)),
-                    linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px),
-                    linear-gradient(0deg, rgba(255,255,255,0.045) 1px, transparent 1px),
-                    linear-gradient(135deg, #07111d 0%, #0d1b2a 44%, #10233a 100%) !important;
-                background-size: auto, 56px 56px, 56px 56px, auto !important;
-                color: var(--fi-text) !important;
-            }}
-            .block-container {{
-                max-width: 1520px;
-                padding: 1rem 1.35rem 3rem;
+                background: var(--sp-bg) !important;
+                color: var(--sp-ink) !important;
             }}
             h1, h2, h3, h4, h5, h6, p, label, span {{
-                color: inherit;
+                color: var(--sp-ink);
+            }}
+            .block-container {{
+                max-width: 1520px !important;
+                padding: 1rem 1.55rem 3rem !important;
             }}
             header[data-testid="stHeader"] {{
                 background: transparent !important;
             }}
+
+            /* Sidebar — dark panel */
             section[data-testid="stSidebar"],
             section[data-testid="stSidebar"] > div,
             div[data-testid="stSidebar"] {{
-                background:
-                    linear-gradient(180deg, #07111d 0%, #0a1828 100%) !important;
-                border-right: 1px solid rgba(148,163,184,0.20) !important;
-                box-shadow: 18px 0 46px rgba(0,0,0,0.22) !important;
-                width: 18rem !important;
-                min-width: 18rem !important;
-                max-width: 18rem !important;
+                background: var(--sp-sidebar) !important;
+                border-right: 1px solid rgba(255,255,255,0.06) !important;
+                box-shadow: 4px 0 24px rgba(0,0,0,0.18) !important;
+                width: 17rem !important;
+                min-width: 17rem !important;
+                max-width: 17rem !important;
+                color-scheme: dark !important;
             }}
             div[data-testid="stSidebar"] *,
             div[data-testid="stSidebar"] span,
@@ -1460,118 +1458,164 @@ def inject_app_style() -> None:
             div[data-testid="stSidebar"] a,
             div[data-testid="stSidebar"] p,
             div[data-testid="stSidebar"] label {{
-                color: var(--fi-text) !important;
+                color: #e2e8f0 !important;
             }}
             div[data-testid="stSidebar"] h3 {{
-                color: #f8fafc !important;
-                font-size: .72rem;
-                letter-spacing: .18em;
+                color: #94a3b8 !important;
+                font-size: .68rem;
+                letter-spacing: .16em;
                 text-transform: uppercase;
-                border-bottom: 1px solid rgba(148,163,184,0.22);
-                padding-bottom: .45rem;
+                margin: .8rem 0 .4rem;
+            }}
+            div[data-testid="stSidebar"] [role="radiogroup"] {{
+                display: grid;
+                gap: .2rem;
+            }}
+            div[data-testid="stSidebar"] [role="radiogroup"] label {{
+                background: rgba(255,255,255,0.04) !important;
+                border: 1px solid rgba(255,255,255,0.07) !important;
+                border-radius: 6px !important;
+                padding: .5rem .65rem !important;
+                min-height: 36px !important;
+                transition: background .1s ease !important;
+            }}
+            div[data-testid="stSidebar"] [role="radiogroup"] label:hover {{
+                background: rgba(255,255,255,0.08) !important;
+            }}
+            div[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) {{
+                background: rgba(193,18,31,0.22) !important;
+                border-color: rgba(193,18,31,0.50) !important;
+                box-shadow: inset 3px 0 0 #c1121f !important;
+            }}
+            div[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) span {{
+                color: #ffffff !important;
             }}
             div[data-testid="stSidebar"] [data-baseweb="select"] > div,
-            div[data-testid="stSidebar"] [data-baseweb="input"] > div,
-            [data-baseweb="select"] > div,
-            [data-baseweb="input"] > div,
-            textarea {{
-                background: rgba(255,255,255,0.06) !important;
-                border: 1px solid rgba(148,163,184,0.28) !important;
-                color: #f8fafc !important;
+            div[data-testid="stSidebar"] [data-baseweb="input"] > div {{
+                background: rgba(255,255,255,0.07) !important;
+                border: 1px solid rgba(148,163,184,0.25) !important;
                 border-radius: 6px !important;
                 box-shadow: none !important;
             }}
-            [data-baseweb="select"] span,
-            [data-baseweb="select"] input,
-            [data-baseweb="input"] input,
+            div[data-testid="stSidebar"] [data-baseweb="select"] span,
+            div[data-testid="stSidebar"] [data-baseweb="select"] input,
+            div[data-testid="stSidebar"] [data-baseweb="input"] input {{
+                color: #e2e8f0 !important;
+                -webkit-text-fill-color: #e2e8f0 !important;
+            }}
+            div[data-testid="stSidebar"] button {{
+                background: rgba(193,18,31,0.85) !important;
+                border-color: rgba(193,18,31,0.50) !important;
+                color: #ffffff !important;
+            }}
+            div[data-testid="stSidebar"] button:hover {{
+                background: #991b1b !important;
+            }}
+            div[data-testid="stSidebar"] hr {{
+                border-color: rgba(148,163,184,0.18) !important;
+            }}
+
+            /* Dropdowns (main area) */
+            [data-baseweb="select"] > div,
+            [data-baseweb="input"] > div,
             textarea {{
-                color: #f8fafc !important;
-                -webkit-text-fill-color: #f8fafc !important;
+                background: #ffffff !important;
+                border: 1px solid #d8dee8 !important;
+                border-radius: 7px !important;
+                box-shadow: 0 1px 2px rgba(15,23,42,0.04) !important;
+            }}
+            [data-baseweb="select"] > div:focus-within,
+            [data-baseweb="input"] > div:focus-within,
+            textarea:focus {{
+                border-color: #c1121f !important;
+                box-shadow: 0 0 0 3px rgba(193,18,31,0.10) !important;
             }}
             div[data-baseweb="popover"] ul,
             div[data-baseweb="popover"] [role="listbox"] {{
-                background: #0d1b2a !important;
-                border: 1px solid rgba(148,163,184,0.28) !important;
-                box-shadow: 0 24px 60px rgba(0,0,0,0.45) !important;
+                background: #ffffff !important;
+                border: 1px solid #dde3ec !important;
+                box-shadow: 0 16px 48px rgba(15,23,42,0.14) !important;
+                border-radius: 8px !important;
             }}
             div[data-baseweb="popover"] [role="option"],
             div[data-baseweb="popover"] [role="option"] *,
             div[data-baseweb="popover"] li,
             div[data-baseweb="popover"] li * {{
-                color: #e5edf6 !important;
-                -webkit-text-fill-color: #e5edf6 !important;
+                color: #0b0f14 !important;
+                -webkit-text-fill-color: #0b0f14 !important;
             }}
             div[data-baseweb="popover"] [aria-selected="true"],
             div[data-baseweb="popover"] [role="option"]:hover {{
-                background: rgba(14,165,233,0.18) !important;
+                background: #f1f5f9 !important;
             }}
-            div[data-testid="stSidebar"] [role="radiogroup"] label {{
-                background: rgba(255,255,255,0.045) !important;
-                border: 1px solid rgba(148,163,184,0.22) !important;
-                border-radius: 6px !important;
-                box-shadow: inset 3px 0 0 rgba(148,163,184,0.18);
-            }}
-            div[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) {{
-                background: linear-gradient(90deg, rgba(193,18,31,0.88), rgba(14,165,233,0.20)) !important;
-                border-color: rgba(248,250,252,0.32) !important;
-                box-shadow: inset 4px 0 0 #f8fafc;
-            }}
-            .mm-filter-card {{
-                background: rgba(255,255,255,0.055) !important;
-                border: 1px solid rgba(148,163,184,0.20) !important;
-                border-radius: 6px !important;
-            }}
-            .mm-filter-label {{
-                color: var(--fi-muted) !important;
-            }}
-            .mm-filter-value {{
-                color: #f8fafc !important;
-            }}
+
+            /* Hero block */
             .mm-hero {{
-                background:
-                    linear-gradient(135deg, rgba(7,17,29,0.98), rgba(13,27,42,0.96) 54%, rgba(193,18,31,0.86)),
-                    repeating-linear-gradient(90deg, rgba(255,255,255,0.08) 0 2px, transparent 2px 88px) !important;
-                border: 1px solid rgba(226,232,240,0.18) !important;
-                border-radius: 6px !important;
-                padding: 1.35rem 1.45rem 1.45rem !important;
-                box-shadow: 0 28px 80px rgba(0,0,0,0.34) !important;
+                background: #0f172a !important;
+                border: 0 !important;
+                border-radius: 10px !important;
+                padding: 1.4rem 1.6rem 1.5rem !important;
+                box-shadow: 0 4px 24px rgba(15,23,42,0.18) !important;
+                position: relative;
+                overflow: hidden;
             }}
             .mm-hero::before {{
-                height: 4px !important;
-                background: linear-gradient(90deg, var(--fi-red), var(--fi-cyan), var(--fi-green), var(--fi-gold)) !important;
+                content: "" !important;
+                display: block !important;
+                position: absolute !important;
+                inset: 0 0 auto 0 !important;
+                height: 3px !important;
+                background: var(--sp-red) !important;
+                border-radius: 10px 10px 0 0 !important;
             }}
             .mm-eyebrow {{
-                color: rgba(226,232,240,0.72) !important;
+                color: rgba(148,163,184,0.9) !important;
+                font-size: .68rem !important;
                 letter-spacing: .18em !important;
+                text-transform: uppercase !important;
             }}
             .mm-title {{
                 color: #ffffff !important;
-                text-transform: uppercase;
-                letter-spacing: .02em !important;
-                font-size: clamp(2rem, 3.4vw, 3.55rem) !important;
+                font-size: clamp(1.85rem, 2.8vw, 3rem) !important;
+                font-weight: 900 !important;
+                letter-spacing: -.01em !important;
+                line-height: 1.02 !important;
+                text-transform: none !important;
             }}
             .mm-copy {{
-                color: rgba(226,232,240,0.84) !important;
-                font-weight: 650 !important;
+                color: rgba(203,213,225,0.90) !important;
+                font-size: .96rem !important;
+                font-weight: 500 !important;
+                max-width: 900px;
             }}
+
+            /* Section divider */
             .mm-section {{
-                background: rgba(255,255,255,0.04);
-                border: 1px solid rgba(148,163,184,0.18);
-                border-radius: 6px;
-                padding: .68rem .78rem !important;
-                margin: 1rem 0 .7rem !important;
+                border-bottom: 1px solid var(--sp-line) !important;
+                background: none !important;
+                border-radius: 0 !important;
+                padding: 0 0 .4rem !important;
+                margin: 1.4rem 0 .8rem !important;
             }}
             .mm-section-title {{
-                color: #f8fafc !important;
-                letter-spacing: .14em !important;
+                color: #0b0f14 !important;
+                font-size: .78rem !important;
+                font-weight: 900 !important;
+                text-transform: uppercase !important;
+                letter-spacing: .12em !important;
             }}
             .mm-section-title::before {{
-                background: var(--fi-cyan) !important;
-                box-shadow: 0 0 0 4px rgba(14,165,233,0.14) !important;
+                background: var(--sp-red) !important;
+                box-shadow: none !important;
+                width: .38rem !important;
+                height: .38rem !important;
             }}
             .mm-section-note {{
-                color: var(--fi-muted) !important;
+                color: var(--sp-muted) !important;
+                font-size: .78rem !important;
             }}
+
+            /* Cards, surfaces */
             .mm-feature-pill,
             .mm-nav-card,
             .mm-insight-card,
@@ -1588,18 +1632,17 @@ def inject_app_style() -> None:
             div[data-testid="stPlotlyChart"],
             div[data-testid="stImage"],
             div[data-testid="stPyplot"] {{
-                background: linear-gradient(180deg, rgba(248,250,252,0.98), rgba(236,242,248,0.98)) !important;
-                border: 1px solid rgba(226,232,240,0.80) !important;
-                border-radius: 6px !important;
-                box-shadow: 0 16px 44px rgba(0,0,0,0.24) !important;
+                background: #ffffff !important;
+                border: 1px solid var(--sp-line) !important;
+                border-radius: 8px !important;
+                box-shadow: 0 1px 4px rgba(15,23,42,0.06) !important;
             }}
             .mm-command-panel,
             .mm-read-card {{
-                background:
-                    linear-gradient(180deg, rgba(13,27,42,0.98), rgba(7,17,29,0.98)) !important;
-                border: 1px solid rgba(148,163,184,0.25) !important;
-                border-radius: 6px !important;
-                box-shadow: 0 18px 48px rgba(0,0,0,0.28) !important;
+                background: #0f172a !important;
+                border: 1px solid rgba(255,255,255,0.10) !important;
+                border-radius: 8px !important;
+                box-shadow: 0 4px 18px rgba(0,0,0,0.22) !important;
             }}
             .mm-command-title,
             .mm-read-value {{
@@ -1607,29 +1650,26 @@ def inject_app_style() -> None:
             }}
             .mm-command-label,
             .mm-read-title {{
-                color: var(--fi-muted) !important;
+                color: #94a3b8 !important;
             }}
             .mm-command-row {{
                 border-top-color: rgba(148,163,184,0.18) !important;
             }}
-            .mm-feature-pill {{
-                border-top: 0 !important;
-                border-left: 4px solid var(--fi-cyan) !important;
+            .mm-nav-card {{
+                min-height: 175px !important;
+                padding: .95rem 1rem !important;
             }}
-            .mm-feature-pill:nth-child(2) {{
-                border-left-color: var(--fi-green) !important;
+            .mm-nav-card::before {{
+                height: 3px !important;
+                width: auto !important;
+                inset: 0 0 auto 0 !important;
+                background: var(--sp-red) !important;
+                border-radius: 8px 8px 0 0 !important;
             }}
-            .mm-feature-pill:nth-child(3) {{
-                border-left-color: var(--fi-red) !important;
-            }}
-            .mm-feature-pill:nth-child(4) {{
-                border-left-color: var(--fi-gold) !important;
-            }}
-            .mm-nav-card::before,
-            div[data-testid="stMetric"]::before {{
-                display: block !important;
-                height: 4px !important;
-                background: linear-gradient(90deg, var(--fi-red), var(--fi-cyan)) !important;
+            .mm-nav-card:hover {{
+                transform: translateY(-2px) !important;
+                border-color: rgba(193,18,31,0.30) !important;
+                box-shadow: 0 8px 28px rgba(15,23,42,0.10) !important;
             }}
             .mm-nav-title,
             .mm-panel-title,
@@ -1640,7 +1680,7 @@ def inject_app_style() -> None:
             div[data-testid="stMetricValue"],
             .mm-feature-value,
             .mm-filter-count {{
-                color: var(--fi-ink) !important;
+                color: var(--sp-ink) !important;
             }}
             .mm-nav-copy,
             .mm-panel-copy,
@@ -1652,75 +1692,137 @@ def inject_app_style() -> None:
             div[data-testid="stMetricLabel"] p,
             .mm-empty-copy,
             .mm-table-note {{
-                color: #53657a !important;
+                color: var(--sp-muted) !important;
             }}
             .mm-card-kicker,
             .mm-workflow-step {{
-                color: var(--fi-red) !important;
+                color: var(--sp-red) !important;
             }}
-            .mm-tiny,
-            .mm-chip {{
-                background: #e8f1fa !important;
-                border: 1px solid #c8d8e8 !important;
-                color: #10233a !important;
-                border-radius: 6px !important;
-            }}
-            .mm-chip strong {{
-                color: #07111d !important;
+            .mm-feature-pill {{
+                border-top: 0 !important;
+                border-left: 3px solid var(--sp-red) !important;
             }}
             .mm-kpi-card,
             .mm-stat-card,
             div[data-testid="stMetric"] {{
-                border-top: 4px solid var(--fi-cyan) !important;
+                border-top: 3px solid var(--sp-ink) !important;
             }}
             .mm-kpi-card.is-red,
             .mm-stat-card.is-red {{
-                border-top-color: var(--fi-red) !important;
+                border-top-color: var(--sp-red) !important;
             }}
-            div[data-testid="stTabs"] [role="tablist"] {{
-                background: rgba(255,255,255,0.06) !important;
-                border: 1px solid rgba(148,163,184,0.22) !important;
+            div[data-testid="stMetric"]::before {{
+                display: none !important;
+            }}
+            div[data-testid="stMetricValue"] {{
+                font-size: 1.45rem !important;
+            }}
+
+            /* Insight card */
+            .mm-insight-card {{
+                padding: .82rem .95rem .82rem 1.05rem !important;
+                min-height: auto !important;
+            }}
+            .mm-insight-card::before {{
+                background: var(--sp-red) !important;
+                top: 0 !important;
+                bottom: 0 !important;
+                border-radius: 8px 0 0 8px !important;
+            }}
+
+            /* Chips & tags */
+            .mm-tiny,
+            .mm-chip {{
+                background: #f1f5f9 !important;
+                border: 1px solid #dde3ec !important;
+                color: #334155 !important;
                 border-radius: 6px !important;
-                box-shadow: 0 14px 40px rgba(0,0,0,0.22) !important;
+            }}
+            .mm-chip strong {{
+                color: var(--sp-ink) !important;
+            }}
+
+            /* Filter summary */
+            .mm-filter-card {{
+                background: #f8fafc !important;
+                border: 1px solid var(--sp-line) !important;
+                border-radius: 6px !important;
+            }}
+            .mm-filter-label {{
+                color: var(--sp-muted) !important;
+            }}
+            .mm-filter-value {{
+                color: var(--sp-ink) !important;
+            }}
+
+            /* Tabs — pill style */
+            div[data-testid="stTabs"] [role="tablist"] {{
+                background: #ffffff !important;
+                border: 1px solid var(--sp-line) !important;
+                border-radius: 8px !important;
+                padding: .3rem !important;
+                box-shadow: none !important;
+                gap: .2rem !important;
+                margin-bottom: .5rem !important;
             }}
             div[data-testid="stTabs"] button[role="tab"] {{
                 background: transparent !important;
-                color: #cbd5e1 !important;
-                border: 1px solid transparent !important;
-                border-radius: 5px !important;
-                text-transform: uppercase !important;
-                letter-spacing: .08em !important;
-                font-size: .76rem !important;
+                border: 0 !important;
+                border-radius: 6px !important;
+                color: var(--sp-muted) !important;
+                font-size: .82rem !important;
+                font-weight: 700 !important;
+                letter-spacing: 0 !important;
+                text-transform: none !important;
+                min-height: 34px !important;
+                padding: .3rem .85rem !important;
+                transition: background .1s ease, color .1s ease !important;
+            }}
+            div[data-testid="stTabs"] button[role="tab"]:hover {{
+                background: #f1f5f9 !important;
+                color: var(--sp-ink) !important;
             }}
             div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {{
-                background: linear-gradient(90deg, var(--fi-red), #991b1b) !important;
+                background: var(--sp-red) !important;
                 color: #ffffff !important;
                 box-shadow: none !important;
             }}
+
+            /* Buttons */
             div.stButton > button,
             div[data-testid="stDownloadButton"] > button {{
-                background: linear-gradient(90deg, var(--fi-red), #991b1b) !important;
-                border: 1px solid rgba(248,250,252,0.14) !important;
+                background: var(--sp-red) !important;
+                border: 0 !important;
+                border-radius: 7px !important;
                 color: #ffffff !important;
-                border-radius: 6px !important;
-                text-transform: uppercase !important;
-                letter-spacing: .07em !important;
-                font-size: .76rem !important;
-                box-shadow: 0 12px 28px rgba(193,18,31,0.24) !important;
+                font-size: .82rem !important;
+                font-weight: 800 !important;
+                letter-spacing: 0 !important;
+                text-transform: none !important;
+                min-height: 38px !important;
+                box-shadow: none !important;
             }}
             div.stButton > button:hover,
             div[data-testid="stDownloadButton"] > button:hover {{
-                background: linear-gradient(90deg, #991b1b, #7f1d1d) !important;
+                background: var(--sp-red-d) !important;
             }}
-            div[data-testid="stCaptionContainer"],
+
+            /* Misc */
             div[data-testid="stCaptionContainer"] p,
-            .stCaptionContainer,
             .stCaptionContainer p {{
-                color: #b6c5d6 !important;
+                color: var(--sp-muted) !important;
             }}
             div[data-testid="stAlert"] {{
-                background: rgba(248,250,252,0.96) !important;
-                border-radius: 6px !important;
+                background: #ffffff !important;
+                border: 1px solid var(--sp-line) !important;
+                border-radius: 8px !important;
+            }}
+            div[data-testid="stDataFrameResizable"] {{
+                background: #ffffff !important;
+            }}
+            .mm-table-note {{
+                color: var(--sp-muted) !important;
+                font-size: .78rem !important;
             }}
             @media (max-width: 760px) {{
                 section[data-testid="stSidebar"],
@@ -1732,6 +1834,9 @@ def inject_app_style() -> None:
                 }}
                 .mm-title {{
                     font-size: 1.8rem !important;
+                }}
+                .block-container {{
+                    padding: .75rem .85rem 2rem !important;
                 }}
             }}
         </style>

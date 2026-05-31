@@ -87,8 +87,8 @@ def _kpi_strip(df: pd.DataFrame) -> None:
     c6.metric("xG / 100", f"{kpi['xg_per_100']:.2f}")
 
 
-def _phase_brief(label: str, df: pd.DataFrame, show_pitch: bool = True) -> None:
-    """Compact brief for one set-piece phase."""
+def _phase_brief(label: str, df: pd.DataFrame, show_pitch: bool = True, slug: str = "my") -> None:
+    """Compact brief for one set-piece phase. slug disambiguates widget keys between team/opponent."""
     if df.empty:
         st.info(f"No {label} data for this team.")
         return
@@ -103,19 +103,20 @@ def _phase_brief(label: str, df: pd.DataFrame, show_pitch: bool = True) -> None:
             with ins_cols[i]:
                 st.markdown(f"<div class='mm-insight-card'>{insight}</div>", unsafe_allow_html=True)
 
+    key_prefix = f"mp_{slug}_{label.lower()}"
     if show_pitch:
         pc1, pc2 = st.columns(2)
         with pc1:
             if label == "Corners":
-                render_mpl_visual(mplsoccer_delivery_figure(df, label), f"{label} delivery", f"mp_{label.lower()}_delivery")
+                render_mpl_visual(mplsoccer_delivery_figure(df, label), f"{label} delivery", f"{key_prefix}_delivery")
             elif label == "Freekicks":
-                render_mpl_visual(freekick_origin_map_figure(df), f"{label} origins", f"mp_{label.lower()}_origin")
+                render_mpl_visual(freekick_origin_map_figure(df), f"{label} origins", f"{key_prefix}_origin")
             elif label == "Throw-ins":
-                render_mpl_visual(throwin_delivery_map_figure(df), f"{label} deliveries", f"mp_{label.lower()}_delivery")
+                render_mpl_visual(throwin_delivery_map_figure(df), f"{label} deliveries", f"{key_prefix}_delivery")
         with pc2:
             render_plotly_visual(
                 polish_plotly_figure(shotmap_figure(df, f"{label} shots")),
-                f"{label} shots", f"mp_{label.lower()}_shots",
+                f"{label} shots", f"{key_prefix}_shots",
             )
 
     if label == "Corners":
@@ -232,11 +233,11 @@ def render_match_prep() -> None:
         c5.metric("xG / 100", f"{total_kpi['xg_per_100']:.2f}")
 
         st.divider()
-        _phase_brief("Corners", my_corners)
+        _phase_brief("Corners", my_corners, slug="my")
         st.divider()
-        _phase_brief("Freekicks", my_fks)
+        _phase_brief("Freekicks", my_fks, slug="my")
         st.divider()
-        _phase_brief("Throw-ins", my_tis)
+        _phase_brief("Throw-ins", my_tis, slug="my")
 
     # ── Opponent attack ───────────────────────────────────────────────────────
     with tab_defend:
@@ -251,11 +252,11 @@ def render_match_prep() -> None:
         c5.metric("xG / 100", f"{opp_total['xg_per_100']:.2f}")
 
         st.divider()
-        _phase_brief("Corners", opp_corners)
+        _phase_brief("Corners", opp_corners, slug="opp")
         st.divider()
-        _phase_brief("Freekicks", opp_fks)
+        _phase_brief("Freekicks", opp_fks, slug="opp")
         st.divider()
-        _phase_brief("Throw-ins", opp_tis)
+        _phase_brief("Throw-ins", opp_tis, slug="opp")
 
     # ── Personnel ─────────────────────────────────────────────────────────────
     with tab_personnel:
