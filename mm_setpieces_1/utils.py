@@ -2163,10 +2163,18 @@ def render_analyst_table(
     if len(df) > max_rows:
         st.caption(f"Showing {max_rows:,} of {len(df):,} rows. Use exports for the full table.")
 
-    # Identify numeric columns eligible for colouring
-    all_numeric = [c for c in display_df.columns if pd.api.types.is_numeric_dtype(display_df[c])]
+    # Identify numeric columns eligible for colouring (booleans excluded — they break gradient math)
+    all_numeric = [
+        c for c in display_df.columns
+        if pd.api.types.is_numeric_dtype(display_df[c]) and not pd.api.types.is_bool_dtype(display_df[c])
+    ]
     target_cols = color_cols if color_cols is not None else all_numeric
-    target_cols = [c for c in target_cols if c in display_df.columns and pd.api.types.is_numeric_dtype(display_df[c])]
+    target_cols = [
+        c for c in target_cols
+        if c in display_df.columns
+        and pd.api.types.is_numeric_dtype(display_df[c])
+        and not pd.api.types.is_bool_dtype(display_df[c])
+    ]
     inverted = set(invert_cols or [])
 
     # Base colour palette: white → steel-blue; inverted: white → rose-red
@@ -2175,8 +2183,8 @@ def render_analyst_table(
 
     def _col_gradient(s: pd.Series, cmap: list[str]) -> list[str]:
         """Return CSS background-color strings for a numeric series."""
-        vals = pd.to_numeric(s, errors="coerce")
-        lo, hi = vals.min(), vals.max()
+        vals = pd.to_numeric(s, errors="coerce").astype(float)
+        lo, hi = float(vals.min()), float(vals.max())
         if pd.isna(lo) or pd.isna(hi) or lo == hi:
             return [""] * len(s)
         n = len(cmap) - 1
@@ -2185,6 +2193,7 @@ def render_analyst_table(
             if pd.isna(v):
                 styles.append("")
             else:
+                v = float(v)
                 t = (v - lo) / (hi - lo)
                 idx = min(int(t * n), n - 1)
                 lo_c, hi_c = cmap[idx], cmap[idx + 1]
