@@ -2207,15 +2207,29 @@ def render_analyst_table(
 
     styler = display_df.style.hide(axis="index")
 
-    # Format numeric columns — always 2 dp for floats, comma-separated integers
+    def _compact(v):
+        """Compact number formatter: 1 500 000 → 1.5M, 100 000 → 100K, else 2dp."""
+        if pd.isna(v):
+            return ""
+        if isinstance(v, float) and v == int(v) and abs(v) >= 1000:
+            v = int(v)
+        if isinstance(v, (int, np.integer)):
+            if abs(v) >= 1_000_000:
+                return f"{v/1_000_000:.1f}M"
+            if abs(v) >= 1_000:
+                return f"{v/1_000:.0f}K"
+            return f"{v:,}"
+        return f"{v:,.2f}"
+
+    # Format numeric columns
     for col in all_numeric:
         sample = display_df[col].dropna()
         if len(sample) == 0:
             continue
         if pd.api.types.is_integer_dtype(display_df[col]):
-            styler = styler.format({col: "{:,.0f}"})
+            styler = styler.format({col: _compact})
         else:
-            styler = styler.format({col: "{:,.2f}"})
+            styler = styler.format({col: _compact})
 
     # Apply per-column gradients
     for col in target_cols:
