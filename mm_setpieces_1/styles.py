@@ -225,26 +225,27 @@ def inject_app_style() -> None:  # noqa: C901
                 display: flex;
                 align-items: baseline;
                 justify-content: space-between;
-                gap: 1rem;
-                margin: 0 0 1rem;
-                padding: 0;
+                gap: 1.2rem;
+                margin: 0 0 .85rem;
+                padding: 0 0 .7rem;
+                border-bottom: 1px solid {BORDER};
             }}
             .mm-page-title {{
                 color: {INK} !important;
-                font-size: 1.6rem !important;
+                font-size: 1.4rem !important;
                 font-weight: 800 !important;
                 letter-spacing: -.032em !important;
                 line-height: 1 !important;
             }}
             .mm-page-scope {{
-                color: #374151 !important;
-                font-size: .74rem !important;
+                color: {MUTED} !important;
+                font-size: .72rem !important;
                 font-weight: 500 !important;
                 white-space: nowrap;
                 letter-spacing: .01em;
             }}
             .mm-page-scope strong {{
-                color: {MUTED} !important;
+                color: {MUTED_2} !important;
                 font-weight: 600 !important;
             }}
 
@@ -254,38 +255,33 @@ def inject_app_style() -> None:  # noqa: C901
                 align-items: center;
                 justify-content: space-between;
                 gap: 1rem;
-                padding: 0 0 .35rem;
-                margin: 1.3rem 0 .7rem;
+                padding: 0 0 .3rem;
+                margin: 1.1rem 0 .55rem;
+                border-bottom: 1px solid {BORDER};
             }}
             .mm-section-title {{
-                color: #374151 !important;
-                font-size: .59rem !important;
+                color: {MUTED} !important;
+                font-size: .58rem !important;
                 font-weight: 700 !important;
                 text-transform: uppercase !important;
-                letter-spacing: .18em !important;
+                letter-spacing: .16em !important;
             }}
             .mm-section-title::before {{ display: none !important; }}
             .mm-section-note {{
-                color: #374151 !important;
-                font-size: .72rem !important;
+                color: {MUTED} !important;
+                font-size: .71rem !important;
             }}
 
             /* ── Filter panel ───────────────────────────────────── */
             .mm-filter-panel {{
-                background: rgba(255,255,255,0.025);
+                background: transparent;
                 border: none;
-                border-radius: 6px;
-                padding: .7rem .85rem .5rem;
-                margin-bottom: .9rem;
+                border-bottom: 1px solid {BORDER};
+                border-radius: 0;
+                padding: 0 0 .6rem;
+                margin-bottom: .85rem;
             }}
-            .mm-filter-panel-label {{
-                color: #374151;
-                font-size: .55rem;
-                font-weight: 700;
-                text-transform: uppercase;
-                letter-spacing: .2em;
-                margin-bottom: .4rem;
-            }}
+            .mm-filter-panel-label {{ display: none; }}
 
             /* ── KPI deck ───────────────────────────────────────── */
             .mm-kpi-deck {{
@@ -302,12 +298,12 @@ def inject_app_style() -> None:  # noqa: C901
                 background: {SURFACE} !important;
                 border: none !important;
                 border-radius: 0 !important;
-                padding: .85rem .9rem !important;
-                min-height: 80px;
+                padding: .75rem .85rem !important;
+                min-height: 72px;
             }}
             .mm-kpi-card.is-red {{ background: rgba(245,158,11,0.06) !important; }}
             .mm-kpi-label {{
-                color: #374151 !important;
+                color: {MUTED} !important;
                 font-size: .58rem !important;
                 font-weight: 700 !important;
                 text-transform: uppercase !important;
@@ -316,14 +312,14 @@ def inject_app_style() -> None:  # noqa: C901
             }}
             .mm-kpi-value {{
                 color: {INK} !important;
-                font-size: 1.6rem !important;
+                font-size: 1.4rem !important;
                 font-weight: 800 !important;
                 font-variant-numeric: tabular-nums !important;
                 letter-spacing: -.03em !important;
                 line-height: 1 !important;
             }}
             .mm-kpi-help {{
-                color: #374151 !important;
+                color: {MUTED} !important;
                 font-size: .65rem !important;
                 line-height: 1.3 !important;
                 margin-top: .2rem !important;
@@ -347,7 +343,7 @@ def inject_app_style() -> None:  # noqa: C901
                 padding: .8rem .9rem !important;
             }}
             .mm-read-title {{
-                color: #374151 !important;
+                color: {MUTED} !important;
                 font-size: .58rem !important;
                 font-weight: 700 !important;
                 letter-spacing: .12em !important;
@@ -386,7 +382,7 @@ def inject_app_style() -> None:  # noqa: C901
                 font-variant-numeric: tabular-nums !important;
             }}
             .mm-feature-label {{
-                color: #374151 !important;
+                color: {MUTED} !important;
                 font-size: .58rem !important;
                 font-weight: 700 !important;
                 text-transform: uppercase !important;
@@ -413,7 +409,7 @@ def inject_app_style() -> None:  # noqa: C901
             }}
             .mm-stat-card.is-red {{ background: rgba(245,158,11,0.06) !important; }}
             .mm-stat-label {{
-                color: #374151 !important;
+                color: {MUTED} !important;
                 font-size: .58rem !important;
                 font-weight: 700 !important;
                 text-transform: uppercase !important;
@@ -455,7 +451,7 @@ def inject_app_style() -> None:  # noqa: C901
                 background: {GREEN};
             }}
             .mm-rail-label {{
-                color: #374151 !important;
+                color: {MUTED} !important;
                 font-size: .58rem !important; font-weight: 700 !important;
                 letter-spacing: .12em !important; text-transform: uppercase !important;
                 margin-bottom: .12rem !important;
@@ -572,7 +568,7 @@ def inject_app_style() -> None:  # noqa: C901
                 border-top: 1px solid {BORDER};
             }}
             .mm-command-label {{
-                color: #374151 !important;
+                color: {MUTED} !important;
                 font-size: .6rem !important; font-weight: 700 !important;
                 text-transform: uppercase !important; letter-spacing: .1em !important;
             }}
@@ -597,21 +593,22 @@ def inject_app_style() -> None:  # noqa: C901
 
             /* ── Native st.metric ───────────────────────────────── */
             div[data-testid="stMetric"] {{
-                background: {SURFACE} !important;
-                border: 1px solid {BORDER} !important;
-                border-radius: 5px !important;
-                padding: .8rem .9rem !important;
+                background: transparent !important;
+                border: none !important;
+                border-top: 1px solid {BORDER} !important;
+                border-radius: 0 !important;
+                padding: .65rem 0 .4rem !important;
                 box-shadow: none !important;
             }}
             div[data-testid="stMetric"]::before {{ display: none !important; }}
             div[data-testid="stMetricLabel"] p {{
-                color: #374151 !important;
+                color: {MUTED} !important;
                 font-size: .58rem !important; font-weight: 700 !important;
                 text-transform: uppercase !important; letter-spacing: .12em !important;
             }}
             div[data-testid="stMetricValue"] {{
                 color: {INK} !important;
-                font-size: 1.75rem !important; font-weight: 800 !important;
+                font-size: 1.5rem !important; font-weight: 800 !important;
                 font-variant-numeric: tabular-nums !important;
                 letter-spacing: -.03em !important;
             }}
@@ -757,7 +754,7 @@ def inject_app_style() -> None:  # noqa: C901
                 margin: .2rem 0;
             }}
             .mm-filter-label {{
-                color: #374151 !important;
+                color: {MUTED} !important;
                 font-size: .52rem !important; font-weight: 700 !important;
                 letter-spacing: .1em !important; text-transform: uppercase !important;
                 margin-bottom: .12rem !important;
@@ -789,19 +786,19 @@ def inject_app_style() -> None:  # noqa: C901
             /* ── Hero (compact page-header re-use) ──────────────── */
             .mm-hero {{ margin-bottom: .9rem; }}
             .mm-eyebrow {{
-                color: #374151 !important;
+                color: {MUTED} !important;
                 font-size: .58rem !important; font-weight: 700 !important;
                 letter-spacing: .2em !important; text-transform: uppercase !important;
             }}
             .mm-title {{
                 color: {INK} !important;
-                font-size: 1.6rem !important;
+                font-size: 1.4rem !important;
                 font-weight: 800 !important;
                 letter-spacing: -.032em !important;
                 line-height: 1 !important;
             }}
             .mm-copy {{
-                color: #374151 !important;
+                color: {MUTED} !important;
                 font-size: .78rem !important;
                 font-weight: 500 !important;
                 letter-spacing: .01em;
@@ -814,14 +811,14 @@ def inject_app_style() -> None:  # noqa: C901
                 flex-wrap: wrap;
                 gap: 0;
                 border-bottom: 1px solid {BORDER};
-                margin: 0 0 1.5rem;
-                padding-bottom: .1rem;
+                margin: 0 0 1.2rem;
+                padding-bottom: 0;
             }}
             .mm-dbstat {{
                 display: flex;
                 flex-direction: column;
-                padding: .3rem 1.4rem .55rem 0;
-                margin-right: 1.4rem;
+                padding: .2rem 1.2rem .45rem 0;
+                margin-right: 1.2rem;
                 border-right: 1px solid {BORDER};
                 flex-shrink: 0;
             }}
@@ -830,15 +827,15 @@ def inject_app_style() -> None:  # noqa: C901
             }}
             .mm-dbstat-val {{
                 color: {INK} !important;
-                font-size: 1.55rem !important;
+                font-size: 1.25rem !important;
                 font-weight: 800 !important;
                 font-variant-numeric: tabular-nums !important;
                 letter-spacing: -.03em;
                 line-height: 1.1;
             }}
             .mm-dbstat-lbl {{
-                color: #374151 !important;
-                font-size: .58rem !important;
+                color: {MUTED} !important;
+                font-size: .57rem !important;
                 font-weight: 600 !important;
                 text-transform: uppercase !important;
                 letter-spacing: .1em !important;
@@ -850,15 +847,14 @@ def inject_app_style() -> None:  # noqa: C901
                 background: {SURFACE};
                 border: 1px solid {BORDER};
                 border-radius: 5px;
-                padding: .9rem .95rem .8rem;
-                min-height: 116px;
+                padding: .8rem .9rem .7rem;
+                min-height: 100px;
                 position: relative;
                 cursor: pointer;
-                transition: border-color .15s, background .15s;
+                transition: border-color .15s;
             }}
             .mm-mod-card:hover {{
-                background: {SURFACE_2};
-                border-color: rgba(34,197,94,0.22);
+                border-color: {BORDER_2};
             }}
             .mm-mod-card + div > button,
             .mm-mod-card ~ div div.stButton > button {{
@@ -889,13 +885,7 @@ def inject_app_style() -> None:  # noqa: C901
                 font-size: .76rem !important;
                 line-height: 1.44 !important;
             }}
-            .mm-mod-cta {{
-                color: {GREEN} !important;
-                font-size: .68rem !important;
-                font-weight: 700 !important;
-                margin-top: .5rem !important;
-                letter-spacing: .03em;
-            }}
+            .mm-mod-cta {{ display: none; }}
 
             /* Legacy nav cards */
             .mm-nav-card {{
@@ -954,7 +944,7 @@ def inject_app_style() -> None:  # noqa: C901
                 margin: 0 0 .9rem;
             }}
             .mm-filter-bar-label {{
-                color: #374151;
+                color: {MUTED};
                 font-size: .58rem; font-weight: 700;
                 text-transform: uppercase; letter-spacing: .12em;
                 white-space: nowrap;
