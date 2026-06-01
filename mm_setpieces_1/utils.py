@@ -2194,8 +2194,8 @@ def render_analyst_table(
     inverted = set(invert_cols or [])
 
     # Base colour palette: white → steel-blue; inverted: white → rose-red
-    BLUE_MAP = ["#ffffff", "#dbeafe", "#93c5fd", "#3b82f6", "#1d4ed8"]
-    RED_MAP  = ["#ffffff", "#fee2e2", "#fca5a5", "#ef4444", "#b91c1c"]
+    BLUE_MAP = ["#222428", "#1e3a5f", "#1e4d8c", "#2563eb", "#1d4ed8"]
+    RED_MAP  = ["#222428", "#3d1a1a", "#7f1d1d", "#dc2626", "#b91c1c"]
 
     def _col_gradient(s: pd.Series, cmap: list[str]) -> list[str]:
         """Return CSS background-color strings for a numeric series."""
@@ -2264,7 +2264,7 @@ def render_analyst_table(
     # Table chrome — dark theme
     styler = styler.set_table_styles([
         {"selector": "thead th", "props": [
-            ("background", "#161922"), ("color", "#9ca3af"),
+            ("background", "#222428"), ("color", "#9ca3af"),
             ("font-size", ".68rem"), ("font-weight", "700"),
             ("letter-spacing", ".06em"), ("text-transform", "uppercase"),
             ("padding", ".45rem .65rem"), ("border-bottom", "1px solid rgba(255,255,255,0.08)"),
@@ -2274,14 +2274,14 @@ def render_analyst_table(
             ("font-size", ".82rem"), ("font-weight", "500"),
             ("padding", ".38rem .65rem"), ("border-bottom", "1px solid rgba(255,255,255,0.05)"),
             ("border-right", "none"), ("white-space", "nowrap"),
-            ("color", "#e5e7eb"),
+            ("color", "#ffffff"),
         ]},
         {"selector": "tbody tr:hover td", "props": [
-            ("background", "rgba(34,197,94,0.05)"),
+            ("background", "rgba(255,255,255,0.04)"),
         ]},
         {"selector": "table", "props": [
             ("border-collapse", "collapse"), ("width", "100%"),
-            ("background", "#161922"),
+            ("background", "#222428"),
         ]},
     ])
 
