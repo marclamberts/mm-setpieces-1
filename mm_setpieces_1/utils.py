@@ -2263,25 +2263,29 @@ def render_analyst_table(
 
     # Table chrome — dark theme
     styler = styler.set_table_styles([
+        {"selector": "html, body", "props": [
+            ("background", "#222428 !important"), ("color", "#ffffff !important"),
+        ]},
         {"selector": "thead th", "props": [
-            ("background", "#222428"), ("color", "#9ca3af"),
+            ("background", "#222428 !important"), ("color", "#9ca3af !important"),
             ("font-size", ".68rem"), ("font-weight", "700"),
             ("letter-spacing", ".06em"), ("text-transform", "uppercase"),
             ("padding", ".45rem .65rem"), ("border-bottom", "1px solid rgba(255,255,255,0.08)"),
             ("border-right", "none"), ("white-space", "nowrap"),
         ]},
         {"selector": "tbody td", "props": [
+            ("background", "#222428 !important"),
             ("font-size", ".82rem"), ("font-weight", "500"),
             ("padding", ".38rem .65rem"), ("border-bottom", "1px solid rgba(255,255,255,0.05)"),
             ("border-right", "none"), ("white-space", "nowrap"),
-            ("color", "#ffffff"),
+            ("color", "#ffffff !important"),
         ]},
         {"selector": "tbody tr:hover td", "props": [
-            ("background", "rgba(255,255,255,0.04)"),
+            ("background", "rgba(255,255,255,0.06) !important"),
         ]},
         {"selector": "table", "props": [
             ("border-collapse", "collapse"), ("width", "100%"),
-            ("background", "#222428"),
+            ("background", "#222428 !important"),
         ]},
     ])
 
