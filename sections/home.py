@@ -70,7 +70,7 @@ def render_home() -> None:
         st.markdown(
             """
             <div style="padding:.6rem 0 .4rem">
-                <div style="color:#374151;font-size:.65rem;font-weight:700;
+                <div style="color:#6b7280;font-size:.65rem;font-weight:700;
                             letter-spacing:.2em;text-transform:uppercase;
                             margin-bottom:.45rem">
                     Football Intelligence

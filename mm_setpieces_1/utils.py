@@ -218,10 +218,12 @@ def hero_block(eyebrow: str, title: str, copy: str) -> None:
 
 
 def section_header(title: str, note: str = "") -> None:
+    note_html = f'<div class="mm-section-note">{note}</div>' if note else ""
     st.markdown(
         f"""
         <div class="mm-section">
             <div class="mm-section-title">{title}</div>
+            {note_html}
         </div>
         """,
         unsafe_allow_html=True,
@@ -304,8 +306,8 @@ def _plotly_matplotlib_fallback_png_bytes(fig: go.Figure, width: int, height: in
     title = title or "SetPlayPro visual"
 
     mpl_fig, ax = plt.subplots(figsize=(width / 180, height / 180), dpi=180)
-    mpl_fig.patch.set_facecolor("white")
-    ax.set_facecolor("white")
+    mpl_fig.patch.set_facecolor("#1e2230")
+    ax.set_facecolor("#1e2230")
 
     for shape in layout.get("shapes", []) or []:
         shape_type = shape.get("type", "")
@@ -399,7 +401,7 @@ def _plotly_matplotlib_fallback_png_bytes(fig: go.Figure, width: int, height: in
 
     x_title = layout.get("xaxis", {}).get("title", {}).get("text", "") if isinstance(layout.get("xaxis"), dict) else ""
     y_title = layout.get("yaxis", {}).get("title", {}).get("text", "") if isinstance(layout.get("yaxis"), dict) else ""
-    ax.set_title(title, color=BLACK, fontweight="bold", pad=14)
+    ax.set_title(title, color="#f1f5f9", fontweight="bold", pad=14)
     ax.set_xlabel(x_title)
     ax.set_ylabel(y_title)
     xaxis = layout.get("xaxis", {}) if isinstance(layout.get("xaxis"), dict) else {}
@@ -422,7 +424,7 @@ def _plotly_matplotlib_fallback_png_bytes(fig: go.Figure, width: int, height: in
         mpl_fig.tight_layout(rect=[0, 0, 1, 0.96])
 
     output = BytesIO()
-    mpl_fig.savefig(output, format="png", dpi=180, facecolor="white")
+    mpl_fig.savefig(output, format="png", dpi=180, facecolor="#1e2230")
     plt.close(mpl_fig)
     return add_logo_to_png_bytes(output.getvalue())
 
@@ -450,7 +452,7 @@ def plotly_figure_png_bytes(fig: go.Figure, width: int = 1400, height: int | Non
 
 def matplotlib_figure_png_bytes(fig) -> bytes:
     output = BytesIO()
-    fig.savefig(output, format="png", dpi=180, bbox_inches="tight", facecolor="white")
+    fig.savefig(output, format="png", dpi=180, bbox_inches="tight", facecolor="#1e2230")
     return add_logo_to_png_bytes(output.getvalue())
 
 
@@ -2456,10 +2458,11 @@ def freekick_origin_map_figure(df: pd.DataFrame, title: str = "Freekick origins"
     ]
 
     fig, ax = plt.subplots(figsize=(6, 9), dpi=130)
+    fig.patch.set_facecolor("#161922")
     pitch_plot = VerticalPitch(
         pitch_type="statsbomb",
-        pitch_color="#f8fafc",
-        line_color="#374151",
+        pitch_color="#1a2438",
+        line_color="#4b5563",
         linewidth=1.2,
         line_zorder=3,
     )
@@ -2473,9 +2476,9 @@ def freekick_origin_map_figure(df: pd.DataFrame, title: str = "Freekick origins"
         if i > 0:
             ax.axvline(x=x0, color="#94a3b8", linestyle="--", linewidth=0.9, alpha=0.65, zorder=2)
         ax.text((x0 + x1) / 2, -7, label, ha="center", va="center",
-                fontsize=6.5, color="#374151", fontweight="bold")
+                fontsize=6.5, color="#9ca3af", fontweight="bold")
 
-    ax.set_title(title, fontsize=12, fontweight="bold", color="#111827", pad=8)
+    ax.set_title(title, fontsize=12, fontweight="bold", color="#f1f5f9", pad=8)
 
     seq = freekick_sequence_summary(df)
     if seq.empty or "Origin x" not in seq.columns:
@@ -2696,15 +2699,16 @@ def throwin_delivery_map_figure(df: pd.DataFrame, title: str = "Throw-in deliver
     SIDE_COLORS = {"Left touchline": "#2563eb", "Right touchline": "#dc2626", "Unknown": "#94a3b8"}
 
     fig, ax = plt.subplots(figsize=(10, 7), dpi=120)
+    fig.patch.set_facecolor("#161922")
     pitch_plot = Pitch(
         pitch_type="statsbomb",
-        pitch_color="#f8fafc",
-        line_color="#374151",
+        pitch_color="#1a2438",
+        line_color="#4b5563",
         linewidth=1.2,
         line_zorder=3,
     )
     pitch_plot.draw(ax=ax)
-    ax.set_title(title, fontsize=12, fontweight="bold", color="#111827", pad=8)
+    ax.set_title(title, fontsize=12, fontweight="bold", color="#f1f5f9", pad=8)
 
     seq = throwin_sequence_summary(df)
     if seq.empty or "Origin x" not in seq.columns:
@@ -2775,10 +2779,11 @@ def throwin_outcome_zone_figure(df: pd.DataFrame, title: str = "Throw-in outcome
     C_NONE    = "#e5e7eb"  # gray — nothing notable
 
     fig, ax = plt.subplots(figsize=(13, 7.5), dpi=120)
+    fig.patch.set_facecolor("#161922")
     pitch_plot = Pitch(
         pitch_type="statsbomb",
-        pitch_color="#f8fafc",
-        line_color="#374151",
+        pitch_color="#1a2438",
+        line_color="#4b5563",
         linewidth=1.2,
         line_zorder=4,
     )
@@ -2790,7 +2795,7 @@ def throwin_outcome_zone_figure(df: pd.DataFrame, title: str = "Throw-in outcome
         ax.axvspan(x0, x1, alpha=0.10, color=bg, zorder=1)
         cx = (x0 + x1) / 2
         ax.text(cx, -4, zone_label, ha="center", va="center",
-                fontsize=8, fontweight="bold", color="#374151")
+                fontsize=8, fontweight="bold", color="#9ca3af")
         ax.text(cx, -10, target_label, ha="center", va="center",
                 fontsize=6.5, color="#6b7280", style="italic")
 
@@ -2800,7 +2805,7 @@ def throwin_outcome_zone_figure(df: pd.DataFrame, title: str = "Throw-in outcome
     seq = throwin_sequence_summary(df)
     if seq.empty or "Origin x" not in seq.columns:
         ax.text(60, 40, "No throw-in data available", ha="center", va="center", color="#94a3b8", fontsize=11)
-        ax.set_title(title, fontsize=12, fontweight="bold", color="#111827", pad=8)
+        ax.set_title(title, fontsize=12, fontweight="bold", color="#f1f5f9", pad=8)
         fig.tight_layout()
         return fig
 
@@ -2858,7 +2863,7 @@ def throwin_outcome_zone_figure(df: pd.DataFrame, title: str = "Throw-in outcome
             alpha=0.82, ax=ax, zorder=zorder + 10,
         )
 
-    ax.set_title(title, fontsize=12, fontweight="bold", color="#111827", pad=8)
+    ax.set_title(title, fontsize=12, fontweight="bold", color="#f1f5f9", pad=8)
     legend_patches = [
         mpatches.Patch(color=C_GOAL,    label="Goal"),
         mpatches.Patch(color=C_SHOT,    label="Shot (no goal)"),
@@ -3096,9 +3101,10 @@ def mplsoccer_delivery_figure(df: pd.DataFrame, label: str = ""):
     base = add_delivery_zones(unique_start_events(df))
     pitch = pitch_dimensions(df)
     fig, ax = plt.subplots(figsize=(5.8, 8), dpi=140)
-    pitch_plot = VerticalPitch(pitch_type="statsbomb", half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
+    fig.patch.set_facecolor("#161922")
+    pitch_plot = VerticalPitch(pitch_type="statsbomb", half=True, pitch_color="#1a2438", line_color="#4b5563", linewidth=1.2)
     pitch_plot.draw(ax=ax)
-    ax.set_title(f"{label} delivery map", fontsize=14, fontweight="bold", color=BLACK, pad=10)
+    ax.set_title(f"{label} delivery map", fontsize=14, fontweight="bold", color="#f1f5f9", pad=10)
 
     if base.empty or not {"delivery_end_x", "delivery_end_y"}.issubset(base.columns):
         ax.text(*mplsoccer_center_xy(pitch), "No delivery end locations", ha="center", va="center", color=MUTED, fontsize=12)
@@ -3150,9 +3156,10 @@ def mplsoccer_delivery_sp_outcome_figure(df: pd.DataFrame, label: str = ""):
     base = unique_start_events(df).copy()
     pitch = pitch_dimensions(df)
     fig, ax = plt.subplots(figsize=(5.8, 8), dpi=140)
-    pitch_plot = VerticalPitch(pitch_type="statsbomb", half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
+    fig.patch.set_facecolor("#161922")
+    pitch_plot = VerticalPitch(pitch_type="statsbomb", half=True, pitch_color="#1a2438", line_color="#4b5563", linewidth=1.2)
     pitch_plot.draw(ax=ax)
-    ax.set_title(f"{label} delivery map SP outcomes", fontsize=14, fontweight="bold", color=BLACK, pad=10)
+    ax.set_title(f"{label} delivery map SP outcomes", fontsize=14, fontweight="bold", color="#f1f5f9", pad=10)
 
     if base.empty or not {"delivery_end_x", "delivery_end_y"}.issubset(base.columns):
         ax.text(*mplsoccer_center_xy(pitch), "No delivery end locations", ha="center", va="center", color=MUTED, fontsize=12)
@@ -3225,9 +3232,10 @@ def mplsoccer_shot_figure(df: pd.DataFrame, label: str = ""):
     pitch = pitch_dimensions(df)
     half_start = float(pitch["half_start"])
     fig, ax = plt.subplots(figsize=(5.8, 8), dpi=140)
-    pitch_plot = VerticalPitch(pitch_type="statsbomb", half=True, pitch_color="#fbfdff", line_color=BLACK, linewidth=1.2)
+    fig.patch.set_facecolor("#161922")
+    pitch_plot = VerticalPitch(pitch_type="statsbomb", half=True, pitch_color="#1a2438", line_color="#4b5563", linewidth=1.2)
     pitch_plot.draw(ax=ax)
-    ax.set_title(f"{label} shot quality", fontsize=14, fontweight="bold", color=BLACK, pad=10)
+    ax.set_title(f"{label} shot quality", fontsize=14, fontweight="bold", color="#f1f5f9", pad=10)
 
     if shots.empty or not {"shot_x", "shot_y"}.issubset(shots.columns):
         ax.text(*mplsoccer_center_xy(pitch), "No shots in current filter", ha="center", va="center", color=MUTED, fontsize=12)
@@ -3267,7 +3275,7 @@ def prematch_report_pdf_bytes(df: pd.DataFrame, label: str = "", opponent: str =
         title = f"{label} pre-match report"
         if opponent:
             title = f"{title}: {opponent}"
-        ax.text(0.07, 0.94, title, fontsize=22, fontweight="bold", color=BLACK)
+        ax.text(0.07, 0.94, title, fontsize=22, fontweight="bold", color="#f1f5f9")
         ax.text(0.07, 0.905, "Roles, archetypes, delivery tendencies, and preparation notes", fontsize=10, color=MUTED)
 
         y = 0.84
