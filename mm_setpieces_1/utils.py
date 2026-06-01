@@ -2245,25 +2245,27 @@ def render_analyst_table(
         cmap = RED_MAP if col in inverted else BLUE_MAP
         styler = styler.apply(lambda s, c=col, cm=cmap: _col_gradient(s, cm), subset=[col])
 
-    # Table chrome — clean, dunkandtrees-style
+    # Table chrome — dark theme
     styler = styler.set_table_styles([
         {"selector": "thead th", "props": [
-            ("background", "#0f172a"), ("color", "#f8fafc"),
-            ("font-size", ".70rem"), ("font-weight", "800"),
-            ("letter-spacing", ".05em"), ("text-transform", "uppercase"),
-            ("padding", ".45rem .65rem"), ("border", "none"),
-            ("white-space", "nowrap"),
-        ]},
-        {"selector": "tbody td", "props": [
-            ("font-size", ".82rem"), ("font-weight", "600"),
-            ("padding", ".38rem .65rem"), ("border-bottom", "1px solid #f1f5f9"),
+            ("background", "#161922"), ("color", "#9ca3af"),
+            ("font-size", ".68rem"), ("font-weight", "700"),
+            ("letter-spacing", ".06em"), ("text-transform", "uppercase"),
+            ("padding", ".45rem .65rem"), ("border-bottom", "1px solid rgba(255,255,255,0.08)"),
             ("border-right", "none"), ("white-space", "nowrap"),
         ]},
+        {"selector": "tbody td", "props": [
+            ("font-size", ".82rem"), ("font-weight", "500"),
+            ("padding", ".38rem .65rem"), ("border-bottom", "1px solid rgba(255,255,255,0.05)"),
+            ("border-right", "none"), ("white-space", "nowrap"),
+            ("color", "#e5e7eb"),
+        ]},
         {"selector": "tbody tr:hover td", "props": [
-            ("filter", "brightness(0.95)"),
+            ("background", "rgba(34,197,94,0.05)"),
         ]},
         {"selector": "table", "props": [
             ("border-collapse", "collapse"), ("width", "100%"),
+            ("background", "#161922"),
         ]},
     ])
 
