@@ -1853,6 +1853,233 @@ def inject_app_style() -> None:
                     padding: .75rem .85rem 2rem !important;
                 }}
             }}
+
+            /* ═══ Navigation & Button refinements ══════════════════════════ */
+
+            /* Hide radio circles → nav items look like sidebar links */
+            div[data-testid="stSidebar"] [role="radiogroup"] [data-baseweb="radio"] > div:first-child,
+            div[data-testid="stSidebar"] [role="radiogroup"] [data-baseweb="radio"] svg {{
+                display: none !important;
+                width: 0 !important;
+                height: 0 !important;
+            }}
+            div[data-testid="stSidebar"] [role="radiogroup"] label > div {{
+                gap: 0 !important;
+                padding-left: 0 !important;
+                margin-left: 0 !important;
+            }}
+            div[data-testid="stSidebar"] [role="radiogroup"] label {{
+                padding: .56rem .78rem !important;
+                border-radius: 7px !important;
+                cursor: pointer;
+                font-size: .88rem !important;
+                font-weight: 600 !important;
+            }}
+            div[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) {{
+                background: rgba(193,18,31,0.18) !important;
+                border: 1px solid rgba(193,18,31,0.40) !important;
+                box-shadow: inset 3px 0 0 #c1121f !important;
+            }}
+            div[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) * {{
+                color: #ffffff !important;
+                font-weight: 700 !important;
+            }}
+
+            /* Sidebar label / section headings */
+            div[data-testid="stSidebar"] h3 {{
+                font-size: .62rem !important;
+                letter-spacing: .18em !important;
+                text-transform: uppercase !important;
+                color: #64748b !important;
+                padding: 0 .3rem !important;
+                margin: 1.1rem 0 .3rem !important;
+            }}
+
+            /* Sidebar divider */
+            div[data-testid="stSidebar"] hr {{
+                border-color: rgba(148,163,184,0.15) !important;
+                margin: .6rem 0 !important;
+            }}
+
+            /* Sidebar reset / action buttons → ghost outline */
+            div[data-testid="stSidebar"] div.stButton > button {{
+                background: transparent !important;
+                border: 1px solid rgba(193,18,31,0.38) !important;
+                color: #94a3b8 !important;
+                font-size: .78rem !important;
+                font-weight: 700 !important;
+                min-height: 34px !important;
+                letter-spacing: .01em !important;
+                text-transform: none !important;
+            }}
+            div[data-testid="stSidebar"] div.stButton > button:hover {{
+                background: rgba(193,18,31,0.12) !important;
+                border-color: rgba(193,18,31,0.55) !important;
+                color: #e2e8f0 !important;
+            }}
+
+            /* Primary action buttons — solid red, subtle */
+            div.stButton > button {{
+                background: var(--sp-red) !important;
+                border: 0 !important;
+                border-radius: 7px !important;
+                color: #ffffff !important;
+                font-size: .82rem !important;
+                font-weight: 700 !important;
+                letter-spacing: 0 !important;
+                text-transform: none !important;
+                min-height: 38px !important;
+                box-shadow: 0 1px 3px rgba(193,18,31,0.25) !important;
+                transition: background .12s ease, box-shadow .12s ease !important;
+            }}
+            div.stButton > button:hover {{
+                background: var(--sp-red-d) !important;
+                box-shadow: 0 4px 12px rgba(193,18,31,0.30) !important;
+            }}
+            div.stButton > button:active {{
+                transform: translateY(1px) !important;
+                box-shadow: none !important;
+            }}
+
+            /* Download buttons → secondary outline */
+            div[data-testid="stDownloadButton"] > button {{
+                background: transparent !important;
+                border: 1.5px solid #d8dee8 !important;
+                border-radius: 7px !important;
+                color: #334155 !important;
+                font-size: .82rem !important;
+                font-weight: 700 !important;
+                min-height: 38px !important;
+                box-shadow: none !important;
+                transition: border-color .12s ease, color .12s ease !important;
+            }}
+            div[data-testid="stDownloadButton"] > button:hover {{
+                background: #fdf2f2 !important;
+                border-color: var(--sp-red) !important;
+                color: var(--sp-red) !important;
+            }}
+
+            /* Module nav card — the card wrapper on home page */
+            .mm-nav-card {{
+                position: relative;
+                overflow: hidden;
+                background: #ffffff !important;
+                border: 1px solid #e2e8f0 !important;
+                border-radius: 10px !important;
+                padding: 1.1rem 1.1rem .85rem !important;
+                min-height: 148px !important;
+                box-shadow: 0 1px 4px rgba(15,23,42,0.05) !important;
+                transition: box-shadow .15s ease, border-color .15s ease, transform .15s ease !important;
+                margin-bottom: 0 !important;
+            }}
+            .mm-nav-card:hover {{
+                transform: translateY(-2px) !important;
+                box-shadow: 0 8px 24px rgba(15,23,42,0.10) !important;
+                border-color: rgba(193,18,31,0.28) !important;
+            }}
+            .mm-nav-card::before {{
+                content: "" !important;
+                position: absolute !important;
+                inset: 0 0 auto 0 !important;
+                height: 3px !important;
+                background: var(--sp-red) !important;
+                border-radius: 10px 10px 0 0 !important;
+            }}
+            /* Negative margin to pull button up against card */
+            .mm-nav-card-action {{
+                margin-top: .35rem !important;
+                margin-bottom: .85rem !important;
+            }}
+            /* Button inside nav card — subtle outline link */
+            .mm-nav-card-action div.stButton > button {{
+                background: transparent !important;
+                border: 1px solid #dde3ec !important;
+                border-radius: 6px !important;
+                color: #475569 !important;
+                font-size: .78rem !important;
+                font-weight: 700 !important;
+                min-height: 32px !important;
+                box-shadow: none !important;
+                letter-spacing: 0 !important;
+            }}
+            .mm-nav-card-action div.stButton > button:hover {{
+                background: #fdf2f2 !important;
+                border-color: var(--sp-red) !important;
+                color: var(--sp-red) !important;
+                box-shadow: none !important;
+            }}
+
+            /* Metrics — cleaner */
+            div[data-testid="stMetric"] {{
+                padding: .85rem .95rem !important;
+                border-top: 2px solid var(--sp-ink) !important;
+                background: #ffffff !important;
+                border-radius: 8px !important;
+                box-shadow: 0 1px 4px rgba(15,23,42,0.05) !important;
+            }}
+            div[data-testid="stMetricLabel"] p {{
+                font-size: .68rem !important;
+                font-weight: 800 !important;
+                text-transform: uppercase !important;
+                letter-spacing: .07em !important;
+                color: var(--sp-muted) !important;
+            }}
+            div[data-testid="stMetricValue"] {{
+                font-size: 1.5rem !important;
+                font-weight: 900 !important;
+                letter-spacing: -.01em !important;
+            }}
+
+            /* Tabs — clean pill segment control */
+            div[data-testid="stTabs"] [role="tablist"] {{
+                background: #f1f5f9 !important;
+                border: 0 !important;
+                border-radius: 8px !important;
+                padding: .25rem !important;
+                box-shadow: none !important;
+                gap: .15rem !important;
+                margin-bottom: .65rem !important;
+            }}
+            div[data-testid="stTabs"] button[role="tab"] {{
+                background: transparent !important;
+                border: 0 !important;
+                border-radius: 6px !important;
+                color: #64748b !important;
+                font-size: .82rem !important;
+                font-weight: 600 !important;
+                letter-spacing: 0 !important;
+                text-transform: none !important;
+                min-height: 32px !important;
+                padding: .28rem .9rem !important;
+                transition: background .1s ease, color .1s ease !important;
+            }}
+            div[data-testid="stTabs"] button[role="tab"]:hover {{
+                background: rgba(255,255,255,0.7) !important;
+                color: #0b0f14 !important;
+            }}
+            div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {{
+                background: #ffffff !important;
+                color: #0b0f14 !important;
+                box-shadow: 0 1px 4px rgba(15,23,42,0.12) !important;
+                font-weight: 700 !important;
+            }}
+
+            /* Form inputs — clean focus rings */
+            [data-baseweb="select"] > div,
+            [data-baseweb="input"] > div,
+            textarea {{
+                background: #ffffff !important;
+                border: 1.5px solid #d8dee8 !important;
+                border-radius: 7px !important;
+                box-shadow: none !important;
+                transition: border-color .12s ease, box-shadow .12s ease !important;
+            }}
+            [data-baseweb="select"] > div:focus-within,
+            [data-baseweb="input"] > div:focus-within,
+            textarea:focus {{
+                border-color: var(--sp-red) !important;
+                box-shadow: 0 0 0 3px rgba(193,18,31,0.10) !important;
+            }}
         </style>
         """,
         unsafe_allow_html=True,

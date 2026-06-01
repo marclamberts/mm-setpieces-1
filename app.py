@@ -29,6 +29,20 @@ from sections.match_prep import render_match_prep
 
 LOGO_PATH = Path(__file__).resolve().parent / "assets" / "setplaypro-logo.jpg"
 
+SECTION_ICONS = {
+    "Home": "⌂",
+    "Corners": "⚽",
+    "Freekicks": "🎯",
+    "Throw-ins": "↗",
+    "HOPS": "🏃",
+    "League Comparison": "📊",
+    "Delay Analysis": "⏱",
+    "Match Prep": "📋",
+}
+
+_DISPLAY_SECTIONS = [f"{SECTION_ICONS.get(s, '•')}  {s}" for s in APP_SECTIONS]
+_LABEL_TO_SECTION = {label: name for label, name in zip(_DISPLAY_SECTIONS, APP_SECTIONS)}
+
 # ---------------------------------------------------------------------------
 # Page config
 # ---------------------------------------------------------------------------
@@ -142,30 +156,48 @@ def _write_section_to_url(section: str) -> None:
 def _render_sidebar() -> str:
     inject_sidebar_css()
 
+    # Logo at top of sidebar
+    if LOGO_PATH.exists():
+        st.sidebar.image(str(LOGO_PATH), use_container_width=True)
+    else:
+        st.sidebar.markdown("## SetPlay**Pro**")
+
+    st.sidebar.markdown("---")
+
     # Resolve pending navigation (from module buttons on Home)
     if "pending_section" in st.session_state:
-        st.session_state["section_select"] = st.session_state.pop("pending_section")
+        pending = st.session_state.pop("pending_section")
+        # Map plain name to display label
+        pending_label = next((lbl for lbl, sec in _LABEL_TO_SECTION.items() if sec == pending), pending)
+        st.session_state["section_select_display"] = pending_label
 
     # On first load after auth, read section from URL
     if "section" not in st.session_state:
         url_section = _read_section_from_url()
         st.session_state["section"] = url_section or "Home"
 
-    st.sidebar.markdown("### Pages")
-    section = st.sidebar.radio(
+    current_section = st.session_state["section"]
+    current_label = next((lbl for lbl, sec in _LABEL_TO_SECTION.items() if sec == current_section), _DISPLAY_SECTIONS[0])
+    current_idx = _DISPLAY_SECTIONS.index(current_label) if current_label in _DISPLAY_SECTIONS else 0
+
+    st.sidebar.markdown("### Navigation")
+    selected_label = st.sidebar.radio(
         "Choose view",
-        APP_SECTIONS,
-        index=APP_SECTIONS.index(st.session_state.get("section_select", st.session_state["section"])),
-        key="section_select",
+        _DISPLAY_SECTIONS,
+        index=current_idx,
+        key="section_select_display",
         label_visibility="collapsed",
     )
+    section = _LABEL_TO_SECTION.get(selected_label, "Home")
     st.session_state["section"] = section
+    st.session_state["section_select"] = section
     _write_section_to_url(section)
 
     st.sidebar.markdown("---")
-    st.sidebar.markdown("### Filters")
+
     if section != "Home":
-        if st.sidebar.button("Reset filters", key=f"reset_{section}", use_container_width=True):
+        st.sidebar.markdown("### Filters")
+        if st.sidebar.button("↺  Reset filters", key=f"reset_{section}", use_container_width=True):
             reset_current_filters(section)
 
     return section

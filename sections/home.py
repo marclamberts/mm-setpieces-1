@@ -111,17 +111,29 @@ def render_home() -> None:
         st.info("No team names were found in the bundled data.")
 
     section_header("Open A Module")
-    module_cols = st.columns(3)
-    modules = [
-        ("Corners", "home_open_corners"),
-        ("Freekicks", "home_open_freekicks"),
-        ("Throw-ins", "home_open_throwins"),
-        ("HOPS", "home_open_hops"),
-        ("League Comparison", "home_open_league_comparison"),
-        ("Match Prep", "home_open_match_prep"),
-        ("Delay Analysis", "home_open_delay"),
+    MODULE_CARDS = [
+        ("Corners", "home_open_corners", "⚽", "Delivery zones, shot maps, taker profiles, and phase breakdowns."),
+        ("Freekicks", "home_open_freekicks", "🎯", "Indirect free kick zones, cross maps, and phase analysis."),
+        ("Throw-ins", "home_open_throwins", "↗", "Throw-in patterns, distances, and possession outcomes."),
+        ("HOPS", "home_open_hops", "🏃", "Player heading and duel ratings across all positions."),
+        ("League Comparison", "home_open_league_comparison", "📊", "Benchmark set piece stats across competitions."),
+        ("Match Prep", "home_open_match_prep", "📋", "Opponent-specific set piece intelligence for upcoming fixtures."),
+        ("Delay Analysis", "home_open_delay", "⏱", "Corner delivery timing and delay patterns over time."),
     ]
-    for idx, (title, key) in enumerate(modules):
-        with module_cols[idx % 3]:
-            if st.button(title, key=key, use_container_width=True):
-                set_section(title)
+    for row_start in range(0, len(MODULE_CARDS), 3):
+        row_cards = MODULE_CARDS[row_start:row_start + 3]
+        cols = st.columns(len(row_cards))
+        for col, (title, key, icon, desc) in zip(cols, row_cards):
+            with col:
+                st.markdown(
+                    f"""<div class="mm-nav-card">
+                        <div class="mm-card-kicker">{icon}&nbsp; Module</div>
+                        <div class="mm-nav-title">{title}</div>
+                        <div class="mm-nav-copy">{desc}</div>
+                    </div>""",
+                    unsafe_allow_html=True,
+                )
+                st.markdown('<div class="mm-nav-card-action">', unsafe_allow_html=True)
+                if st.button(f"Open {title} →", key=key, use_container_width=True):
+                    set_section(title)
+                st.markdown("</div>", unsafe_allow_html=True)
