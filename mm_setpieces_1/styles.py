@@ -55,7 +55,7 @@ def inject_app_style() -> None:  # noqa: C901
                 font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
                 font-feature-settings: "cv02","cv03","cv04","cv11","tnum";
             }}
-            .stApp {{ background: {NAVY} !important; color: {INK} !important; }}
+            .stApp {{ background: {NAVY} !important; color: #ffffff !important; }}
             footer, #MainMenu {{ visibility: hidden; height: 0; }}
             header[data-testid="stHeader"],
             button[data-testid="collapsedControl"],
@@ -67,66 +67,66 @@ def inject_app_style() -> None:  # noqa: C901
             }}
             .block-container {{
                 max-width: 1560px !important;
-                padding: 64px 1.6rem 4rem !important;
+                padding: 78px 1.6rem 4rem !important;
             }}
-            h1,h2,h3,h4,h5,h6 {{ color: {INK} !important; }}
-            p {{ color: {MUTED_2}; }}
-            label {{ color: {MUTED_2} !important; }}
+            h1,h2,h3,h4,h5,h6 {{ color: #ffffff !important; }}
+            p {{ color: #d1d5db; }}
+            label {{ color: #d1d5db !important; }}
             span {{ color: inherit; }}
 
             /* ── Top navigation bar ─────────────────────────────── */
             .mm-topbar {{
                 position: fixed;
                 top: 0; left: 0; right: 0;
-                height: 44px;
-                background: {SIDEBAR_BG};
-                border-bottom: 1px solid {BORDER};
+                height: 58px;
+                background: #1a1d23;
+                border-bottom: 1px solid rgba(255,255,255,0.10);
                 display: flex;
                 align-items: center;
-                padding: 0 1.4rem;
+                padding: 0 1.8rem;
                 z-index: 9999;
-                gap: 1.2rem;
+                gap: 1.6rem;
             }}
             .mm-topbar-brand {{
                 display: flex; align-items: center;
-                gap: .45rem;
+                gap: .5rem;
                 text-decoration: none;
                 flex-shrink: 0;
             }}
             .mm-topbar-brand img {{
-                height: 26px; width: auto; border-radius: 3px;
+                height: 30px; width: auto; border-radius: 3px;
             }}
             .mm-topbar-brand span {{
-                color: {INK}; font-size: .88rem; font-weight: 700;
+                color: #ffffff; font-size: .95rem; font-weight: 700;
                 white-space: nowrap;
             }}
             .mm-topbar-brand span strong {{ color: {GREEN}; }}
             .mm-topbar-links {{
                 display: flex; align-items: stretch;
-                gap: 0; overflow-x: auto; flex: 1; height: 44px;
+                gap: 0; overflow-x: auto; flex: 1; height: 58px;
                 scrollbar-width: none; -ms-overflow-style: none;
             }}
             .mm-topbar-links::-webkit-scrollbar {{ display: none; }}
             .mm-topbar-links a,
             .mm-topbar-link {{
                 display: flex; align-items: center;
-                color: #4b5563;
-                font-size: .78rem; font-weight: 500;
-                padding: 0 .7rem;
+                color: #9ca3af;
+                font-size: .84rem; font-weight: 500;
+                padding: 0 .95rem;
                 text-decoration: none !important;
                 white-space: nowrap;
                 border-bottom: 2px solid transparent;
                 transition: color .12s, border-color .12s;
-                letter-spacing: .01em;
+                letter-spacing: .015em;
             }}
             .mm-topbar-links a:hover,
             .mm-topbar-link:hover {{
-                color: {MUTED_2};
+                color: #ffffff;
                 text-decoration: none !important;
             }}
             .mm-topbar-links a.mm-active,
             .mm-topbar-link.mm-active {{
-                color: {INK};
+                color: #ffffff;
                 font-weight: 600;
                 border-bottom-color: {GREEN};
             }}
@@ -135,8 +135,8 @@ def inject_app_style() -> None:  # noqa: C901
             [data-baseweb="select"] > div,
             [data-baseweb="input"] > div,
             textarea {{
-                background: {SURFACE_2} !important;
-                border: 1px solid {BORDER_2} !important;
+                background: #2a2d35 !important;
+                border: 1px solid rgba(255,255,255,0.12) !important;
                 border-radius: 5px !important;
                 box-shadow: none !important;
             }}
@@ -144,8 +144,8 @@ def inject_app_style() -> None:  # noqa: C901
             [data-baseweb="select"] input,
             [data-baseweb="input"] input,
             textarea {{
-                color: {INK} !important;
-                -webkit-text-fill-color: {INK} !important;
+                color: #ffffff !important;
+                -webkit-text-fill-color: #ffffff !important;
             }}
             [data-baseweb="select"] > div:focus-within,
             [data-baseweb="input"] > div:focus-within {{
@@ -161,17 +161,17 @@ def inject_app_style() -> None:  # noqa: C901
             /* Dropdown popover */
             div[data-baseweb="popover"] ul,
             div[data-baseweb="popover"] [role="listbox"] {{
-                background: {SURFACE_2} !important;
-                border: 1px solid {BORDER_2} !important;
-                box-shadow: 0 8px 24px rgba(0,0,0,0.45) !important;
+                background: #2a2d35 !important;
+                border: 1px solid rgba(255,255,255,0.12) !important;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.55) !important;
                 border-radius: 6px !important;
             }}
             div[data-baseweb="popover"] [role="option"],
             div[data-baseweb="popover"] [role="option"] *,
             div[data-baseweb="popover"] li,
             div[data-baseweb="popover"] li * {{
-                color: {MUTED_2} !important;
-                -webkit-text-fill-color: {MUTED_2} !important;
+                color: #d1d5db !important;
+                -webkit-text-fill-color: #d1d5db !important;
                 background: transparent !important;
             }}
             div[data-baseweb="popover"] [aria-selected="true"],
@@ -180,23 +180,23 @@ def inject_app_style() -> None:  # noqa: C901
             }}
             div[data-baseweb="popover"] [aria-selected="true"] *,
             div[data-baseweb="popover"] [role="option"]:hover * {{
-                color: {INK} !important;
-                -webkit-text-fill-color: {INK} !important;
+                color: #ffffff !important;
+                -webkit-text-fill-color: #ffffff !important;
             }}
 
             /* Radio buttons */
-            div[data-testid="stRadio"] label {{ color: {MUTED_2} !important; }}
+            div[data-testid="stRadio"] label {{ color: #d1d5db !important; }}
             div[data-testid="stRadio"] [data-baseweb="radio"] > div:first-child {{
-                border-color: {BORDER_2} !important;
+                border-color: rgba(255,255,255,0.25) !important;
             }}
             div[data-testid="stRadio"] [data-baseweb="radio"][aria-checked="true"] > div:first-child {{
                 border-color: {GREEN} !important; background: {GREEN} !important;
             }}
 
             /* Checkboxes */
-            div[data-testid="stCheckbox"] label {{ color: {MUTED_2} !important; }}
+            div[data-testid="stCheckbox"] label {{ color: #d1d5db !important; }}
             div[data-testid="stCheckbox"] [data-baseweb="checkbox"] > div:first-child {{
-                border-color: {BORDER_2} !important; background: {SURFACE_2} !important;
+                border-color: rgba(255,255,255,0.25) !important; background: #2a2d35 !important;
             }}
 
             /* Sliders */
@@ -209,16 +209,16 @@ def inject_app_style() -> None:  # noqa: C901
 
             /* Expander */
             div[data-testid="stExpander"] {{
-                background: transparent !important;
-                border: 1px solid {BORDER} !important;
+                background: #222428 !important;
+                border: 1px solid rgba(255,255,255,0.10) !important;
                 border-radius: 5px !important;
             }}
             div[data-testid="stExpander"] summary {{
-                color: {MUTED} !important; font-weight: 600 !important;
+                color: #d1d5db !important; font-weight: 600 !important;
                 font-size: .79rem !important;
             }}
-            div[data-testid="stExpander"] summary:hover {{ color: {INK} !important; }}
-            div[data-testid="stExpander"] svg {{ color: {MUTED} !important; }}
+            div[data-testid="stExpander"] summary:hover {{ color: #ffffff !important; }}
+            div[data-testid="stExpander"] svg {{ color: #d1d5db !important; }}
 
             /* ── Page header ────────────────────────────────────── */
             .mm-page-header {{
@@ -231,7 +231,7 @@ def inject_app_style() -> None:  # noqa: C901
                 border-bottom: 1px solid {BORDER};
             }}
             .mm-page-title {{
-                color: {INK} !important;
+                color: #ffffff !important;
                 font-size: 1.4rem !important;
                 font-weight: 800 !important;
                 letter-spacing: -.032em !important;
@@ -288,14 +288,14 @@ def inject_app_style() -> None:  # noqa: C901
                 display: grid;
                 grid-template-columns: repeat(6,minmax(0,1fr));
                 gap: 1px;
-                background: {BORDER};
-                border: 1px solid {BORDER};
+                background: rgba(255,255,255,0.08);
+                border: 1px solid rgba(255,255,255,0.08);
                 border-radius: 6px;
                 overflow: hidden;
                 margin: .8rem 0 .6rem;
             }}
             .mm-kpi-card {{
-                background: {SURFACE} !important;
+                background: #222428 !important;
                 border: none !important;
                 border-radius: 0 !important;
                 padding: .75rem .85rem !important;
@@ -311,7 +311,7 @@ def inject_app_style() -> None:  # noqa: C901
                 margin-bottom: .24rem !important;
             }}
             .mm-kpi-value {{
-                color: {INK} !important;
+                color: #ffffff !important;
                 font-size: 1.4rem !important;
                 font-weight: 800 !important;
                 font-variant-numeric: tabular-nums !important;
@@ -337,7 +337,7 @@ def inject_app_style() -> None:  # noqa: C901
                 margin: .6rem 0 1rem;
             }}
             .mm-read-card {{
-                background: {SURFACE} !important;
+                background: #222428 !important;
                 border: none !important;
                 border-radius: 0 !important;
                 padding: .8rem .9rem !important;
@@ -351,7 +351,7 @@ def inject_app_style() -> None:  # noqa: C901
                 margin-bottom: .2rem !important;
             }}
             .mm-read-value {{
-                color: {INK} !important;
+                color: #ffffff !important;
                 font-size: .88rem !important;
                 font-weight: 700 !important;
                 line-height: 1.35 !important;
@@ -370,13 +370,13 @@ def inject_app_style() -> None:  # noqa: C901
                 margin: .65rem 0 .9rem;
             }}
             .mm-feature-pill {{
-                background: {SURFACE} !important;
+                background: #222428 !important;
                 border: none !important;
                 border-radius: 0 !important;
                 padding: .8rem .9rem !important;
             }}
             .mm-feature-value {{
-                color: {INK} !important;
+                color: #ffffff !important;
                 font-size: 1.1rem !important;
                 font-weight: 800 !important;
                 font-variant-numeric: tabular-nums !important;
@@ -402,7 +402,7 @@ def inject_app_style() -> None:  # noqa: C901
                 margin: .65rem 0 .85rem;
             }}
             .mm-stat-card {{
-                background: {SURFACE} !important;
+                background: #222428 !important;
                 border: none !important;
                 border-radius: 0 !important;
                 padding: .75rem .8rem !important;
@@ -417,7 +417,7 @@ def inject_app_style() -> None:  # noqa: C901
                 margin-bottom: .14rem !important;
             }}
             .mm-stat-value {{
-                color: {INK} !important;
+                color: #ffffff !important;
                 font-size: 1.25rem !important;
                 font-weight: 800 !important;
                 font-variant-numeric: tabular-nums !important;
@@ -437,7 +437,7 @@ def inject_app_style() -> None:  # noqa: C901
                 margin: .62rem 0 .8rem;
             }}
             .mm-rail-step {{
-                background: {SURFACE} !important;
+                background: #222428 !important;
                 border: none !important;
                 border-radius: 0 !important;
                 padding: .7rem .75rem !important;
@@ -457,7 +457,7 @@ def inject_app_style() -> None:  # noqa: C901
                 margin-bottom: .12rem !important;
             }}
             .mm-rail-title {{
-                color: {INK} !important;
+                color: #ffffff !important;
                 font-weight: 700 !important; font-size: .82rem !important;
             }}
 
@@ -469,7 +469,7 @@ def inject_app_style() -> None:  # noqa: C901
                 margin: .72rem 0 1rem;
             }}
             .mm-workflow-card {{
-                background: {SURFACE} !important;
+                background: #222428 !important;
                 border: 1px solid {BORDER} !important;
                 border-radius: 5px !important;
                 padding: .9rem !important;
@@ -481,7 +481,7 @@ def inject_app_style() -> None:  # noqa: C901
                 margin-bottom: .26rem !important;
             }}
             .mm-workflow-title {{
-                color: {INK} !important;
+                color: #ffffff !important;
                 font-weight: 700 !important;
                 margin-bottom: .2rem !important;
             }}
@@ -502,14 +502,14 @@ def inject_app_style() -> None:  # noqa: C901
                 margin: .62rem 0;
             }}
             .mm-profile-card {{
-                background: {SURFACE} !important;
+                background: #222428 !important;
                 border: none !important;
                 border-radius: 0 !important;
                 padding: .75rem .85rem !important;
                 border-left: 2px solid {GREEN} !important;
             }}
             .mm-profile-title {{
-                color: {INK} !important;
+                color: #ffffff !important;
                 font-weight: 700 !important; font-size: .85rem !important;
                 margin-bottom: .14rem !important;
             }}
@@ -533,13 +533,13 @@ def inject_app_style() -> None:  # noqa: C901
                 margin: .8rem 0 1.1rem;
             }}
             .mm-panel {{
-                background: {SURFACE} !important;
+                background: #222428 !important;
                 border: 1px solid {BORDER} !important;
                 border-radius: 5px !important;
                 padding: .9rem !important;
             }}
             .mm-panel-title {{
-                color: {INK} !important;
+                color: #ffffff !important;
                 font-weight: 700 !important; font-size: .9rem !important;
                 margin-bottom: .16rem !important;
             }}
@@ -549,13 +549,13 @@ def inject_app_style() -> None:  # noqa: C901
                 margin-bottom: .72rem !important;
             }}
             .mm-command-panel {{
-                background: {SURFACE_2} !important;
+                background: #2a2d35 !important;
                 border: 1px solid {BORDER} !important;
                 border-radius: 5px !important;
                 padding: 1rem !important;
             }}
             .mm-command-title {{
-                color: {INK} !important;
+                color: #ffffff !important;
                 font-size: .78rem !important; font-weight: 700 !important;
                 letter-spacing: .1em !important; text-transform: uppercase !important;
                 margin-bottom: .65rem !important;
@@ -580,16 +580,16 @@ def inject_app_style() -> None:  # noqa: C901
 
             /* ── Insight card ───────────────────────────────────── */
             .mm-insight-card {{
-                background: {SURFACE} !important;
-                border: 1px solid {BORDER} !important;
+                background: #222428 !important;
+                border: 1px solid rgba(255,255,255,0.10) !important;
                 border-left: 2px solid {GREEN} !important;
                 border-radius: 5px !important;
                 padding: .75rem .9rem .75rem 1rem !important;
-                color: {MUTED_2};
+                color: #d1d5db;
                 line-height: 1.48;
                 font-size: .86rem;
             }}
-            .mm-insight-card strong {{ color: {INK} !important; }}
+            .mm-insight-card strong {{ color: #ffffff !important; }}
 
             /* ── Native st.metric ───────────────────────────────── */
             div[data-testid="stMetric"] {{
@@ -602,12 +602,12 @@ def inject_app_style() -> None:  # noqa: C901
             }}
             div[data-testid="stMetric"]::before {{ display: none !important; }}
             div[data-testid="stMetricLabel"] p {{
-                color: {MUTED} !important;
+                color: #9ca3af !important;
                 font-size: .58rem !important; font-weight: 700 !important;
                 text-transform: uppercase !important; letter-spacing: .12em !important;
             }}
             div[data-testid="stMetricValue"] {{
-                color: {INK} !important;
+                color: #ffffff !important;
                 font-size: 1.5rem !important; font-weight: 800 !important;
                 font-variant-numeric: tabular-nums !important;
                 letter-spacing: -.03em !important;
@@ -618,24 +618,24 @@ def inject_app_style() -> None:  # noqa: C901
             [data-testid="stDataFrameResizable"] {{
                 border-radius: 5px !important;
                 overflow: hidden !important;
-                border: 1px solid {BORDER} !important;
+                border: 1px solid rgba(255,255,255,0.10) !important;
                 box-shadow: none !important;
-                background: {SURFACE} !important;
+                background: #222428 !important;
             }}
             [data-testid="stDataFrame"] > div {{
                 border-radius: 5px !important; overflow: hidden !important;
             }}
             [data-testid="stDataFrame"] iframe {{ border: 0 !important; }}
             .mm-table-note {{
-                color: {MUTED} !important; font-size: .74rem !important;
+                color: #9ca3af !important; font-size: .74rem !important;
             }}
 
             /* ── Charts / images ────────────────────────────────── */
             div[data-testid="stPlotlyChart"],
             div[data-testid="stImage"],
             div[data-testid="stPyplot"] {{
-                background: {SURFACE} !important;
-                border: 1px solid {BORDER} !important;
+                background: #222428 !important;
+                border: 1px solid rgba(255,255,255,0.10) !important;
                 border-radius: 5px !important;
                 padding: .5rem !important;
                 box-shadow: none !important;
@@ -643,8 +643,8 @@ def inject_app_style() -> None:  # noqa: C901
 
             /* ── Tabs ───────────────────────────────────────────── */
             div[data-testid="stTabs"] [role="tablist"] {{
-                background: {SURFACE} !important;
-                border: 1px solid {BORDER} !important;
+                background: #1e2026 !important;
+                border: 1px solid rgba(255,255,255,0.10) !important;
                 border-radius: 5px !important;
                 padding: .18rem !important;
                 box-shadow: none !important;
@@ -655,63 +655,65 @@ def inject_app_style() -> None:  # noqa: C901
                 background: transparent !important;
                 border: 0 !important;
                 border-radius: 4px !important;
-                color: {MUTED} !important;
+                color: #9ca3af !important;
                 font-size: .76rem !important; font-weight: 500 !important;
                 letter-spacing: .005em !important;
                 min-height: 28px !important; padding: .2rem .85rem !important;
                 transition: background .1s, color .1s !important;
             }}
             div[data-testid="stTabs"] button[role="tab"]:hover {{
-                background: rgba(255,255,255,0.05) !important;
-                color: {INK} !important;
+                background: rgba(255,255,255,0.07) !important;
+                color: #ffffff !important;
             }}
             div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {{
-                background: {GREEN} !important;
-                color: {GREEN_PAL} !important;
+                background: #2e3038 !important;
+                color: #ffffff !important;
                 font-weight: 700 !important;
                 box-shadow: none !important;
             }}
 
             /* ── Primary buttons ────────────────────────────────── */
             div.stButton > button {{
-                background: {GREEN} !important;
-                border: 0 !important;
+                background: #2e3038 !important;
+                border: 1px solid rgba(255,255,255,0.14) !important;
                 border-radius: 5px !important;
-                color: {GREEN_PAL} !important;
-                font-size: .79rem !important; font-weight: 700 !important;
+                color: #ffffff !important;
+                font-size: .8rem !important; font-weight: 600 !important;
                 letter-spacing: .01em !important;
-                min-height: 34px !important;
+                min-height: 36px !important;
                 box-shadow: none !important;
             }}
             div.stButton > button:hover {{
-                background: {GREEN_D} !important; color: #fff !important;
+                background: #383b45 !important;
+                border-color: rgba(255,255,255,0.22) !important;
+                color: #ffffff !important;
             }}
             div.stButton > button:active {{ transform: translateY(1px) !important; }}
 
-            /* Download → outline */
+            /* Download button */
             div[data-testid="stDownloadButton"] > button {{
-                background: transparent !important;
-                border: 1px solid {BORDER_2} !important;
+                background: #2e3038 !important;
+                border: 1px solid rgba(255,255,255,0.14) !important;
                 border-radius: 5px !important;
-                color: {MUTED_2} !important;
-                font-size: .79rem !important; font-weight: 600 !important;
-                min-height: 34px !important;
+                color: #ffffff !important;
+                font-size: .8rem !important; font-weight: 600 !important;
+                min-height: 36px !important;
             }}
             div[data-testid="stDownloadButton"] > button:hover {{
-                background: rgba(34,197,94,0.06) !important;
-                border-color: rgba(34,197,94,0.32) !important;
-                color: {GREEN} !important;
+                background: #383b45 !important;
+                border-color: rgba(255,255,255,0.22) !important;
+                color: #ffffff !important;
             }}
 
             /* ── Alerts ─────────────────────────────────────────── */
             div[data-testid="stAlert"] {{
-                background: {SURFACE} !important;
-                border: 1px solid {BORDER} !important;
+                background: #222428 !important;
+                border: 1px solid rgba(255,255,255,0.10) !important;
                 border-radius: 5px !important;
             }}
-            div[data-testid="stAlert"] * {{ color: {MUTED_2} !important; }}
+            div[data-testid="stAlert"] * {{ color: #d1d5db !important; }}
             div[data-testid="stCaptionContainer"] p,
-            .stCaptionContainer p {{ color: {MUTED} !important; }}
+            .stCaptionContainer p {{ color: #9ca3af !important; }}
 
             /* ── Filter summary ─────────────────────────────────── */
             .mm-filter-summary {{
@@ -767,7 +769,7 @@ def inject_app_style() -> None:  # noqa: C901
 
             /* ── Empty state ────────────────────────────────────── */
             .mm-empty-state {{
-                background: {SURFACE} !important;
+                background: #222428 !important;
                 border: 1px solid {BORDER} !important;
                 border-left: 2px solid {GREEN} !important;
                 border-radius: 5px !important;
@@ -775,7 +777,7 @@ def inject_app_style() -> None:  # noqa: C901
                 margin: .75rem 0 1rem;
             }}
             .mm-empty-title {{
-                color: {INK} !important; font-weight: 700 !important;
+                color: #ffffff !important; font-weight: 700 !important;
                 margin-bottom: .18rem !important;
             }}
             .mm-empty-copy {{
@@ -791,7 +793,7 @@ def inject_app_style() -> None:  # noqa: C901
                 letter-spacing: .2em !important; text-transform: uppercase !important;
             }}
             .mm-title {{
-                color: {INK} !important;
+                color: #ffffff !important;
                 font-size: 1.4rem !important;
                 font-weight: 800 !important;
                 letter-spacing: -.032em !important;
@@ -826,7 +828,7 @@ def inject_app_style() -> None:  # noqa: C901
                 border-right: none; margin-right: 0;
             }}
             .mm-dbstat-val {{
-                color: {INK} !important;
+                color: #ffffff !important;
                 font-size: 1.25rem !important;
                 font-weight: 800 !important;
                 font-variant-numeric: tabular-nums !important;
@@ -844,8 +846,8 @@ def inject_app_style() -> None:  # noqa: C901
 
             /* ── Module cards ───────────────────────────────────── */
             .mm-mod-card {{
-                background: {SURFACE};
-                border: 1px solid {BORDER};
+                background: #222428;
+                border: 1px solid rgba(255,255,255,0.10);
                 border-radius: 5px;
                 padding: .8rem .9rem .7rem;
                 min-height: 100px;
@@ -874,7 +876,7 @@ def inject_app_style() -> None:  # noqa: C901
                 opacity: .75;
             }}
             .mm-mod-title {{
-                color: {INK} !important;
+                color: #ffffff !important;
                 font-size: .88rem !important;
                 font-weight: 700 !important;
                 margin-bottom: .2rem !important;
@@ -889,7 +891,7 @@ def inject_app_style() -> None:  # noqa: C901
 
             /* Legacy nav cards */
             .mm-nav-card {{
-                background: {SURFACE};
+                background: #222428;
                 border: 1px solid {BORDER};
                 border-radius: 5px;
                 padding: .9rem 1rem .78rem;
@@ -899,7 +901,7 @@ def inject_app_style() -> None:  # noqa: C901
                 transition: border-color .15s, background .15s;
             }}
             .mm-nav-card:hover {{
-                background: {SURFACE_2};
+                background: #2a2d35;
                 border-color: rgba(34,197,94,0.22);
             }}
             .mm-card-kicker {{
@@ -909,7 +911,7 @@ def inject_app_style() -> None:  # noqa: C901
                 margin-bottom: .3rem !important;
             }}
             .mm-nav-title {{
-                color: {INK} !important;
+                color: #ffffff !important;
                 font-size: .9rem !important; font-weight: 700 !important;
                 margin-bottom: .22rem !important;
             }}
