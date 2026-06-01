@@ -32,7 +32,7 @@ except Exception:
 from mm_setpieces_1.utils import plotly_figure_png_bytes  # noqa: F401
 
 
-APP_SECTIONS = ["Home", "Corners", "Freekicks", "Throw-ins", "HOPS", "League Comparison", "Delay Analysis", "Match Prep"]
+APP_SECTIONS = ["Home", "Corners", "Freekicks", "Throw-ins", "HOPS", "League Comparison", "Delay Analysis", "Match Prep", "Data Justification"]
 
 FILTER_PREFIXES = {
     "Corners": "corners",
@@ -71,7 +71,7 @@ def _league_filter_options(df: pd.DataFrame, source_folder: str | None = None) -
 def _league_selectbox(label: str, options: list[str], key: str) -> str:
     if key in st.session_state and st.session_state[key] not in options:
         st.session_state[key] = "All"
-    return st.sidebar.selectbox(label, options, key=key)
+    return st.selectbox(label, options, key=key)
 
 
 def _fmt_num(value: float, digits: int = 1) -> str:
@@ -488,7 +488,11 @@ def search_people(query: str, corners: pd.DataFrame, freekicks: pd.DataFrame, th
 # ---------------------------------------------------------------------------
 
 def set_section(section: str) -> None:
-    st.session_state["pending_section"] = section
+    st.session_state["section"] = section
+    try:
+        st.query_params["section"] = section
+    except Exception:
+        pass
     st.rerun()
 
 

@@ -1,127 +1,215 @@
-"""Home section — team snapshot, player search, module navigation."""
+"""Home section — database stats, module navigation, team snapshot."""
 from __future__ import annotations
 
+from pathlib import Path
+
 import streamlit as st
+import pandas as pd
 
 from mm_setpieces_1.utils import (
     DATA_VERSION,
     load_prepared_sp_data,
     render_analyst_table,
-    hero_block,
     section_header,
+    load_prepared_freekick_brief_data,
 )
-from mm_setpieces_1.utils import load_prepared_freekick_brief_data
 
 from sections._shared import (
     _fmt_num,
     _with_match_names,
     _set_piece_team_options,
-    _match_team_parts,
-    _safe_sorted,
     load_hops_data,
     team_snapshot_table,
     selected_team_staff_read,
     search_people,
     set_section,
-    _league_comparison_source,
-    _league_summary_table,
-    _league_phase_summary_table,
-    _league_set_piece_difference_table,
 )
-import pandas as pd
 
+LOGO_PATH = Path(__file__).resolve().parent.parent / "assets" / "setplaypro-logo.jpg"
 
-# ---------------------------------------------------------------------------
-# Cached data — loaded only when Home section is active
-# ---------------------------------------------------------------------------
+MODULE_CARDS = [
+    ("Corners",          "home_open_corners",          "⚽", "Corner Kicks",
+     "Delivery zones, shot maps, taker profiles, phase breakdowns."),
+    ("Freekicks",        "home_open_freekicks",         "🎯", "Free Kicks",
+     "Indirect FK zones, cross maps, phase and sequence analysis."),
+    ("Throw-ins",        "home_open_throwins",          "↗",  "Throw-ins",
+     "Throw-in patterns, distances and possession outcomes."),
+    ("HOPS",             "home_open_hops",              "🏃", "HOPS",
+     "Player heading and aerial duel ratings across all positions."),
+    ("League Comparison","home_open_league_comparison", "📊", "League Comparison",
+     "Benchmark set piece output across competitions."),
+    ("Match Prep",       "home_open_match_prep",        "📋", "Match Prep",
+     "Opponent-specific set piece intelligence for upcoming fixtures."),
+    ("Delay Analysis",   "home_open_delay",             "⏱",  "Delay Analysis",
+     "Corner delivery timing and delay patterns over time."),
+]
+
 
 @st.cache_data(show_spinner=False)
 def _home_data(_data_version: str = DATA_VERSION):
-    corners = _with_match_names(load_prepared_sp_data("Corners", _data_version))
-    freekicks = _with_match_names(load_prepared_freekick_brief_data(_data_version))
-    throwins = _with_match_names(load_prepared_sp_data("Throw ins", _data_version))
-    hops = load_hops_data(_data_version)
+    corners   = _with_match_names(load_prepared_sp_data("Corners",    _data_version))
+    freekicks = _with_match_names(load_prepared_freekick_brief_data(   _data_version))
+    throwins  = _with_match_names(load_prepared_sp_data("Throw ins",  _data_version))
+    hops      = load_hops_data(_data_version)
     return corners, freekicks, throwins, hops
 
 
-def _team_options(corners: pd.DataFrame, freekicks: pd.DataFrame, throwins: pd.DataFrame, hops: pd.DataFrame) -> list[str]:
-    restart_team_sets = [
-        set(_set_piece_team_options(df)[1:])
-        for df in [corners, freekicks, throwins]
-        if not df.empty
+def _db_stats(corners, freekicks, throwins, hops) -> list[tuple[str, str, str]]:
+    """Return (label, value, sublabel) tuples for the database stats bar."""
+    total_corners   = len(corners)   if not corners.empty   else 0
+    total_fks       = len(freekicks) if not freekicks.empty else 0
+    total_throwins  = len(throwins)  if not throwins.empty  else 0
+
+    teams: set = set()
+    for df in [corners, freekicks, throwins]:
+        if not df.empty and "Team" in df.columns:
+            teams.update(df["Team"].dropna().astype(str).unique())
+    teams.discard("Unknown")
+
+    leagues: set = set()
+    for df in [corners, freekicks, throwins]:
+        if not df.empty and "League" in df.columns:
+            leagues.update(df["League"].dropna().astype(str).unique())
+    leagues.discard("Unknown")
+
+    matches: set = set()
+    for df in [corners, freekicks, throwins]:
+        if not df.empty and "Match" in df.columns:
+            matches.update(df["Match"].dropna().astype(str).unique())
+
+    players = 0
+    if not hops.empty and "Player" in hops.columns:
+        players = int(hops["Player"].nunique())
+
+    def _fmt(n: int) -> str:
+        return f"{n:,}"
+
+    return [
+        ("⚽", _fmt(total_corners),  "corners"),
+        ("🎯", _fmt(total_fks),      "free kicks"),
+        ("↗",  _fmt(total_throwins), "throw-ins"),
+        ("🏟", _fmt(len(matches)),   "matches"),
+        ("🛡", _fmt(len(teams)),     "teams"),
+        ("🏆", _fmt(len(leagues)),   "leagues"),
+        ("🏃", _fmt(players),        "HOPS players"),
     ]
-    if not restart_team_sets:
-        return []
-    return sorted(set.intersection(*restart_team_sets))
 
-
-# ---------------------------------------------------------------------------
-# Render
-# ---------------------------------------------------------------------------
 
 def render_home() -> None:
     corners, freekicks, throwins, hops = _home_data(DATA_VERSION)
-    teams = _team_options(corners, freekicks, throwins, hops)
 
-    hero_block(
-        "Football Intelligence",
-        "Pick a team. Open a module.",
-        "Simple match-prep views for set pieces, player roles, duel profiles, league benchmarks, and timing checks.",
+    # ── Database stats bar ───────────────────────────────────────────
+    stats = _db_stats(corners, freekicks, throwins, hops)
+    stat_items = "".join(
+        f"""<div class="mm-dbstat">
+               <span class="mm-dbstat-icon">{icon}</span>
+               <span class="mm-dbstat-val">{val}</span>
+               <span class="mm-dbstat-lbl">{lbl}</span>
+            </div>"""
+        for icon, val, lbl in stats
+    )
+    st.markdown(
+        f'<div class="mm-dbstats-bar">{stat_items}</div>',
+        unsafe_allow_html=True,
     )
 
+    # ── Module cards ─────────────────────────────────────────────────
+    section_header("Analysis Modules")
+    # 4-col first row, 3-col second row
+    rows = [MODULE_CARDS[:4], MODULE_CARDS[4:]]
+    for row in rows:
+        if not row:
+            continue
+        cols = st.columns(len(row), gap="small")
+        for col, (section, key, icon, short, desc) in zip(cols, row):
+            with col:
+                # Invisible overlay button fills the card; visible card is pure HTML
+                st.markdown(
+                    f"""<div class="mm-mod-card" id="mc-{key}">
+                        <div class="mm-mod-icon">{icon}</div>
+                        <div class="mm-mod-title">{short}</div>
+                        <div class="mm-mod-desc">{desc}</div>
+                        <div class="mm-mod-cta">Open →</div>
+                    </div>""",
+                    unsafe_allow_html=True,
+                )
+                if st.button("", key=key, use_container_width=True, help=f"Open {short}"):
+                    set_section(section)
+
+    # ── Team Snapshot ────────────────────────────────────────────────
+    st.markdown("<div style='height:.2rem'></div>", unsafe_allow_html=True)
     section_header("Team Snapshot")
-    if teams:
-        selected_team = st.selectbox("Team", teams, key="home_team_snapshot")
-        snapshot_perspective = st.radio("View", ["For", "Against"], horizontal=True, key="home_snapshot_perspective")
-        snapshot = team_snapshot_table(selected_team, corners, freekicks, throwins, snapshot_perspective)
 
-        total_set_pieces = int(snapshot["Set pieces"].sum())
-        total_shots = int(snapshot["Shots"].sum())
-        total_goals = int(snapshot["Goals"].sum())
-        total_xg = float(snapshot["xG"].sum())
-        shot_rate = (total_shots / total_set_pieces * 100) if total_set_pieces else 0
-        phase_read, role_read, _ = selected_team_staff_read(selected_team, snapshot, hops)
+    teams_for = sorted({
+        t for df in [corners, freekicks, throwins]
+        if not df.empty and "Team" in df.columns
+        for t in df["Team"].dropna().astype(str).unique()
+        if t and t != "Unknown"
+    })
 
-        # Safe Streamlit-native layout instead of raw HTML f-strings
-        c1, c2, c3, c4, c5 = st.columns(5)
-        c1.metric("Set pieces", f"{total_set_pieces:,}")
-        c2.metric("Shots", f"{total_shots:,}")
-        c3.metric("Goals", f"{total_goals:,}")
-        c4.metric("xG", _fmt_num(total_xg, 2))
-        c5.metric("Shot rate", f"{_fmt_num(shot_rate, 1)}%")
+    if not teams_for:
+        st.info("No team names found in the bundled data.")
+        return
 
-        ins_left, ins_right = st.columns(2)
-        with ins_left:
-            st.markdown(f"<div class='mm-insight-card'><strong>Main read:</strong> {phase_read}</div>", unsafe_allow_html=True)
-        with ins_right:
-            st.markdown(f"<div class='mm-insight-card'><strong>Role read:</strong> {role_read}</div>", unsafe_allow_html=True)
+    sc1, sc2, sc3 = st.columns([3, 1, 1], gap="small")
+    with sc1:
+        selected_team = st.selectbox("Team", teams_for, key="home_team_snapshot",
+                                     label_visibility="collapsed")
+    with sc2:
+        snapshot_perspective = st.radio("View", ["For", "Against"], horizontal=True,
+                                        key="home_snapshot_perspective",
+                                        label_visibility="collapsed")
+    with sc3:
+        st.markdown("<div style='height:.35rem'></div>", unsafe_allow_html=True)
 
-        render_analyst_table(snapshot, height=190)
+    snapshot = team_snapshot_table(selected_team, corners, freekicks, throwins, snapshot_perspective)
 
-        search_query = st.text_input(
-            "Search player, taker, shooter, or HOPS profile",
-            key="home_people_search",
-            placeholder="Type at least 2 characters",
+    total_sp    = int(snapshot["Set pieces"].sum())
+    total_shots = int(snapshot["Shots"].sum())
+    total_goals = int(snapshot["Goals"].sum())
+    total_xg    = float(snapshot["xG"].sum())
+    shot_rate   = (total_shots / total_sp * 100) if total_sp else 0
+    xg_per_100  = (total_xg / total_sp * 100) if total_sp else 0
+    phase_read, role_read, hops_read = selected_team_staff_read(selected_team, snapshot, hops)
+
+    # KPI row
+    k1, k2, k3, k4, k5, k6 = st.columns(6)
+    k1.metric("Set pieces",  f"{total_sp:,}")
+    k2.metric("Shots",       f"{total_shots:,}")
+    k3.metric("Goals",       f"{total_goals:,}")
+    k4.metric("xG",          _fmt_num(total_xg, 2))
+    k5.metric("Shot rate",   f"{_fmt_num(shot_rate, 1)}%")
+    k6.metric("xG / 100",    _fmt_num(xg_per_100, 2))
+
+    # Insight cards
+    ins_l, ins_r = st.columns(2)
+    with ins_l:
+        st.markdown(
+            f"<div class='mm-insight-card'>"
+            f"<strong>Threat read</strong>&ensp;{phase_read}</div>",
+            unsafe_allow_html=True,
         )
+    with ins_r:
+        st.markdown(
+            f"<div class='mm-insight-card'>"
+            f"<strong>Personnel</strong>&ensp;{role_read}</div>",
+            unsafe_allow_html=True,
+        )
+
+    render_analyst_table(snapshot, height=190)
+
+    # ── Global player search ─────────────────────────────────────────
+    st.markdown("<div style='height:.15rem'></div>", unsafe_allow_html=True)
+    section_header("Player Search")
+    search_query = st.text_input(
+        "Search",
+        key="home_people_search",
+        placeholder="Search by player name across corners, free kicks, throw-ins and HOPS…",
+        label_visibility="collapsed",
+    )
+    if search_query:
         search_results = search_people(search_query, corners, freekicks, throwins, hops)
         if not search_results.empty:
-            section_header("Search Results", "Across restarts and HOPS")
-            render_analyst_table(search_results, height=260)
-    else:
-        st.info("No team names were found in the bundled data.")
-
-    section_header("Open A Module")
-    module_cols = st.columns(3)
-    modules = [
-        ("Corners", "home_open_corners"),
-        ("Freekicks", "home_open_freekicks"),
-        ("Throw-ins", "home_open_throwins"),
-        ("HOPS", "home_open_hops"),
-        ("League Comparison", "home_open_league_comparison"),
-        ("Match Prep", "home_open_match_prep"),
-        ("Delay Analysis", "home_open_delay"),
-    ]
-    for idx, (title, key) in enumerate(modules):
-        with module_cols[idx % 3]:
-            if st.button(title, key=key, use_container_width=True):
-                set_section(title)
+            render_analyst_table(search_results, height=280)
+        else:
+            st.caption("No results found.")

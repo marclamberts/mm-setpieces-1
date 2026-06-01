@@ -33,18 +33,22 @@ def _rating_delta_color(delta: float) -> str:
 
 def render_hops() -> None:
     df = load_hops_data(DATA_VERSION)
-    hero_block("Players", "HOPS", "Heading and duel profile ratings — individual and squad-level views.")
     if df.empty:
         st.warning("No HOPS rows were found in Data/HOPS.")
         return
 
     leagues = _league_filter_options(df, "HOPS")
     teams = ["All"] + sorted(df["Team"].dropna().astype(str).unique().tolist())
-    league = _league_selectbox("League", leagues, key="hops_league")
-    team = st.sidebar.selectbox("Team", teams, key="hops_team")
-    with st.sidebar.expander("More filters", expanded=False):
-        top_n = st.slider("Leaderboard rows", min_value=5, max_value=50, value=15, key="hops_top_n")
+    st.markdown('<div class="mm-filter-panel"><div class="mm-filter-panel-label">Filters</div>', unsafe_allow_html=True)
+    fc1, fc2, fc3, fc4 = st.columns(4)
+    with fc1:
+        league = _league_selectbox("League", leagues, key="hops_league")
+    with fc2:
+        team = st.selectbox("Team", teams, key="hops_team")
+    with fc3:
         tier_filter = st.multiselect("Tier", ["Elite", "Strong", "Rotation", "Depth"], key="hops_tier")
+    with fc4:
+        top_n = st.slider("Leaderboard rows", min_value=5, max_value=50, value=15, key="hops_top_n")
 
     filtered = df.copy()
     if league != "All":
@@ -53,6 +57,11 @@ def render_hops() -> None:
         filtered = filtered[filtered["Team"] == team].copy()
     if tier_filter:
         filtered = filtered[filtered["Tier"].isin(tier_filter)].copy()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    scope_parts = [p for p in [team if team != "All" else None, league if league != "All" else None] if p]
+    scope_str = " · ".join(scope_parts) if scope_parts else "All leagues"
+    hero_block("Players", "HOPS", f"{scope_str} · {len(filtered):,} players")
 
     render_export_controls(filtered, "hops", "HOPS")
     render_filter_summary("HOPS", len(df), len(filtered), [

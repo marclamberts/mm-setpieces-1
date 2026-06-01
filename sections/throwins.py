@@ -129,7 +129,6 @@ def _minute_band_breakdown(sequences: pd.DataFrame) -> pd.DataFrame:
 def render_throwins() -> None:
     label = "Throw-ins"
     df = _with_match_names(load_prepared_sp_data("Throw ins", DATA_VERSION))
-    hero_block("Set pieces", label, "Throw-in sequences, zone entry, box threat, side profiles, and personnel breakdown.")
     if df.empty:
         st.warning("No throw-in rows were found.")
         return
@@ -137,29 +136,40 @@ def render_throwins() -> None:
     leagues = _league_filter_options(df, "SP")
     teams = _set_piece_team_options(df)
     periods = ["All"] + _safe_sorted(df["game_period"]) if "game_period" in df.columns else ["All"]
+    st.markdown('<div class="mm-filter-panel"><div class="mm-filter-panel-label">Filters</div>', unsafe_allow_html=True)
     takers = _safe_sorted(df["Taker"]) if "Taker" in df.columns else []
     shooters = _safe_sorted(df["Shooter"]) if "Shooter" in df.columns else []
     heights = _safe_sorted(df["Delivery height"]) if "Delivery height" in df.columns else []
     outcomes = _safe_sorted(df["Shot outcome"]) if "Shot outcome" in df.columns else []
 
-    league = _league_selectbox("League", leagues, key="throwins_league")
-    team = st.sidebar.selectbox("Team", teams, key="throwins_team")
-    perspective = st.sidebar.radio("Perspective", ["For", "Against"], key="throwins_perspective")
-    sample = st.sidebar.radio("Sample", ["Total", "Last 10 games"], key="throwins_sample")
-
     minute_min = int(pd.to_numeric(df["minute"], errors="coerce").fillna(0).min()) if "minute" in df.columns else 0
     minute_max = max(95, int(pd.to_numeric(df["minute"], errors="coerce").fillna(95).max())) if "minute" in df.columns else 95
+
+    fc1, fc2, fc3, fc4 = st.columns(4)
+    with fc1:
+        league = _league_selectbox("League", leagues, key="throwins_league")
+    with fc2:
+        team = st.selectbox("Team", teams, key="throwins_team")
+    with fc3:
+        perspective = st.radio("Perspective", ["For", "Against"], horizontal=True, key="throwins_perspective")
+    with fc4:
+        sample = st.radio("Sample", ["Total", "Last 10"], horizontal=True, key="throwins_sample")
 
     period = "All"; minute_range = (minute_min, minute_max)
     taker_filter: list = []; shooter_filter: list = []; height_filter: list = []; outcome_filter: list = []
 
-    with st.sidebar.expander("More filters", expanded=False):
-        period = st.selectbox("Game period", periods, key="throwins_period")
-        minute_range = st.slider("Minutes", minute_min, minute_max, (minute_min, minute_max), key="throwins_minutes")
-        taker_filter = st.multiselect("Thrower", takers, key="throwins_taker")
-        shooter_filter = st.multiselect("Shooter", shooters, key="throwins_shooter")
-        height_filter = st.multiselect("Height", heights, key="throwins_height")
-        outcome_filter = st.multiselect("Shot outcome", outcomes, key="throwins_outcome")
+    with st.expander("More filters", expanded=False):
+        mx1, mx2, mx3 = st.columns(3)
+        with mx1:
+            period = st.selectbox("Game period", periods, key="throwins_period")
+            minute_range = st.slider("Minutes", minute_min, minute_max, (minute_min, minute_max), key="throwins_minutes")
+        with mx2:
+            taker_filter = st.multiselect("Thrower", takers, key="throwins_taker")
+            shooter_filter = st.multiselect("Shooter", shooters, key="throwins_shooter")
+        with mx3:
+            height_filter = st.multiselect("Height", heights, key="throwins_height")
+            outcome_filter = st.multiselect("Shot outcome", outcomes, key="throwins_outcome")
+    st.markdown('</div>', unsafe_allow_html=True)
 
     filtered = df.copy()
     if league != "All" and "League" in filtered.columns:
@@ -189,6 +199,10 @@ def render_throwins() -> None:
         ("Thrower", taker_filter), ("Shooter", shooter_filter),
         ("Height", height_filter), ("Shot outcome", outcome_filter),
     ]
+
+    scope_parts = [p for p in [team if team != "All" else None, league if league != "All" else None] if p]
+    scope_str = " · ".join(scope_parts) if scope_parts else "All teams"
+    hero_block("Set pieces", label, f"{scope_str} · {len(filtered):,} events")
 
     render_export_controls(filtered, "throwins", label)
     render_filter_summary(label, len(df), len(filtered), filters)

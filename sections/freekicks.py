@@ -127,7 +127,6 @@ def _minute_band_breakdown(sequences: pd.DataFrame) -> pd.DataFrame:
 def render_freekicks() -> None:
     label = "Freekicks"
     df = _with_match_names(load_prepared_freekick_brief_data(DATA_VERSION))
-    hero_block("Set pieces", label, "Indirect free kick sequences, zones, channels, takers, and shot creation.")
     if df.empty:
         st.warning("No freekick rows were found.")
         return
@@ -137,15 +136,25 @@ def render_freekicks() -> None:
     takers = _safe_sorted(df["Taker"]) if "Taker" in df.columns else []
     heights = _safe_sorted(df["Delivery height"]) if "Delivery height" in df.columns else []
 
-    league = _league_selectbox("League", leagues, key="freekicks_league")
-    team = st.sidebar.selectbox("Team", teams, key="freekicks_team")
-    perspective = st.sidebar.radio("Perspective", ["For", "Against"], key="freekicks_perspective")
-    sample = st.sidebar.radio("Sample", ["Total", "Last 10 games"], key="freekicks_sample")
+    st.markdown('<div class="mm-filter-panel"><div class="mm-filter-panel-label">Filters</div>', unsafe_allow_html=True)
+    fc1, fc2, fc3, fc4 = st.columns(4)
+    with fc1:
+        league = _league_selectbox("League", leagues, key="freekicks_league")
+    with fc2:
+        team = st.selectbox("Team", teams, key="freekicks_team")
+    with fc3:
+        perspective = st.radio("Perspective", ["For", "Against"], horizontal=True, key="freekicks_perspective")
+    with fc4:
+        sample = st.radio("Sample", ["Total", "Last 10"], horizontal=True, key="freekicks_sample")
     taker_filter: list = []
     height_filter: list = []
-    with st.sidebar.expander("More filters", expanded=False):
-        taker_filter = st.multiselect("Taker", takers, key="freekicks_taker")
-        height_filter = st.multiselect("Delivery height", heights, key="freekicks_height")
+    with st.expander("More filters", expanded=False):
+        mx1, mx2 = st.columns(2)
+        with mx1:
+            taker_filter = st.multiselect("Taker", takers, key="freekicks_taker")
+        with mx2:
+            height_filter = st.multiselect("Delivery height", heights, key="freekicks_height")
+    st.markdown('</div>', unsafe_allow_html=True)
 
     filtered = df.copy()
     if league != "All" and "League" in filtered.columns:
@@ -164,6 +173,10 @@ def render_freekicks() -> None:
         ("Perspective", perspective if team != "All" else "All"),
         ("Sample", sample), ("Taker", taker_filter), ("Height", height_filter),
     ]
+
+    scope_parts = [p for p in [team if team != "All" else None, league if league != "All" else None] if p]
+    scope_str = " · ".join(scope_parts) if scope_parts else "All teams"
+    hero_block("Set pieces", label, f"{scope_str} · {len(filtered):,} events")
 
     render_export_controls(filtered, "freekicks", label)
     render_filter_summary(label, len(df), len(filtered), filters)
