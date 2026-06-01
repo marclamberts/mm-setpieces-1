@@ -2261,39 +2261,41 @@ def render_analyst_table(
         cmap = RED_MAP if col in inverted else BLUE_MAP
         styler = styler.apply(lambda s, c=col, cm=cmap: _col_gradient(s, cm), subset=[col])
 
-    # Table chrome — dark theme
+    # Table chrome — dark theme (rendered as plain HTML, not st.dataframe iframe)
     styler = styler.set_table_styles([
-        {"selector": "html, body", "props": [
-            ("background", "#222428 !important"), ("color", "#ffffff !important"),
-        ]},
         {"selector": "thead th", "props": [
-            ("background", "#222428 !important"), ("color", "#9ca3af !important"),
+            ("background-color", "#1e2026"), ("color", "#9ca3af"),
             ("font-size", ".68rem"), ("font-weight", "700"),
             ("letter-spacing", ".06em"), ("text-transform", "uppercase"),
-            ("padding", ".45rem .65rem"), ("border-bottom", "1px solid rgba(255,255,255,0.08)"),
+            ("padding", ".45rem .65rem"),
+            ("border-bottom", "1px solid rgba(255,255,255,0.08)"),
             ("border-right", "none"), ("white-space", "nowrap"),
+            ("position", "sticky"), ("top", "0"), ("z-index", "1"),
         ]},
         {"selector": "tbody td", "props": [
-            ("background", "#222428 !important"),
+            ("background-color", "#222428"),
             ("font-size", ".82rem"), ("font-weight", "500"),
-            ("padding", ".38rem .65rem"), ("border-bottom", "1px solid rgba(255,255,255,0.05)"),
+            ("padding", ".38rem .65rem"),
+            ("border-bottom", "1px solid rgba(255,255,255,0.05)"),
             ("border-right", "none"), ("white-space", "nowrap"),
-            ("color", "#ffffff !important"),
+            ("color", "#ffffff"),
         ]},
         {"selector": "tbody tr:hover td", "props": [
-            ("background", "rgba(255,255,255,0.06) !important"),
+            ("background-color", "#2a2d35"),
         ]},
         {"selector": "table", "props": [
             ("border-collapse", "collapse"), ("width", "100%"),
-            ("background", "#222428 !important"),
+            ("background-color", "#222428"),
         ]},
     ])
 
-    st.dataframe(
-        styler,
-        use_container_width=True,
-        hide_index=True,
-        height=height,
+    html = styler.to_html(uuid_len=0, escape=False)
+    st.markdown(
+        f'<div style="overflow:auto;max-height:{height}px;'
+        f'background:#222428;border-radius:5px;'
+        f'border:1px solid rgba(255,255,255,0.08)">'
+        f'{html}</div>',
+        unsafe_allow_html=True,
     )
 
 
