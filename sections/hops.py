@@ -33,13 +33,13 @@ def _rating_delta_color(delta: float) -> str:
 
 def render_hops() -> None:
     df = load_hops_data(DATA_VERSION)
-    hero_block("Players", "HOPS", "Heading and duel profile ratings — individual and squad-level views.")
     if df.empty:
         st.warning("No HOPS rows were found in Data/HOPS.")
         return
 
     leagues = _league_filter_options(df, "HOPS")
     teams = ["All"] + sorted(df["Team"].dropna().astype(str).unique().tolist())
+    st.markdown('<div class="mm-filter-panel"><div class="mm-filter-panel-label">Filters</div>', unsafe_allow_html=True)
     fc1, fc2, fc3, fc4 = st.columns(4)
     with fc1:
         league = _league_selectbox("League", leagues, key="hops_league")
@@ -57,6 +57,11 @@ def render_hops() -> None:
         filtered = filtered[filtered["Team"] == team].copy()
     if tier_filter:
         filtered = filtered[filtered["Tier"].isin(tier_filter)].copy()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    scope_parts = [p for p in [team if team != "All" else None, league if league != "All" else None] if p]
+    scope_str = " · ".join(scope_parts) if scope_parts else "All leagues"
+    hero_block("Players", "HOPS", f"{scope_str} · {len(filtered):,} players")
 
     render_export_controls(filtered, "hops", "HOPS")
     render_filter_summary("HOPS", len(df), len(filtered), [

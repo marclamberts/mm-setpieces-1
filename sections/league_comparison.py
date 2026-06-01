@@ -41,7 +41,6 @@ def _lc_datasets(_data_version: str = DATA_VERSION):
 def render_league_comparison() -> None:
     corners, freekicks, throwins = _lc_datasets(DATA_VERSION)
     df = _league_comparison_source(corners, freekicks, throwins)
-    hero_block("League comparison", "League Comparison", "Benchmark restart volume, shot creation, and xG across competitions.")
     if df.empty:
         st.warning("No restart rows were found for league comparison.")
         return
@@ -53,6 +52,7 @@ def render_league_comparison() -> None:
     selected_leagues = leagues
     min_set_pieces = 10
     top_n = min(10, max(3, len(leagues)))
+    st.markdown('<div class="mm-filter-panel"><div class="mm-filter-panel-label">Filters</div>', unsafe_allow_html=True)
     fc1, fc2, fc3, fc4 = st.columns(4)
     with fc1:
         phase = st.selectbox("Phase", phases, key="league_comparison_phase")
@@ -68,6 +68,10 @@ def render_league_comparison() -> None:
         filtered = filtered[filtered["Phase"].eq(phase)].copy()
     if selected_leagues and "League" in filtered.columns:
         filtered = filtered[filtered["League"].isin(selected_leagues)].copy()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    phase_label = phase if phase != "All" else "All phases"
+    hero_block("League comparison", "League Comparison", f"{phase_label} · {len(selected_leagues)} leagues · {len(filtered):,} events")
 
     summary = _league_summary_table(filtered)
     if not summary.empty:

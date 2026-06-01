@@ -273,12 +273,19 @@ def _team_kpis(df: pd.DataFrame, team: str) -> dict:
 def render_corners() -> None:
     label = "Corners"
     df = load_prepared_sp_data(label, DATA_VERSION)
-    hero_block("Set pieces", label, "Corner delivery, shot creation, zones, patterns, taker archetypes, and tactical intelligence.")
     if df.empty:
         st.warning("No corner rows were found.")
         return
 
+    st.markdown('<div class="mm-filter-panel"><div class="mm-filter-panel-label">Filters</div>', unsafe_allow_html=True)
     filtered, filters, selected_team, selected_league = _filter_data(df, "corners")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    scope_parts = [p for p in [selected_team if selected_team != "All" else None,
+                                selected_league if selected_league != "All" else None] if p]
+    scope_str = " · ".join(scope_parts) if scope_parts else "All teams"
+    hero_block("Set pieces", label, f"{scope_str} · {len(filtered):,} events")
+
     render_export_controls(filtered, label, label)
     render_filter_summary(label, len(df), len(filtered), filters)
     if filtered.empty:

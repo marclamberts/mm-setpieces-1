@@ -176,12 +176,6 @@ def _hops_brief(team: str, hops: pd.DataFrame) -> None:
 # ── Main render ──────────────────────────────────────────────────────────────
 
 def render_match_prep() -> None:
-    hero_block(
-        "Match Prep",
-        "Pre-match brief",
-        "Select your team and the opponent. Get attacking and defensive set-piece profiles, key personnel, and a PDF export.",
-    )
-
     corners, freekicks, throwins, hops = _all_sp_data(DATA_VERSION)
     teams = _all_teams(corners, freekicks, throwins)
     if not teams:
@@ -189,22 +183,18 @@ def render_match_prep() -> None:
         return
 
     # ── Team selectors ──────────────────────────────────────────────────────
+    st.markdown('<div class="mm-filter-panel"><div class="mm-filter-panel-label">Select teams</div>', unsafe_allow_html=True)
     col_my, col_opp = st.columns(2)
     my_team = col_my.selectbox("Your team", teams, key="mp_my_team")
     opp_options = [t for t in teams if t != my_team]
     opponent = col_opp.selectbox("Opponent", opp_options, key="mp_opponent") if opp_options else None
+    st.markdown('</div>', unsafe_allow_html=True)
 
     if not opponent:
         st.info("Add more teams to compare.")
         return
 
-    st.markdown(
-        f"<div class='mm-hero' style='padding:1rem 1.4rem;margin-bottom:.8rem'>"
-        f"<div class='mm-eyebrow'>Match prep</div>"
-        f"<div class='mm-title' style='font-size:1.5rem'>{my_team} <span style='opacity:.55'>vs</span> {opponent}</div>"
-        f"</div>",
-        unsafe_allow_html=True,
-    )
+    hero_block("Match Prep", f"{my_team} vs {opponent}", "Attacking and defensive set-piece profiles, key personnel, tactical patterns, and PDF export.")
 
     # ── Data subsets ─────────────────────────────────────────────────────────
     my_corners = _team_filter(corners, my_team)

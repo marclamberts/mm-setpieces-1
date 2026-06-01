@@ -295,24 +295,9 @@ def inject_app_style() -> None:  # noqa: C901
             }}
             div[data-testid="stExpander"] svg {{ color: {MUTED} !important; }}
 
-            /* ─── Hero block ─────────────────────────────────────── */
+            /* ─── Hero block (now = compact page header) ────────── */
             .mm-hero {{
-                background: {SURFACE} !important;
-                border: 1px solid {BORDER} !important;
-                border-radius: 8px !important;
-                padding: 1.3rem 1.6rem 1.4rem !important;
-                box-shadow: none !important;
-                position: relative;
-                overflow: hidden;
                 margin-bottom: .9rem;
-            }}
-            .mm-hero::before {{
-                content: "" !important;
-                position: absolute !important;
-                inset: 0 0 auto 0 !important;
-                height: 2px !important;
-                background: {GREEN} !important;
-                border-radius: 8px 8px 0 0 !important;
             }}
             .mm-eyebrow {{
                 color: {MUTED} !important;
@@ -323,15 +308,14 @@ def inject_app_style() -> None:  # noqa: C901
             }}
             .mm-title {{
                 color: {INK} !important;
-                font-size: clamp(1.65rem,2.3vw,2.5rem) !important;
+                font-size: clamp(1.45rem,2vw,2rem) !important;
                 font-weight: 800 !important;
-                letter-spacing: -.02em !important;
+                letter-spacing: -.025em !important;
                 line-height: 1.05 !important;
-                margin: .18rem 0 .45rem !important;
             }}
             .mm-copy {{
                 color: {MUTED} !important;
-                font-size: .93rem !important;
+                font-size: .82rem !important;
                 font-weight: 400 !important;
                 max-width: 820px;
                 line-height: 1.6;
@@ -676,7 +660,112 @@ def inject_app_style() -> None:  # noqa: C901
             }}
             .mm-insight-card strong {{ color: {INK} !important; }}
 
-            /* ─── Home module nav cards ──────────────────────────── */
+            /* ─── Database stats bar (home) ─────────────────────── */
+            .mm-dbstats-bar {{
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 0;
+                background: {SURFACE};
+                border: 1px solid {BORDER};
+                border-radius: 8px;
+                margin: 0 0 1.1rem;
+                overflow: hidden;
+            }}
+            .mm-dbstat {{
+                display: flex;
+                align-items: center;
+                gap: .42rem;
+                padding: .7rem 1.1rem;
+                border-right: 1px solid {BORDER};
+                flex: 1;
+                min-width: 7rem;
+            }}
+            .mm-dbstat:last-child {{ border-right: none; }}
+            .mm-dbstat-icon {{
+                font-size: 1rem;
+                line-height: 1;
+                flex-shrink: 0;
+            }}
+            .mm-dbstat-val {{
+                color: {INK} !important;
+                font-size: 1.18rem !important;
+                font-weight: 800 !important;
+                font-variant-numeric: tabular-nums !important;
+                letter-spacing: -.01em;
+                line-height: 1;
+            }}
+            .mm-dbstat-lbl {{
+                color: {MUTED} !important;
+                font-size: .68rem !important;
+                font-weight: 600 !important;
+                text-transform: uppercase !important;
+                letter-spacing: .06em !important;
+                align-self: flex-end;
+                padding-bottom: .06rem;
+            }}
+
+            /* ─── Module cards (new compact design) ─────────────── */
+            .mm-mod-card {{
+                background: {SURFACE};
+                border: 1px solid {BORDER};
+                border-radius: 8px;
+                padding: 1rem 1rem .88rem;
+                min-height: 130px;
+                position: relative;
+                transition: border-color .15s, background .15s;
+                cursor: pointer;
+            }}
+            .mm-mod-card:hover {{
+                background: {SURFACE_2};
+                border-color: rgba(34,197,94,0.35);
+            }}
+            .mm-mod-card::before {{
+                content: "";
+                position: absolute;
+                inset: 0 0 auto 0;
+                height: 2px;
+                background: {GREEN};
+                border-radius: 8px 8px 0 0;
+            }}
+            /* Push Streamlit's invisible button over the whole card */
+            .mm-mod-card + div > button,
+            .mm-mod-card ~ div div.stButton > button {{
+                position: absolute !important;
+                inset: 0 !important;
+                opacity: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                min-height: unset !important;
+                border-radius: 8px !important;
+                cursor: pointer !important;
+            }}
+            .mm-mod-icon {{
+                font-size: 1.35rem;
+                margin-bottom: .4rem;
+                line-height: 1;
+            }}
+            .mm-mod-title {{
+                color: {INK} !important;
+                font-size: .92rem !important;
+                font-weight: 700 !important;
+                margin-bottom: .22rem !important;
+                letter-spacing: -.01em;
+            }}
+            .mm-mod-desc {{
+                color: {MUTED} !important;
+                font-size: .78rem !important;
+                line-height: 1.45 !important;
+            }}
+            .mm-mod-cta {{
+                color: {GREEN} !important;
+                font-size: .72rem !important;
+                font-weight: 700 !important;
+                margin-top: .55rem !important;
+                letter-spacing: .02em;
+            }}
+
+            /* ─── Home module nav cards (legacy) ─────────────────── */
             .mm-nav-card {{
                 position: relative;
                 overflow: hidden;
@@ -732,6 +821,51 @@ def inject_app_style() -> None:  # noqa: C901
                 background: rgba(34,197,94,0.08) !important;
                 border-color: rgba(34,197,94,0.38) !important;
                 color: {GREEN} !important;
+            }}
+
+            /* ─── Page header (section scope bar) ───────────────── */
+            .mm-page-header {{
+                display: flex;
+                align-items: baseline;
+                justify-content: space-between;
+                gap: 1rem;
+                margin: 0 0 .9rem;
+                padding: 0 0 .75rem;
+                border-bottom: 1px solid {BORDER};
+            }}
+            .mm-page-title {{
+                color: {INK} !important;
+                font-size: 1.45rem !important;
+                font-weight: 800 !important;
+                letter-spacing: -.025em !important;
+                line-height: 1.05 !important;
+            }}
+            .mm-page-scope {{
+                color: {MUTED} !important;
+                font-size: .78rem !important;
+                font-weight: 500 !important;
+                white-space: nowrap;
+            }}
+            .mm-page-scope strong {{
+                color: {MUTED_2} !important;
+                font-weight: 600 !important;
+            }}
+
+            /* ─── Filter panel wrapper ───────────────────────────── */
+            .mm-filter-panel {{
+                background: {SURFACE};
+                border: 1px solid {BORDER};
+                border-radius: 7px;
+                padding: .62rem .9rem .45rem;
+                margin-bottom: .9rem;
+            }}
+            .mm-filter-panel-label {{
+                color: {MUTED};
+                font-size: .58rem;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: .12em;
+                margin-bottom: .38rem;
             }}
 
             /* ─── Filter summary ─────────────────────────────────── */

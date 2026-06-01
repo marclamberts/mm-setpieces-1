@@ -32,7 +32,6 @@ def render_delay() -> None:
     diagnostics = book.get("Diagnostics", pd.DataFrame()).copy()
     skipped = book.get("Skipped_Files", pd.DataFrame()).copy()
 
-    hero_block("Timing", "Delay Analysis", "How long it takes from ball out to corner kick — by match, band, and exit event.")
     if events.empty:
         st.warning("No delay events found. Place a `corner_delays*.xlsx` file in the Data/ folder.")
         return
@@ -40,6 +39,7 @@ def render_delay() -> None:
     leagues = ["All"] + sorted(events["League"].dropna().astype(str).unique().tolist()) if "League" in events.columns else ["All"]
     matches = ["All"] + sorted(events["match"].dropna().astype(str).unique().tolist()) if "match" in events.columns else ["All"]
     periods = ["All"] + sorted(events["period"].dropna().astype(int).astype(str).unique().tolist()) if "period" in events.columns else ["All"]
+    st.markdown('<div class="mm-filter-panel"><div class="mm-filter-panel-label">Filters</div>', unsafe_allow_html=True)
     out_types = ["All"] + sorted(events["out_event_type"].dropna().astype(str).unique().tolist()) if "out_event_type" in events.columns else ["All"]
 
     fc1, fc2, fc3, fc4 = st.columns(4)
@@ -69,6 +69,11 @@ def render_delay() -> None:
         full_delay_range = (lo, hi)
         delay_range = st.slider("Delay range (seconds)", min_value=lo, max_value=hi, value=(lo, hi), key="delay_range")
         filtered = filtered[filtered["delay_sec"].between(delay_range[0], delay_range[1])].copy()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    scope_parts = [p for p in [match if match != "All" else None, league if league != "All" else None] if p]
+    scope_str = " · ".join(scope_parts) if scope_parts else "All matches"
+    hero_block("Timing", "Delay Analysis", f"{scope_str} · {len(filtered):,} events")
 
     render_export_controls(filtered, "delay", "Delay")
     filters = [

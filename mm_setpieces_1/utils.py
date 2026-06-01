@@ -192,8 +192,8 @@ def render_empty_filter_state() -> None:
     st.markdown(
         """
         <div class="mm-empty-state">
-            <div class="mm-empty-title">No rows match these filters.</div>
-            <div class="mm-empty-copy">Widen the team, minute, player, or outcome filters in the sidebar to bring events back into the view.</div>
+            <div class="mm-empty-title">No rows match the current filters.</div>
+            <div class="mm-empty-copy">Widen the team, league, minute range, or player filters above to bring events back into view.</div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -205,12 +205,26 @@ def render_workflow_rail() -> None:
 
 
 def hero_block(eyebrow: str, title: str, copy: str) -> None:
+    """Compact page header — replaces the old hero banner."""
     st.markdown(
         f"""
-        <div class="mm-hero">
-            <div class="mm-eyebrow">{eyebrow}</div>
-            <div class="mm-title">{title}</div>
-            <div class="mm-copy">{copy}</div>
+        <div class="mm-page-header">
+            <div class="mm-page-title">{title}</div>
+            <div class="mm-page-scope">{copy}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def page_header(title: str, scope: str = "") -> None:
+    """Lightweight section page header with optional scope line."""
+    scope_html = f'<div class="mm-page-scope">{scope}</div>' if scope else ""
+    st.markdown(
+        f"""
+        <div class="mm-page-header">
+            <div class="mm-page-title">{title}</div>
+            {scope_html}
         </div>
         """,
         unsafe_allow_html=True,

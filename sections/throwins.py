@@ -129,7 +129,6 @@ def _minute_band_breakdown(sequences: pd.DataFrame) -> pd.DataFrame:
 def render_throwins() -> None:
     label = "Throw-ins"
     df = _with_match_names(load_prepared_sp_data("Throw ins", DATA_VERSION))
-    hero_block("Set pieces", label, "Throw-in sequences, zone entry, box threat, side profiles, and personnel breakdown.")
     if df.empty:
         st.warning("No throw-in rows were found.")
         return
@@ -137,6 +136,7 @@ def render_throwins() -> None:
     leagues = _league_filter_options(df, "SP")
     teams = _set_piece_team_options(df)
     periods = ["All"] + _safe_sorted(df["game_period"]) if "game_period" in df.columns else ["All"]
+    st.markdown('<div class="mm-filter-panel"><div class="mm-filter-panel-label">Filters</div>', unsafe_allow_html=True)
     takers = _safe_sorted(df["Taker"]) if "Taker" in df.columns else []
     shooters = _safe_sorted(df["Shooter"]) if "Shooter" in df.columns else []
     heights = _safe_sorted(df["Delivery height"]) if "Delivery height" in df.columns else []
@@ -169,6 +169,7 @@ def render_throwins() -> None:
         with mx3:
             height_filter = st.multiselect("Height", heights, key="throwins_height")
             outcome_filter = st.multiselect("Shot outcome", outcomes, key="throwins_outcome")
+    st.markdown('</div>', unsafe_allow_html=True)
 
     filtered = df.copy()
     if league != "All" and "League" in filtered.columns:
@@ -198,6 +199,10 @@ def render_throwins() -> None:
         ("Thrower", taker_filter), ("Shooter", shooter_filter),
         ("Height", height_filter), ("Shot outcome", outcome_filter),
     ]
+
+    scope_parts = [p for p in [team if team != "All" else None, league if league != "All" else None] if p]
+    scope_str = " · ".join(scope_parts) if scope_parts else "All teams"
+    hero_block("Set pieces", label, f"{scope_str} · {len(filtered):,} events")
 
     render_export_controls(filtered, "throwins", label)
     render_filter_summary(label, len(df), len(filtered), filters)
