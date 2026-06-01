@@ -230,14 +230,14 @@ def section_header(title: str, note: str = "") -> None:
 
 def polish_plotly_figure(fig: go.Figure) -> go.Figure:
     fig.update_layout(
-        font=dict(color=BLACK, family="Arial, sans-serif"),
-        title_font=dict(color=BLACK, size=18),
-        paper_bgcolor="rgba(255,255,255,0)",
-        plot_bgcolor="rgba(255,255,255,0.96)",
-        colorway=[RED, BLACK, "#2563eb", "#16a34a", "#f59e0b", "#7c3aed", "#64748b"],
+        font=dict(color="#e5e7eb", family="Inter, Arial, sans-serif"),
+        title_font=dict(color="#f1f5f9", size=16),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="#1e2230",
+        colorway=["#22c55e", "#60a5fa", "#f59e0b", "#a78bfa", "#f87171", "#34d399", "#94a3b8"],
     )
-    fig.update_xaxes(showgrid=True, gridcolor="rgba(15,23,42,0.08)", zeroline=False)
-    fig.update_yaxes(showgrid=True, gridcolor="rgba(15,23,42,0.08)", zeroline=False)
+    fig.update_xaxes(showgrid=True, gridcolor="rgba(255,255,255,0.06)", zeroline=False, color="#9ca3af")
+    fig.update_yaxes(showgrid=True, gridcolor="rgba(255,255,255,0.06)", zeroline=False, color="#9ca3af")
     return fig
 
 
