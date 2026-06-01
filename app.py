@@ -1,20 +1,16 @@
-"""SetPlayPro — thin router entry point.
-
-All render logic lives in sections/. This file handles:
-  - Streamlit page config
-  - Authentication (password gate)
-  - URL routing (section encoded in ?section= query param)
-  - Sidebar navigation
-  - Section dispatch
-"""
+"""SetPlayPro — thin router entry point."""
 from __future__ import annotations
 
+import base64
+import hashlib
 import os
+import time
+import urllib.parse
 from pathlib import Path
 
 import streamlit as st
 
-from mm_setpieces_1.styles import inject_app_style, inject_sidebar_css
+from mm_setpieces_1.styles import inject_app_style
 from mm_setpieces_1.utils import DATA_VERSION
 
 from sections._shared import APP_SECTIONS, FILTER_PREFIXES, reset_current_filters
@@ -40,9 +36,6 @@ SECTION_ICONS = {
     "Match Prep": "📋",
 }
 
-_DISPLAY_SECTIONS = [f"{SECTION_ICONS.get(s, '•')}  {s}" for s in APP_SECTIONS]
-_LABEL_TO_SECTION = {label: name for label, name in zip(_DISPLAY_SECTIONS, APP_SECTIONS)}
-
 # ---------------------------------------------------------------------------
 # Page config
 # ---------------------------------------------------------------------------
@@ -50,43 +43,70 @@ st.set_page_config(
     page_title="Michael Mackin Set Piece",
     page_icon="⚽",
     layout="wide",
-    initial_sidebar_state="collapsed",  # collapsed on landing; expanded after auth
+    initial_sidebar_state="collapsed",
 )
 
 inject_app_style()
 
 
 # ---------------------------------------------------------------------------
-# Authentication
+# Token-based auth (persists across page loads / nav clicks)
 # ---------------------------------------------------------------------------
 
-def _check_password() -> bool:
-    """Return True when the user has successfully authenticated this session."""
-    if st.session_state.get("authenticated"):
-        return True
+def _auth_token() -> str:
+    """Hourly HMAC token. When no password set, uses 'open' as secret."""
+    secret = os.environ.get("SETPLAYPRO_PASSWORD") or "open"
+    hour = int(time.time() // 3600)
+    return hashlib.sha256(f"{secret}{hour}".encode()).hexdigest()[:16]
 
-    # Read password from Streamlit secrets, env var, or fall back to open access
-    expected = None
-    try:
-        expected = st.secrets.get("SETPLAYPRO_PASSWORD") or os.environ.get("SETPLAYPRO_PASSWORD")
-    except Exception:
-        expected = os.environ.get("SETPLAYPRO_PASSWORD")
 
-    _render_landing(password_required=bool(expected), expected=expected)
+def _check_auth_token(tok: str) -> bool:
+    secret = os.environ.get("SETPLAYPRO_PASSWORD") or "open"
+    for offset in (0, -1):  # accept current and previous hour
+        hour = int(time.time() // 3600) + offset
+        if tok == hashlib.sha256(f"{secret}{hour}".encode()).hexdigest()[:16]:
+            return True
     return False
 
 
-def _render_landing(password_required: bool, expected: str | None) -> None:
-    """Full-page landing / login screen (no sidebar)."""
+def _password_required() -> bool:
+    try:
+        pw = st.secrets.get("SETPLAYPRO_PASSWORD") or os.environ.get("SETPLAYPRO_PASSWORD")
+    except Exception:
+        pw = os.environ.get("SETPLAYPRO_PASSWORD")
+    return bool(pw)
+
+
+def _expected_password() -> str | None:
+    try:
+        return st.secrets.get("SETPLAYPRO_PASSWORD") or os.environ.get("SETPLAYPRO_PASSWORD")
+    except Exception:
+        return os.environ.get("SETPLAYPRO_PASSWORD")
+
+
+def _check_password() -> bool:
+    if st.session_state.get("authenticated"):
+        return True
+    # Check URL token (persists after top-nav link clicks)
+    tok = st.query_params.get("tok", "")
+    if tok and _check_auth_token(tok):
+        st.session_state["authenticated"] = True
+        return True
+    _render_landing()
+    return False
+
+
+def _render_landing() -> None:
+    """Full-page login screen."""
+    pw_required = _password_required()
+    expected = _expected_password()
+
     st.markdown(
         """
         <style>
             section[data-testid="stSidebar"] { display: none !important; }
-            header[data-testid="stHeader"],
-            [data-testid="stDecoration"],
-            footer, #MainMenu {
-                display: none !important; visibility: hidden !important; height: 0 !important;
-            }
+            header[data-testid="stHeader"], [data-testid="stDecoration"],
+            footer, #MainMenu { display: none !important; visibility: hidden !important; height: 0 !important; }
             html, body, .stApp,
             [data-testid="stAppViewContainer"],
             [data-testid="stMain"], .main {
@@ -101,24 +121,16 @@ def _render_landing(password_required: bool, expected: str | None) -> None:
                 background: #0f1117 !important; overflow: hidden !important;
             }
             .block-container > div { width: min(360px, 76vw) !important; }
-            /* Input on dark bg */
             [data-baseweb="input"] > div {
                 background: #1e2230 !important;
                 border: 1px solid rgba(255,255,255,0.12) !important;
                 border-radius: 7px !important;
             }
-            [data-baseweb="input"] input {
-                color: #f1f5f9 !important;
-                -webkit-text-fill-color: #f1f5f9 !important;
-            }
-            /* Login button */
+            [data-baseweb="input"] input { color: #f1f5f9 !important; -webkit-text-fill-color: #f1f5f9 !important; }
             div.stButton > button {
-                background: #22c55e !important;
-                border: 0 !important;
-                color: #052e16 !important;
-                font-weight: 700 !important;
-                border-radius: 7px !important;
-                min-height: 42px !important;
+                background: #22c55e !important; border: 0 !important;
+                color: #052e16 !important; font-weight: 700 !important;
+                border-radius: 7px !important; min-height: 42px !important;
             }
             div.stButton > button:hover { background: #16a34a !important; color: #ffffff !important; }
         </style>
@@ -131,19 +143,75 @@ def _render_landing(password_required: bool, expected: str | None) -> None:
     else:
         st.markdown("## SetPlay**Pro**")
 
-    if password_required:
-        pwd = st.text_input("Password", type="password", key="login_pwd", label_visibility="collapsed", placeholder="Enter password")
+    if pw_required:
+        pwd = st.text_input("Password", type="password", key="login_pwd",
+                            label_visibility="collapsed", placeholder="Enter password")
         if st.button("Enter portal", key="portal_submit", use_container_width=True):
             if pwd == expected:
                 st.session_state["authenticated"] = True
-                st.session_state["section"] = "Home"
+                st.query_params["tok"] = _auth_token()
+                st.query_params["section"] = "Home"
                 st.rerun()
             else:
                 st.error("Incorrect password.")
     else:
         if st.button("Go to portal", key="portal_submit", use_container_width=True):
             st.session_state["authenticated"] = True
-            st.session_state["section"] = "Home"
+            st.query_params["tok"] = _auth_token()
+            st.query_params["section"] = "Home"
+            st.rerun()
+
+
+# ---------------------------------------------------------------------------
+# Top navigation bar
+# ---------------------------------------------------------------------------
+
+def _logo_b64() -> str:
+    if LOGO_PATH.exists():
+        return base64.b64encode(LOGO_PATH.read_bytes()).decode()
+    return ""
+
+
+def _render_topnav(section: str) -> None:
+    token = _auth_token()
+    logo_b64 = _logo_b64()
+
+    if logo_b64:
+        brand_inner = f'<img src="data:image/jpeg;base64,{logo_b64}" alt="logo">'
+    else:
+        brand_inner = "<span>SetPlay<strong>Pro</strong></span>"
+
+    links_html = ""
+    for sec in APP_SECTIONS:
+        icon = SECTION_ICONS.get(sec, "•")
+        active_cls = " mm-active" if sec == section else ""
+        href = f"?tok={urllib.parse.quote(token)}&section={urllib.parse.quote(sec)}"
+        links_html += (
+            f'<a href="{href}" class="mm-topbar-link{active_cls}">'
+            f'{icon}&thinsp;{sec}</a>'
+        )
+
+    home_href = f"?tok={urllib.parse.quote(token)}&section=Home"
+    st.markdown(
+        f"""
+        <nav class="mm-topbar">
+            <a class="mm-topbar-brand" href="{home_href}">{brand_inner}</a>
+            <div class="mm-topbar-links">{links_html}</div>
+        </nav>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Inline reset button
+# ---------------------------------------------------------------------------
+
+def _render_reset_button(section: str) -> None:
+    _, right = st.columns([10, 1])
+    with right:
+        if st.button("↺ Reset", key=f"reset_{section}", help="Reset all filters"):
+            reset_current_filters(section)
             st.rerun()
 
 
@@ -151,76 +219,11 @@ def _render_landing(password_required: bool, expected: str | None) -> None:
 # URL routing
 # ---------------------------------------------------------------------------
 
-def _read_section_from_url() -> str | None:
-    """Read ?section= from the URL, return it if it is a valid section name."""
-    try:
-        raw = st.query_params.get("section")
-        if raw and raw in APP_SECTIONS:
-            return raw
-    except Exception:
-        pass
-    return None
-
-
-def _write_section_to_url(section: str) -> None:
-    try:
-        st.query_params["section"] = section
-    except Exception:
-        pass
-
-
-# ---------------------------------------------------------------------------
-# Sidebar navigation
-# ---------------------------------------------------------------------------
-
-def _render_sidebar() -> str:
-    inject_sidebar_css()
-
-    # Logo at top of sidebar
-    if LOGO_PATH.exists():
-        st.sidebar.image(str(LOGO_PATH), use_container_width=True)
-    else:
-        st.sidebar.markdown("## SetPlay**Pro**")
-
-    st.sidebar.markdown("---")
-
-    # Resolve pending navigation (from module buttons on Home)
-    if "pending_section" in st.session_state:
-        pending = st.session_state.pop("pending_section")
-        # Map plain name to display label
-        pending_label = next((lbl for lbl, sec in _LABEL_TO_SECTION.items() if sec == pending), pending)
-        st.session_state["section_select_display"] = pending_label
-
-    # On first load after auth, read section from URL
-    if "section" not in st.session_state:
-        url_section = _read_section_from_url()
-        st.session_state["section"] = url_section or "Home"
-
-    current_section = st.session_state["section"]
-    current_label = next((lbl for lbl, sec in _LABEL_TO_SECTION.items() if sec == current_section), _DISPLAY_SECTIONS[0])
-    current_idx = _DISPLAY_SECTIONS.index(current_label) if current_label in _DISPLAY_SECTIONS else 0
-
-    st.sidebar.markdown("### Navigation")
-    selected_label = st.sidebar.radio(
-        "Choose view",
-        _DISPLAY_SECTIONS,
-        index=current_idx,
-        key="section_select_display",
-        label_visibility="collapsed",
-    )
-    section = _LABEL_TO_SECTION.get(selected_label, "Home")
-    st.session_state["section"] = section
-    st.session_state["section_select"] = section
-    _write_section_to_url(section)
-
-    st.sidebar.markdown("---")
-
-    if section != "Home":
-        st.sidebar.markdown("### Filters")
-        if st.sidebar.button("↺  Reset filters", key=f"reset_{section}", use_container_width=True):
-            reset_current_filters(section)
-
-    return section
+def _current_section() -> str:
+    raw = st.query_params.get("section", "")
+    if raw in APP_SECTIONS:
+        return raw
+    return st.session_state.get("section", "Home")
 
 
 # ---------------------------------------------------------------------------
@@ -230,13 +233,22 @@ def _render_sidebar() -> str:
 if not _check_password():
     st.stop()
 
-# Ensure sidebar is visible after auth
+# Ensure sidebar is fully hidden
 st.markdown(
-    "<style>section[data-testid='stSidebar'] { display: block !important; }</style>",
+    "<style>"
+    "section[data-testid='stSidebar'],button[data-testid='collapsedControl']"
+    "{display:none!important;width:0!important;min-width:0!important}"
+    "</style>",
     unsafe_allow_html=True,
 )
 
-section = _render_sidebar()
+section = _current_section()
+st.session_state["section"] = section
+
+_render_topnav(section)
+
+if section != "Home":
+    _render_reset_button(section)
 
 if section == "Home":
     render_home()

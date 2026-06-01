@@ -40,11 +40,15 @@ def render_hops() -> None:
 
     leagues = _league_filter_options(df, "HOPS")
     teams = ["All"] + sorted(df["Team"].dropna().astype(str).unique().tolist())
-    league = _league_selectbox("League", leagues, key="hops_league")
-    team = st.sidebar.selectbox("Team", teams, key="hops_team")
-    with st.sidebar.expander("More filters", expanded=False):
-        top_n = st.slider("Leaderboard rows", min_value=5, max_value=50, value=15, key="hops_top_n")
+    fc1, fc2, fc3, fc4 = st.columns(4)
+    with fc1:
+        league = _league_selectbox("League", leagues, key="hops_league")
+    with fc2:
+        team = st.selectbox("Team", teams, key="hops_team")
+    with fc3:
         tier_filter = st.multiselect("Tier", ["Elite", "Strong", "Rotation", "Depth"], key="hops_tier")
+    with fc4:
+        top_n = st.slider("Leaderboard rows", min_value=5, max_value=50, value=15, key="hops_top_n")
 
     filtered = df.copy()
     if league != "All":

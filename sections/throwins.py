@@ -142,24 +142,33 @@ def render_throwins() -> None:
     heights = _safe_sorted(df["Delivery height"]) if "Delivery height" in df.columns else []
     outcomes = _safe_sorted(df["Shot outcome"]) if "Shot outcome" in df.columns else []
 
-    league = _league_selectbox("League", leagues, key="throwins_league")
-    team = st.sidebar.selectbox("Team", teams, key="throwins_team")
-    perspective = st.sidebar.radio("Perspective", ["For", "Against"], key="throwins_perspective")
-    sample = st.sidebar.radio("Sample", ["Total", "Last 10 games"], key="throwins_sample")
-
     minute_min = int(pd.to_numeric(df["minute"], errors="coerce").fillna(0).min()) if "minute" in df.columns else 0
     minute_max = max(95, int(pd.to_numeric(df["minute"], errors="coerce").fillna(95).max())) if "minute" in df.columns else 95
+
+    fc1, fc2, fc3, fc4 = st.columns(4)
+    with fc1:
+        league = _league_selectbox("League", leagues, key="throwins_league")
+    with fc2:
+        team = st.selectbox("Team", teams, key="throwins_team")
+    with fc3:
+        perspective = st.radio("Perspective", ["For", "Against"], horizontal=True, key="throwins_perspective")
+    with fc4:
+        sample = st.radio("Sample", ["Total", "Last 10"], horizontal=True, key="throwins_sample")
 
     period = "All"; minute_range = (minute_min, minute_max)
     taker_filter: list = []; shooter_filter: list = []; height_filter: list = []; outcome_filter: list = []
 
-    with st.sidebar.expander("More filters", expanded=False):
-        period = st.selectbox("Game period", periods, key="throwins_period")
-        minute_range = st.slider("Minutes", minute_min, minute_max, (minute_min, minute_max), key="throwins_minutes")
-        taker_filter = st.multiselect("Thrower", takers, key="throwins_taker")
-        shooter_filter = st.multiselect("Shooter", shooters, key="throwins_shooter")
-        height_filter = st.multiselect("Height", heights, key="throwins_height")
-        outcome_filter = st.multiselect("Shot outcome", outcomes, key="throwins_outcome")
+    with st.expander("More filters", expanded=False):
+        mx1, mx2, mx3 = st.columns(3)
+        with mx1:
+            period = st.selectbox("Game period", periods, key="throwins_period")
+            minute_range = st.slider("Minutes", minute_min, minute_max, (minute_min, minute_max), key="throwins_minutes")
+        with mx2:
+            taker_filter = st.multiselect("Thrower", takers, key="throwins_taker")
+            shooter_filter = st.multiselect("Shooter", shooters, key="throwins_shooter")
+        with mx3:
+            height_filter = st.multiselect("Height", heights, key="throwins_height")
+            outcome_filter = st.multiselect("Shot outcome", outcomes, key="throwins_outcome")
 
     filtered = df.copy()
     if league != "All" and "League" in filtered.columns:

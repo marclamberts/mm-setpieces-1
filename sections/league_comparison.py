@@ -48,15 +48,19 @@ def render_league_comparison() -> None:
 
     phases = ["All"] + _safe_sorted(df["Phase"]) if "Phase" in df.columns else ["All"]
     leagues = _safe_sorted(df["League"]) if "League" in df.columns else []
-    phase = st.sidebar.selectbox("Phase", phases, key="league_comparison_phase")
     if any(league not in leagues for league in st.session_state.get("league_comparison_leagues", [])):
         st.session_state["league_comparison_leagues"] = leagues
     selected_leagues = leagues
     min_set_pieces = 10
     top_n = min(10, max(3, len(leagues)))
-    with st.sidebar.expander("More filters", expanded=False):
+    fc1, fc2, fc3, fc4 = st.columns(4)
+    with fc1:
+        phase = st.selectbox("Phase", phases, key="league_comparison_phase")
+    with fc2:
         selected_leagues = st.multiselect("Leagues", leagues, default=leagues, key="league_comparison_leagues")
-        min_set_pieces = st.slider("Minimum set pieces", 1, 100, 10, key="league_comparison_min_sp")
+    with fc3:
+        min_set_pieces = st.slider("Min set pieces", 1, 100, 10, key="league_comparison_min_sp")
+    with fc4:
         top_n = st.slider("Rows shown", 3, 25, top_n, key="league_comparison_top_n")
 
     filtered = df.copy()

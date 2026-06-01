@@ -65,11 +65,6 @@ def _filter_data(df: pd.DataFrame, key_prefix: str):
     takers = _safe_sorted(df["Taker"]) if "Taker" in df.columns else []
     shot_outcomes = _safe_sorted(df["Shot outcome"]) if "Shot outcome" in df.columns else []
 
-    team = st.sidebar.selectbox("Team", teams, key=f"{key_prefix}_team")
-    perspective = st.sidebar.radio("Perspective", ["For", "Against"], key=f"{key_prefix}_perspective")
-    league = _league_selectbox("League", leagues, key=f"{key_prefix}_league")
-    sample = st.sidebar.radio("Sample", ["Total", "Last 10 games"], key=f"{key_prefix}_sample")
-
     minute_min, minute_max = 0, 95
     if "minute" in df.columns:
         vals = pd.to_numeric(df["minute"], errors="coerce").dropna()
@@ -77,19 +72,34 @@ def _filter_data(df: pd.DataFrame, key_prefix: str):
             minute_min = int(min(0, vals.min()))
             minute_max = max(95, int(vals.max()))
 
+    fc1, fc2, fc3, fc4 = st.columns(4)
+    with fc1:
+        team = st.selectbox("Team", teams, key=f"{key_prefix}_team")
+    with fc2:
+        league = _league_selectbox("League", leagues, key=f"{key_prefix}_league")
+    with fc3:
+        perspective = st.radio("Perspective", ["For", "Against"], horizontal=True, key=f"{key_prefix}_perspective")
+    with fc4:
+        sample = st.radio("Sample", ["Total", "Last 10"], horizontal=True, key=f"{key_prefix}_sample")
+
     side = "All"; time_in_game = "All"; minute_range = (minute_min, minute_max)
     taker_filter: list = []; technique_filter: list = []; height_filter: list = []
     shot_outcome_filter: list = []; only_shots = False
 
-    with st.sidebar.expander("More filters", expanded=False):
-        side = st.radio("Side", sides, key=f"{key_prefix}_side")
-        time_in_game = st.selectbox("Time in game", periods, key=f"{key_prefix}_period")
-        minute_range = st.slider("Minutes", minute_min, minute_max, (minute_min, minute_max), key=f"{key_prefix}_minutes")
-        taker_filter = st.multiselect("Taker", takers, key=f"{key_prefix}_taker")
-        technique_filter = st.multiselect("Technique", techniques, key=f"{key_prefix}_technique")
-        height_filter = st.multiselect("Height", heights, key=f"{key_prefix}_height")
-        shot_outcome_filter = st.multiselect("Shot outcome", shot_outcomes, key=f"{key_prefix}_outcome")
-        only_shots = st.checkbox("Shots only", value=False, key=f"{key_prefix}_shots_only")
+    with st.expander("More filters", expanded=False):
+        mx1, mx2, mx3, mx4 = st.columns(4)
+        with mx1:
+            side = st.radio("Side", sides, key=f"{key_prefix}_side")
+            time_in_game = st.selectbox("Time in game", periods, key=f"{key_prefix}_period")
+        with mx2:
+            minute_range = st.slider("Minutes", minute_min, minute_max, (minute_min, minute_max), key=f"{key_prefix}_minutes")
+            only_shots = st.checkbox("Shots only", value=False, key=f"{key_prefix}_shots_only")
+        with mx3:
+            taker_filter = st.multiselect("Taker", takers, key=f"{key_prefix}_taker")
+            technique_filter = st.multiselect("Technique", techniques, key=f"{key_prefix}_technique")
+        with mx4:
+            height_filter = st.multiselect("Height", heights, key=f"{key_prefix}_height")
+            shot_outcome_filter = st.multiselect("Shot outcome", shot_outcomes, key=f"{key_prefix}_outcome")
 
     filtered = df.copy()
     filtered = _apply_team_perspective(filtered, team, perspective)

@@ -65,14 +65,19 @@ def inject_app_style() -> None:  # noqa: C901
             }}
             footer, #MainMenu {{ visibility: hidden; height: 0; }}
             header[data-testid="stHeader"] {{
-                background: {SIDEBAR_BG} !important;
-                border-bottom: 1px solid {BORDER} !important;
-                height: 2.4rem !important;
+                display: none !important;
+                height: 0 !important;
             }}
-            header[data-testid="stHeader"]::before {{ background: transparent !important; }}
+            section[data-testid="stSidebar"],
+            section[data-testid="stSidebar"] > div,
+            div[data-testid="stSidebar"],
+            button[data-testid="collapsedControl"] {{
+                display: none !important;
+                width: 0 !important; min-width: 0 !important;
+            }}
             .block-container {{
                 max-width: 1520px !important;
-                padding: .85rem 1.55rem 3rem !important;
+                padding: 68px 1.55rem 3rem !important;
             }}
             h1,h2,h3,h4,h5,h6 {{ color: {INK} !important; }}
             p {{ color: {MUTED_2}; }}
@@ -98,7 +103,7 @@ def inject_app_style() -> None:  # noqa: C901
 
             /* Sidebar headings */
             div[data-testid="stSidebar"] h3 {{
-                color: #374151 !important;
+                color: {MUTED} !important;
                 font-size: .58rem !important;
                 font-weight: 700 !important;
                 letter-spacing: .2em !important;
@@ -310,7 +315,7 @@ def inject_app_style() -> None:  # noqa: C901
                 border-radius: 8px 8px 0 0 !important;
             }}
             .mm-eyebrow {{
-                color: #374151 !important;
+                color: {MUTED} !important;
                 font-size: .64rem !important;
                 font-weight: 700 !important;
                 letter-spacing: .2em !important;
@@ -927,6 +932,98 @@ def inject_app_style() -> None:  # noqa: C901
             .mm-kpi-value, .mm-stat-value, .mm-feature-value,
             .mm-filter-count {{ font-variant-numeric: tabular-nums !important; }}
 
+            /* ─── Top navigation bar ─────────────────────────────── */
+            .mm-topbar {{
+                position: fixed;
+                top: 0; left: 0; right: 0;
+                height: 52px;
+                background: {SIDEBAR_BG};
+                border-bottom: 1px solid {BORDER};
+                display: flex;
+                align-items: center;
+                padding: 0 1.5rem;
+                z-index: 9999;
+                gap: 1.6rem;
+                box-shadow: 0 1px 12px rgba(0,0,0,0.35);
+            }}
+            .mm-topbar-brand {{
+                display: flex;
+                align-items: center;
+                gap: .52rem;
+                text-decoration: none;
+                flex-shrink: 0;
+            }}
+            .mm-topbar-brand img {{
+                height: 30px; width: auto;
+                border-radius: 4px;
+            }}
+            .mm-topbar-brand span {{
+                color: {INK};
+                font-size: .93rem;
+                font-weight: 700;
+                white-space: nowrap;
+            }}
+            .mm-topbar-brand span strong {{
+                color: {GREEN};
+            }}
+            .mm-topbar-links {{
+                display: flex;
+                align-items: center;
+                gap: .08rem;
+                overflow-x: auto;
+                flex: 1;
+                /* hide scrollbar */
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }}
+            .mm-topbar-links::-webkit-scrollbar {{ display: none; }}
+            .mm-topbar-links a,
+            .mm-topbar-link {{
+                color: {MUTED};
+                font-size: .82rem;
+                font-weight: 500;
+                padding: .32rem .68rem;
+                border-radius: 5px;
+                text-decoration: none !important;
+                white-space: nowrap;
+                transition: color .12s, background .12s;
+                display: flex; align-items: center; gap: .28rem;
+            }}
+            .mm-topbar-links a:hover,
+            .mm-topbar-link:hover {{
+                color: {INK};
+                background: rgba(255,255,255,0.06);
+                text-decoration: none !important;
+            }}
+            .mm-topbar-links a.mm-active,
+            .mm-topbar-link.mm-active {{
+                color: {GREEN};
+                background: rgba(34,197,94,0.10);
+                font-weight: 600;
+            }}
+
+            /* ─── Inline filter bar ──────────────────────────────── */
+            .mm-filter-bar {{
+                background: {SURFACE};
+                border: 1px solid {BORDER};
+                border-radius: 7px;
+                padding: .62rem .9rem;
+                margin: 0 0 .9rem;
+                display: flex;
+                align-items: center;
+                gap: .6rem;
+                flex-wrap: wrap;
+            }}
+            .mm-filter-bar-label {{
+                color: {MUTED};
+                font-size: .63rem;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: .09em;
+                white-space: nowrap;
+                margin-right: .15rem;
+            }}
+
             /* ─── Responsive grids ───────────────────────────────── */
             @media (max-width: 1100px) {{
                 .mm-kpi-deck, .mm-stat-grid {{
@@ -937,15 +1034,9 @@ def inject_app_style() -> None:  # noqa: C901
                 }}
             }}
             @media (max-width: 760px) {{
-                section[data-testid="stSidebar"],
-                section[data-testid="stSidebar"] > div,
-                div[data-testid="stSidebar"] {{
-                    width: 100% !important;
-                    min-width: 100% !important;
-                    max-width: 100% !important;
-                }}
+                .mm-topbar-links a {{ padding: .28rem .45rem; font-size: .75rem; }}
                 .mm-title {{ font-size: 1.65rem !important; }}
-                .block-container {{ padding: .65rem .85rem 2rem !important; }}
+                .block-container {{ padding: 62px .85rem 2rem !important; }}
                 .mm-kpi-deck, .mm-stat-grid {{ grid-template-columns: repeat(2,minmax(0,1fr)); }}
                 .mm-read-strip, .mm-profile-strip, .mm-workflow-grid {{
                     grid-template-columns: 1fr;
