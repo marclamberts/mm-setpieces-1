@@ -90,7 +90,7 @@ def _render_landing(password_required: bool, expected: str | None) -> None:
             html, body, .stApp,
             [data-testid="stAppViewContainer"],
             [data-testid="stMain"], .main {
-                background: #ffffff !important; overflow: hidden !important;
+                background: #0f1117 !important; overflow: hidden !important;
             }
             .block-container {
                 width: 100vw !important; max-width: 100vw !important;
@@ -98,16 +98,36 @@ def _render_landing(password_required: bool, expected: str | None) -> None:
                 padding: 0 !important; display: flex !important;
                 flex-direction: column !important; align-items: center !important;
                 justify-content: center !important; gap: .9rem !important;
-                background: #ffffff !important; overflow: hidden !important;
+                background: #0f1117 !important; overflow: hidden !important;
             }
-            .block-container > div { width: min(380px, 76vw) !important; }
+            .block-container > div { width: min(360px, 76vw) !important; }
+            /* Input on dark bg */
+            [data-baseweb="input"] > div {
+                background: #1e2230 !important;
+                border: 1px solid rgba(255,255,255,0.12) !important;
+                border-radius: 7px !important;
+            }
+            [data-baseweb="input"] input {
+                color: #f1f5f9 !important;
+                -webkit-text-fill-color: #f1f5f9 !important;
+            }
+            /* Login button */
+            div.stButton > button {
+                background: #22c55e !important;
+                border: 0 !important;
+                color: #052e16 !important;
+                font-weight: 700 !important;
+                border-radius: 7px !important;
+                min-height: 42px !important;
+            }
+            div.stButton > button:hover { background: #16a34a !important; color: #ffffff !important; }
         </style>
         """,
         unsafe_allow_html=True,
     )
 
     if LOGO_PATH.exists():
-        st.image(str(LOGO_PATH), width=320)
+        st.image(str(LOGO_PATH), width=300)
     else:
         st.markdown("## SetPlay**Pro**")
 
