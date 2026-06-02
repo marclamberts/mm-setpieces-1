@@ -69,7 +69,7 @@ def _filter_data(df: pd.DataFrame, key_prefix: str):
     if "minute" in df.columns:
         vals = pd.to_numeric(df["minute"], errors="coerce").dropna()
         if not vals.empty:
-            minute_min = int(min(0, vals.min()))
+            minute_min = int(vals.min())
             minute_max = max(95, int(vals.max()))
 
     fc1, fc2, fc3, fc4 = st.columns(4)
@@ -105,7 +105,7 @@ def _filter_data(df: pd.DataFrame, key_prefix: str):
     filtered = _apply_team_perspective(filtered, team, perspective)
     if league != "All" and "League" in filtered.columns:
         filtered = filtered[filtered["League"] == league]
-    if sample == "Last 10 games" and "match_rank" in filtered.columns:
+    if sample == "Last 10" and "match_rank" in filtered.columns:
         filtered = filtered[filtered["match_rank"] <= 10]
     if side != "All" and "side" in filtered.columns:
         filtered = filtered[filtered["side"] == side]

@@ -160,7 +160,7 @@ def render_freekicks() -> None:
     if league != "All" and "League" in filtered.columns:
         filtered = filtered[filtered["League"].eq(league)].copy()
     filtered = _apply_team_perspective(filtered, team, perspective)
-    if sample == "Last 10 games" and "match_rank" in filtered.columns:
+    if sample == "Last 10" and "match_rank" in filtered.columns:
         filtered = filtered[filtered["match_rank"] <= 10].copy()
     if taker_filter and "Taker" in filtered.columns:
         filtered = filtered[filtered["Taker"].isin(taker_filter)].copy()
