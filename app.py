@@ -23,6 +23,8 @@ from sections.league_comparison import render_league_comparison
 from sections.delay import render_delay
 from sections.match_prep import render_match_prep
 from sections.data_justification import render_data_justification
+from sections.takers import render_takers
+from sections.routines import render_routines
 
 LOGO_PATH = Path(__file__).resolve().parent / "assets" / "setplaypro-logo.jpg"
 
@@ -36,6 +38,8 @@ SECTION_ICONS = {
     "Delay Analysis": "⏱",
     "Match Prep": "📋",
     "Data Justification": "📖",
+    "Takers": "👤",
+    "Routines": "📖",
 }
 
 # ---------------------------------------------------------------------------
@@ -275,5 +279,9 @@ elif section == "Delay Analysis":
     render_delay()
 elif section == "Match Prep":
     render_match_prep()
+elif section == "Takers":
+    render_takers()
+elif section == "Routines":
+    render_routines()
 elif section == "Data Justification":
     render_data_justification()

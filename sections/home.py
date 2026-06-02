@@ -43,6 +43,10 @@ MODULE_CARDS = [
      "Opponent-specific set piece intelligence for upcoming fixtures."),
     ("Delay Analysis",   "home_open_delay",             "⏱",  "Delay Analysis",
      "Corner delivery timing and delay patterns over time."),
+    ("Takers",           "home_open_takers",            "👤", "Set Piece Takers",
+     "Player-level delivery stats, xG per 100, shot-assist rate and foot preference."),
+    ("Routines",         "home_open_routines",          "📖", "Routines Playbook",
+     "Save, tag and review set piece routines for pre-match preparation."),
 ]
 
 
