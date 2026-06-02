@@ -64,7 +64,7 @@ def _auth_token() -> str:
 
 def _check_auth_token(tok: str) -> bool:
     secret = os.environ.get("SETPLAYPRO_PASSWORD") or "open"
-    for offset in (0, -1):  # accept current and previous hour
+    for offset in range(-12, 1):  # accept tokens up to 12 hours old
         hour = int(time.time() // 3600) + offset
         if tok == hashlib.sha256(f"{secret}{hour}".encode()).hexdigest()[:16]:
             return True

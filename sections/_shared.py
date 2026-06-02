@@ -487,8 +487,12 @@ def search_people(query: str, corners: pd.DataFrame, freekicks: pd.DataFrame, th
 # Navigation helpers
 # ---------------------------------------------------------------------------
 
-def set_section(section: str) -> None:
+def set_section(section: str, team: str | None = None) -> None:
     st.session_state["section"] = section
+    if team:
+        prefix = FILTER_PREFIXES.get(section)
+        if prefix:
+            st.session_state[f"{prefix}_team"] = team
     try:
         st.query_params["section"] = section
     except Exception:
