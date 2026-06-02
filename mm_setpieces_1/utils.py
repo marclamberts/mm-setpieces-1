@@ -3703,68 +3703,61 @@ def full_scouting_report_pdf_bytes(
         # ── OPPONENT SECTION ─────────────────────────────────────────
         _pdf_section_divider(pdf, plt, f"{opponent}", "Their set-piece attack — what you need to defend", "#ef4444")
 
-        # Corners
-        if not opp_corners.empty:
-            fig_del = mplsoccer_delivery_figure(opp_corners, "Corners")
-            fig_shot = mplsoccer_shot_figure(opp_corners, "Corners")
-            _pdf_two_figures(pdf, plt, fig_del, fig_shot, f"{opponent} — Corner deliveries & shots")
-            fig_out = mplsoccer_delivery_sp_outcome_figure(opp_corners, "Corners")
-            _pdf_two_figures(pdf, plt, fig_out, None, f"{opponent} — Corner delivery outcomes")
-            taker_lb = build_taker_leaderboard(opp_corners).head(12)
-            _pdf_df_page(pdf, plt, taker_lb, f"{opponent} — Corner takers", "Events, shot rate, xG/event, delivery tendency")
-            pattern_lb = build_pattern_library(opp_corners).head(12)
-            _pdf_df_page(pdf, plt, pattern_lb, f"{opponent} — Corner patterns", "Recurring delivery + zone combinations")
+        # Corners — always render; individual functions show "no data" if empty
+        fig_del = mplsoccer_delivery_figure(opp_corners, "Corners")
+        fig_shot = mplsoccer_shot_figure(opp_corners, "Corners")
+        _pdf_two_figures(pdf, plt, fig_del, fig_shot, f"{opponent} — Corner deliveries & shots")
+        fig_out = mplsoccer_delivery_sp_outcome_figure(opp_corners, "Corners")
+        _pdf_two_figures(pdf, plt, fig_out, None, f"{opponent} — Corner delivery outcomes")
+        _pdf_df_page(pdf, plt, build_taker_leaderboard(opp_corners).head(12),
+                     f"{opponent} — Corner takers", "Events, shot rate, xG/event, delivery tendency")
+        _pdf_df_page(pdf, plt, build_pattern_library(opp_corners).head(12),
+                     f"{opponent} — Corner patterns", "Recurring delivery + zone combinations")
 
         # Free kicks
-        if not opp_fks.empty:
-            fig_fk = freekick_origin_map_figure(opp_fks, f"{opponent} Freekick origins")
-            fig_fk_shot = mplsoccer_shot_figure(opp_fks, "Freekicks")
-            _pdf_two_figures(pdf, plt, fig_fk, fig_fk_shot, f"{opponent} — Freekick origins & shots")
-            fk_zones = freekick_zone_summary(opp_fks).head(10)
-            _pdf_df_page(pdf, plt, fk_zones, f"{opponent} — Freekick zone breakdown")
-            fk_takers = freekick_taker_summary(opp_fks).head(12)
-            _pdf_df_page(pdf, plt, fk_takers, f"{opponent} — Freekick takers")
-            fk_seq = freekick_sequence_summary(opp_fks).head(10)
-            _pdf_df_page(pdf, plt, fk_seq, f"{opponent} — Freekick sequences")
+        fig_fk = freekick_origin_map_figure(opp_fks, f"{opponent} Freekick origins")
+        fig_fk_shot = mplsoccer_shot_figure(opp_fks, "Freekicks")
+        _pdf_two_figures(pdf, plt, fig_fk, fig_fk_shot, f"{opponent} — Freekick origins & shots")
+        _pdf_df_page(pdf, plt, freekick_zone_summary(opp_fks).head(10),
+                     f"{opponent} — Freekick zone breakdown")
+        _pdf_df_page(pdf, plt, freekick_taker_summary(opp_fks).head(12),
+                     f"{opponent} — Freekick takers")
+        _pdf_df_page(pdf, plt, freekick_sequence_summary(opp_fks).head(10),
+                     f"{opponent} — Freekick sequences")
 
         # Throw-ins
-        if not opp_tis.empty:
-            fig_ti = throwin_delivery_map_figure(opp_tis, f"{opponent} Throw-in deliveries")
-            _pdf_two_figures(pdf, plt, fig_ti, None, f"{opponent} — Throw-in delivery map")
-            ti_zones = throwin_zone_summary(opp_tis).head(10)
-            _pdf_df_page(pdf, plt, ti_zones, f"{opponent} — Throw-in zones")
-            ti_takers = throwin_taker_summary(opp_tis).head(12)
-            _pdf_df_page(pdf, plt, ti_takers, f"{opponent} — Throw-in takers (throwers)")
+        fig_ti = throwin_delivery_map_figure(opp_tis, f"{opponent} Throw-in deliveries")
+        _pdf_two_figures(pdf, plt, fig_ti, None, f"{opponent} — Throw-in delivery map")
+        _pdf_df_page(pdf, plt, throwin_zone_summary(opp_tis).head(10),
+                     f"{opponent} — Throw-in zones")
+        _pdf_df_page(pdf, plt, throwin_taker_summary(opp_tis).head(12),
+                     f"{opponent} — Throw-in takers (throwers)")
 
         # HOPS aerial threats
-        if not opp_hops.empty:
-            _pdf_df_page(
-                pdf, plt,
-                opp_hops[["Player", "Rating", "Percentile", "Tier"]].head(20),
-                f"{opponent} — HOPS aerial threat watchlist",
-                "Players to mark at corners and free kicks",
-            )
+        _pdf_df_page(
+            pdf, plt,
+            opp_hops[["Player", "Rating", "Percentile", "Tier"]].head(20) if not opp_hops.empty else pd.DataFrame(),
+            f"{opponent} — HOPS aerial threat watchlist",
+            "Players to mark at corners and free kicks",
+        )
 
         # ── OUR SECTION ──────────────────────────────────────────────
         _pdf_section_divider(pdf, plt, f"{my_team}", "Our attacking set pieces — reference", "#22c55e")
 
-        if not my_corners.empty:
-            fig_del = mplsoccer_delivery_figure(my_corners, "Corners")
-            fig_shot = mplsoccer_shot_figure(my_corners, "Corners")
-            _pdf_two_figures(pdf, plt, fig_del, fig_shot, f"{my_team} — Corner deliveries & shots")
-            taker_lb = build_taker_leaderboard(my_corners).head(12)
-            _pdf_df_page(pdf, plt, taker_lb, f"{my_team} — Corner takers")
+        fig_del = mplsoccer_delivery_figure(my_corners, "Corners")
+        fig_shot = mplsoccer_shot_figure(my_corners, "Corners")
+        _pdf_two_figures(pdf, plt, fig_del, fig_shot, f"{my_team} — Corner deliveries & shots")
+        _pdf_df_page(pdf, plt, build_taker_leaderboard(my_corners).head(12),
+                     f"{my_team} — Corner takers")
 
-        if not my_fks.empty:
-            fig_fk = freekick_origin_map_figure(my_fks, f"{my_team} Freekick origins")
-            fig_fk_shot = mplsoccer_shot_figure(my_fks, "Freekicks")
-            _pdf_two_figures(pdf, plt, fig_fk, fig_fk_shot, f"{my_team} — Freekick origins & shots")
-            fk_takers = freekick_taker_summary(my_fks).head(12)
-            _pdf_df_page(pdf, plt, fk_takers, f"{my_team} — Freekick takers")
+        fig_fk = freekick_origin_map_figure(my_fks, f"{my_team} Freekick origins")
+        fig_fk_shot = mplsoccer_shot_figure(my_fks, "Freekicks")
+        _pdf_two_figures(pdf, plt, fig_fk, fig_fk_shot, f"{my_team} — Freekick origins & shots")
+        _pdf_df_page(pdf, plt, freekick_taker_summary(my_fks).head(12),
+                     f"{my_team} — Freekick takers")
 
-        if not my_tis.empty:
-            fig_ti = throwin_delivery_map_figure(my_tis, f"{my_team} Throw-in deliveries")
-            _pdf_two_figures(pdf, plt, fig_ti, None, f"{my_team} — Throw-in delivery map")
+        fig_ti = throwin_delivery_map_figure(my_tis, f"{my_team} Throw-in deliveries")
+        _pdf_two_figures(pdf, plt, fig_ti, None, f"{my_team} — Throw-in delivery map")
 
         # HOPS — our squad
         my_hops = (
