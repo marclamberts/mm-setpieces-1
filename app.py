@@ -25,6 +25,7 @@ from sections.match_prep import render_match_prep
 from sections.data_justification import render_data_justification
 from sections.takers import render_takers
 from sections.routines import render_routines
+from sections.impact import render_impact
 
 LOGO_PATH = Path(__file__).resolve().parent / "assets" / "setplaypro-logo.jpg"
 
@@ -40,6 +41,7 @@ SECTION_ICONS = {
     "Data Justification": "📖",
     "Takers": "👤",
     "Routines": "📖",
+    "Impact Score": "🏆",
 }
 
 # ---------------------------------------------------------------------------
@@ -283,5 +285,7 @@ elif section == "Takers":
     render_takers()
 elif section == "Routines":
     render_routines()
+elif section == "Impact Score":
+    render_impact()
 elif section == "Data Justification":
     render_data_justification()

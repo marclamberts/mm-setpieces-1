@@ -47,6 +47,8 @@ MODULE_CARDS = [
      "Player-level delivery stats, xG per 100, shot-assist rate and foot preference."),
     ("Routines",         "home_open_routines",          "📖", "Routines Playbook",
      "Save, tag and review set piece routines for pre-match preparation."),
+    ("Impact Score",     "home_open_impact",            "🏆", "Impact Score",
+     "Composite set piece rating: xG threat, shot creation, conversion, volume, aerial power."),
 ]
 
 
