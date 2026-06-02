@@ -194,7 +194,7 @@ def _with_match_names(df: pd.DataFrame) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 
 @st.cache_data(show_spinner=False)
-def load_hops_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
+def load_hops_data(_data_version: str = DATA_VERSION, _code_v: str = "league_fix_v2") -> pd.DataFrame:
     sources = []
     for path in _data_files("HOPS", (".parquet",)):
         try:
