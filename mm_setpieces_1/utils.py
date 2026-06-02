@@ -690,12 +690,15 @@ def _title_from_token(text: str) -> str:
 
 
 def _league_from_generic_filename(path: Path) -> str:
+    import re as _re
     stem = path.stem.strip()
     parts = stem.replace("_", " ").split(" - ", 1)
     candidate = parts[0].strip()
     for suffix in [" Corners", " SP", " HOPS"]:
         if candidate.lower().endswith(suffix.lower()):
             candidate = candidate[: -len(suffix)].strip()
+    # Strip trailing season IDs like 316, 318 (3–4 digit numbers)
+    candidate = _re.sub(r"\s+\d{3,4}$", "", candidate).strip()
     candidate = " ".join(candidate.split())
     if not candidate or candidate.lower() in {"all", "data", "corners", "sp", "hops"}:
         return "Unknown"
