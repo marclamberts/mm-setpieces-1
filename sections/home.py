@@ -49,6 +49,12 @@ MODULE_CARDS = [
      "Save, tag and review set piece routines for pre-match preparation."),
     ("Impact Score",     "home_open_impact",            "🏆", "Impact Score",
      "Composite set piece rating: xG threat, shot creation, conversion, volume, aerial power."),
+    ("Defensive",        "home_open_defensive",         "🛡", "Defensive Analysis",
+     "xG conceded, shot locations, GK analysis and defensive league ranking."),
+    ("Trends",           "home_open_trends",            "📈", "Set Piece Trends",
+     "Rolling match-by-match xG, shot rate and attack vs defence differential over time."),
+    ("Intel Card",       "home_open_intel",             "🗂", "Intel Card",
+     "One-page pre-match brief: threats, key personnel, preferences and PDF download."),
 ]
 
 

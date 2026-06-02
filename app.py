@@ -26,6 +26,9 @@ from sections.data_justification import render_data_justification
 from sections.takers import render_takers
 from sections.routines import render_routines
 from sections.impact import render_impact
+from sections.defensive import render_defensive
+from sections.trends import render_trends
+from sections.intel_card import render_intel_card
 
 LOGO_PATH = Path(__file__).resolve().parent / "assets" / "setplaypro-logo.jpg"
 
@@ -42,6 +45,9 @@ SECTION_ICONS = {
     "Takers": "👤",
     "Routines": "📖",
     "Impact Score": "🏆",
+    "Defensive": "🛡",
+    "Trends": "📈",
+    "Intel Card": "🗂",
 }
 
 # ---------------------------------------------------------------------------
@@ -287,5 +293,11 @@ elif section == "Routines":
     render_routines()
 elif section == "Impact Score":
     render_impact()
+elif section == "Defensive":
+    render_defensive()
+elif section == "Trends":
+    render_trends()
+elif section == "Intel Card":
+    render_intel_card()
 elif section == "Data Justification":
     render_data_justification()
