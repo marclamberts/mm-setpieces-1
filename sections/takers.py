@@ -129,7 +129,7 @@ def render_takers() -> None:
                          color_discrete_sequence=["#22c55e", "#3b82f6", "#f59e0b"])
             fig.update_traces(textposition="outside")
             fig.update_layout(yaxis={"categoryorder": "total ascending"}, showlegend=True)
-            render_plotly_visual(polish_plotly_figure(fig), "takers_xg100_bar")
+            render_plotly_visual(polish_plotly_figure(fig), "xG / 100 by Taker", "takers_xg100_bar")
 
     # ── Taker Profile ─────────────────────────────────────────────────────
     with tab_profile:
@@ -160,7 +160,7 @@ def render_takers() -> None:
                                       opacity=0.7)
                     fig2.update_layout(xaxis_range=[0, 120], yaxis_range=[0, 80],
                                        xaxis_title="x", yaxis_title="y")
-                    render_plotly_visual(polish_plotly_figure(fig2), "takers_delivery_scatter")
+                    render_plotly_visual(polish_plotly_figure(fig2), "Delivery Locations", "takers_delivery_scatter")
 
             # Type breakdown
             section_header("Deliveries by type")
@@ -201,4 +201,4 @@ def render_takers() -> None:
             x="Metric", y="Value", color="Taker", barmode="group",
             color_discrete_sequence=["#22c55e", "#3b82f6"],
         )
-        render_plotly_visual(polish_plotly_figure(fig3), "takers_cmp_bar")
+        render_plotly_visual(polish_plotly_figure(fig3), "Taker Comparison", "takers_cmp_bar")
