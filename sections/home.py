@@ -109,8 +109,9 @@ def _render_highlights(corners, freekicks, throwins, hops) -> None:
         ))
 
     # Team with most corner shots
-    if not corners.empty and "Team" in corners.columns and "Shot" in corners.columns:
-        shot_col = "Shot"
+    shot_col = next((c for c in ["is_shot", "Shot", "shot"] if c in corners.columns), None)
+    if not corners.empty and "Team" in corners.columns and shot_col:
+        shot_col = shot_col
         shot_df = corners[corners[shot_col].astype(str).str.lower().isin(["true", "1", "yes", "shot"])]
         if shot_df.empty:
             shot_df = corners

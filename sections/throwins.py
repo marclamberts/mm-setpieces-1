@@ -177,7 +177,7 @@ def render_throwins() -> None:
     filtered = _apply_team_perspective(filtered, team, perspective)
     if period != "All" and "game_period" in filtered.columns:
         filtered = filtered[filtered["game_period"].eq(period)].copy()
-    if sample == "Last 10 games" and "match_rank" in filtered.columns:
+    if sample == "Last 10" and "match_rank" in filtered.columns:
         filtered = filtered[filtered["match_rank"] <= 10].copy()
     if "minute" in filtered.columns:
         filtered = filtered[pd.to_numeric(filtered["minute"], errors="coerce").between(minute_range[0], minute_range[1])].copy()

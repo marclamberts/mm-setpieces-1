@@ -47,8 +47,6 @@ def render_league_comparison() -> None:
 
     phases = ["All"] + _safe_sorted(df["Phase"]) if "Phase" in df.columns else ["All"]
     leagues = _safe_sorted(df["League"]) if "League" in df.columns else []
-    if any(league not in leagues for league in st.session_state.get("league_comparison_leagues", [])):
-        st.session_state["league_comparison_leagues"] = leagues
     selected_leagues = leagues
     min_set_pieces = 10
     top_n = min(10, max(3, len(leagues)))
