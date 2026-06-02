@@ -3393,3 +3393,391 @@ def prematch_report_pdf_bytes(df: pd.DataFrame, label: str = "", opponent: str =
 
     buffer.seek(0)
     return buffer.getvalue()
+
+
+# ---------------------------------------------------------------------------
+# Full scouting report PDF — all sections, both teams
+# ---------------------------------------------------------------------------
+
+def _pdf_cover_page(pdf, plt, my_team: str, opponent: str,
+                    my_kpi: dict, opp_kpi: dict,
+                    alerts: list[str], avg_xg_100: float) -> None:
+    import matplotlib.gridspec as gridspec
+
+    def _score(kpi):
+        base = kpi["xg_per_100"]
+        if avg_xg_100 <= 0:
+            return 50.0
+        return min(200.0, round(base / avg_xg_100 * 100, 1))
+
+    def _threat_label(s):
+        if s >= 140: return "HIGH THREAT", "#ef4444"
+        if s >= 100: return "ABOVE AVERAGE", "#f59e0b"
+        if s >= 60:  return "AVERAGE", "#9ca3af"
+        return "LOW THREAT", "#22c55e"
+
+    fig = plt.figure(figsize=(8.27, 11.69), dpi=140)
+    fig.patch.set_facecolor("#0b0f14")
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+    ax.axis("off")
+
+    # Header bar
+    ax.axhspan(0.88, 1.0, color="#161922")
+    ax.text(0.06, 0.945, "PRE-MATCH SCOUTING REPORT", fontsize=9, fontweight="bold",
+            color="#22c55e", transform=ax.transAxes, va="center",
+            fontfamily="monospace")
+    add_logo_to_matplotlib_figure(fig)
+
+    # Match title
+    ax.text(0.06, 0.83, f"{my_team}", fontsize=22, fontweight="900", color="#ffffff")
+    ax.text(0.06, 0.80, f"vs  {opponent}", fontsize=16, fontweight="700", color="#9ca3af")
+
+    import datetime
+    ax.text(0.06, 0.76, f"Generated {datetime.date.today().strftime('%d %B %Y')}",
+            fontsize=9, color="#4b5563")
+
+    ax.axhline(0.745, xmin=0.06, xmax=0.94, color="#2a2d35", linewidth=0.7)
+
+    # Threat cards
+    my_s  = _score(my_kpi)
+    opp_s = _score(opp_kpi)
+    my_lbl,  my_col  = _threat_label(my_s)
+    opp_lbl, opp_col = _threat_label(opp_s)
+
+    for x0, team, s, lbl, col, kpi in [
+        (0.06, my_team,  my_s,  my_lbl,  my_col,  my_kpi),
+        (0.53, opponent, opp_s, opp_lbl, opp_col, opp_kpi),
+    ]:
+        rect = plt.Rectangle((x0, 0.63), 0.40, 0.10, transform=ax.transAxes,
+                              facecolor="#161922", edgecolor=col, linewidth=1.2)
+        ax.add_patch(rect)
+        ax.text(x0 + 0.02, 0.725, team, fontsize=8, fontweight="700",
+                color="#9ca3af", transform=ax.transAxes)
+        ax.text(x0 + 0.02, 0.690, f"{s:.0f}", fontsize=24, fontweight="900",
+                color=col, transform=ax.transAxes, va="center")
+        ax.text(x0 + 0.14, 0.690, lbl, fontsize=7, fontweight="700",
+                color=col, transform=ax.transAxes, va="center")
+        ax.text(x0 + 0.02, 0.645, f"{kpi['restarts']:,} SP  ·  {kpi['shots']} shots  ·  {kpi['total_xg']:.2f} xG  ·  {kpi['xg_per_100']:.2f} xG/100",
+                fontsize=7.5, color="#6b7280", transform=ax.transAxes)
+
+    ax.text(0.06, 0.615, "Threat index: 100 = dataset average. Scale 0–200.",
+            fontsize=7, color="#374151")
+
+    ax.axhline(0.600, xmin=0.06, xmax=0.94, color="#2a2d35", linewidth=0.7)
+
+    # KPI table
+    ax.text(0.06, 0.575, "Head-to-head", fontsize=10, fontweight="700", color="#f1f5f9")
+    rows = [
+        ("Set pieces", f"{my_kpi['restarts']:,}", f"{opp_kpi['restarts']:,}"),
+        ("Shots",       f"{my_kpi['shots']:,}",   f"{opp_kpi['shots']:,}"),
+        ("Goals",       f"{my_kpi['goals']:,}",   f"{opp_kpi['goals']:,}"),
+        ("xG total",    f"{my_kpi['total_xg']:.2f}", f"{opp_kpi['total_xg']:.2f}"),
+        ("Shot rate %", f"{my_kpi['shot_rate']:.1f}", f"{opp_kpi['shot_rate']:.1f}"),
+        ("xG / 100",    f"{my_kpi['xg_per_100']:.2f}", f"{opp_kpi['xg_per_100']:.2f}"),
+    ]
+    ax.text(0.35, 0.548, my_team[:20], fontsize=7.5, fontweight="700",
+            color="#22c55e", transform=ax.transAxes)
+    ax.text(0.65, 0.548, opponent[:20], fontsize=7.5, fontweight="700",
+            color="#ef4444", transform=ax.transAxes)
+    y = 0.520
+    for label, mv, ov in rows:
+        try:
+            mf, of = float(mv.replace(",", "")), float(ov.replace(",", ""))
+            mc = "#ffffff" if mf >= of else "#6b7280"
+            oc = "#ffffff" if of >= mf else "#6b7280"
+        except Exception:
+            mc = oc = "#9ca3af"
+        ax.text(0.06, y, label, fontsize=8.5, color="#9ca3af")
+        ax.text(0.35, y, mv, fontsize=8.5, color=mc, fontweight="700" if mc == "#ffffff" else "normal")
+        ax.text(0.65, y, ov, fontsize=8.5, color=oc, fontweight="700" if oc == "#ffffff" else "normal")
+        y -= 0.028
+
+    ax.axhline(y - 0.005, xmin=0.06, xmax=0.94, color="#2a2d35", linewidth=0.7)
+
+    # Alerts
+    ax.text(0.06, y - 0.020, f"Scouting alerts — {opponent}", fontsize=10, fontweight="700", color="#f1f5f9")
+    ya = y - 0.048
+    for alert in alerts[:5]:
+        import re as _re
+        clean = _re.sub(r"<[^>]+>", "", alert)
+        import textwrap as _tw
+        for i, line in enumerate(_tw.wrap(clean, 88)):
+            prefix = "• " if i == 0 else "  "
+            ax.text(0.06, ya, prefix + line, fontsize=8, color="#d1d5db")
+            ya -= 0.022
+        ya -= 0.004
+        if ya < 0.06:
+            break
+
+    ax.axhline(0.04, xmin=0.06, xmax=0.94, color="#2a2d35", linewidth=0.5)
+    ax.text(0.5, 0.022, "SetPlayPro · Michael Mackin Set Piece Analysis · Confidential",
+            fontsize=7, color="#374151", ha="center")
+
+    pdf.savefig(fig, bbox_inches="tight", facecolor=fig.get_facecolor())
+    plt.close(fig)
+
+
+def _pdf_df_page(pdf, plt, df: pd.DataFrame, title: str, subtitle: str = "") -> None:
+    fig = plt.figure(figsize=(8.27, 11.69), dpi=140)
+    fig.patch.set_facecolor("#0b0f14")
+    ax = fig.add_axes([0.06, 0.06, 0.88, 0.88])
+    ax.set_facecolor("#0b0f14")
+    ax.axis("off")
+
+    ax.text(0, 1.02, title, fontsize=13, fontweight="800", color="#f1f5f9",
+            transform=ax.transAxes)
+    if subtitle:
+        ax.text(0, 0.995, subtitle, fontsize=8.5, color="#6b7280",
+                transform=ax.transAxes)
+
+    if df.empty:
+        ax.text(0.5, 0.5, "No data available for this section.",
+                ha="center", va="center", color="#4b5563", fontsize=10)
+        pdf.savefig(fig, bbox_inches="tight", facecolor=fig.get_facecolor())
+        plt.close(fig)
+        return
+
+    # Truncate columns for readability
+    display = df.head(20).copy()
+    for col in display.select_dtypes(include="number").columns:
+        display[col] = display[col].apply(
+            lambda v: f"{v:.3f}" if isinstance(v, float) and abs(v) < 1000 else (f"{int(v):,}" if pd.notna(v) else "")
+        )
+    display = display.fillna("").astype(str)
+    # Trim long text cells
+    for col in display.columns:
+        display[col] = display[col].str[:22]
+
+    cols_list = display.columns.tolist()
+    col_widths = [max(len(str(c)), display[c].str.len().max()) for c in cols_list]
+    total = sum(col_widths) or 1
+    widths = [w / total for w in col_widths]
+
+    tbl = ax.table(
+        cellText=display.values,
+        colLabels=cols_list,
+        colWidths=widths,
+        loc="upper center",
+        cellLoc="left",
+    )
+    tbl.auto_set_font_size(False)
+    tbl.set_fontsize(7.5)
+    tbl.scale(1, 1.55)
+
+    for (row, col), cell in tbl.get_celld().items():
+        cell.set_edgecolor("#2a2d35")
+        if row == 0:
+            cell.set_facecolor("#1e2230")
+            cell.set_text_props(color="#9ca3af", fontweight="bold")
+        else:
+            cell.set_facecolor("#161922" if row % 2 == 0 else "#1a1d23")
+            cell.set_text_props(color="#f1f5f9")
+
+    add_logo_to_matplotlib_figure(fig)
+    ax.text(0.5, -0.02, "SetPlayPro · Confidential", fontsize=6.5, color="#374151",
+            ha="center", transform=ax.transAxes)
+    pdf.savefig(fig, bbox_inches="tight", facecolor=fig.get_facecolor())
+    plt.close(fig)
+
+
+def _pdf_section_divider(pdf, plt, title: str, subtitle: str = "", color: str = "#22c55e") -> None:
+    fig = plt.figure(figsize=(8.27, 11.69), dpi=140)
+    fig.patch.set_facecolor("#0b0f14")
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.set_xlim(0, 1); ax.set_ylim(0, 1); ax.axis("off")
+    rect = plt.Rectangle((0, 0.44), 1, 0.14, facecolor=color, alpha=0.08)
+    ax.add_patch(rect)
+    ax.axvline(0.06, ymin=0.44, ymax=0.58, color=color, linewidth=3)
+    ax.text(0.10, 0.535, title, fontsize=28, fontweight="900", color="#ffffff", va="center")
+    if subtitle:
+        ax.text(0.10, 0.467, subtitle, fontsize=11, color="#6b7280", va="center")
+    add_logo_to_matplotlib_figure(fig)
+    ax.text(0.5, 0.025, "SetPlayPro · Confidential", fontsize=7, color="#374151", ha="center")
+    pdf.savefig(fig, bbox_inches="tight", facecolor=fig.get_facecolor())
+    plt.close(fig)
+
+
+def _pdf_two_figures(pdf, plt, fig_l, fig_r, title: str) -> None:
+    """Combine two matplotlib figures side-by-side on one A4 page."""
+    import matplotlib.gridspec as gridspec
+    from matplotlib.backends.backend_agg import FigureCanvasAgg
+
+    fig = plt.figure(figsize=(8.27, 11.69), dpi=140)
+    fig.patch.set_facecolor("#0b0f14")
+
+    ax_title = fig.add_axes([0.04, 0.93, 0.92, 0.05])
+    ax_title.axis("off")
+    ax_title.text(0, 0.5, title, fontsize=12, fontweight="800",
+                  color="#f1f5f9", va="center")
+
+    for src_fig, rect in [(fig_l, [0.02, 0.46, 0.46, 0.46]),
+                           (fig_r, [0.52, 0.46, 0.46, 0.46])]:
+        if src_fig is None:
+            continue
+        src_fig.canvas = FigureCanvasAgg(src_fig)
+        src_fig.canvas.draw()
+        buf = BytesIO()
+        src_fig.savefig(buf, format="png", dpi=110,
+                        facecolor=src_fig.get_facecolor(), bbox_inches="tight")
+        buf.seek(0)
+        import matplotlib.image as mpimg
+        img = mpimg.imread(buf)
+        ax_img = fig.add_axes(rect)
+        ax_img.imshow(img)
+        ax_img.axis("off")
+        plt.close(src_fig)
+
+    add_logo_to_matplotlib_figure(fig)
+    ax_foot = fig.add_axes([0.04, 0.01, 0.92, 0.02])
+    ax_foot.axis("off")
+    ax_foot.text(0.5, 0.5, "SetPlayPro · Confidential", fontsize=6.5,
+                 color="#374151", ha="center", va="center")
+
+    pdf.savefig(fig, bbox_inches="tight", facecolor=fig.get_facecolor())
+    plt.close(fig)
+
+
+def full_scouting_report_pdf_bytes(
+    my_team: str,
+    opponent: str,
+    my_corners: pd.DataFrame,
+    my_fks: pd.DataFrame,
+    my_tis: pd.DataFrame,
+    opp_corners: pd.DataFrame,
+    opp_fks: pd.DataFrame,
+    opp_tis: pd.DataFrame,
+    hops: pd.DataFrame,
+) -> bytes:
+    """Generate a comprehensive pre-match scouting PDF covering all set-piece phases."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_pdf import PdfPages
+    import re as _re
+
+    buffer = BytesIO()
+
+    # ── KPI totals ────────────────────────────────────────────────────
+    all_sp  = pd.concat([my_corners, my_fks, my_tis,
+                         opp_corners, opp_fks, opp_tis], ignore_index=True)
+    all_kpi  = set_piece_kpi_values(all_sp)
+    avg_xg_100 = float(all_kpi["xg_per_100"]) or 1.0
+
+    my_sp   = pd.concat([my_corners,  my_fks,  my_tis],  ignore_index=True)
+    opp_sp  = pd.concat([opp_corners, opp_fks, opp_tis], ignore_index=True)
+    my_kpi  = set_piece_kpi_values(my_sp)
+    opp_kpi = set_piece_kpi_values(opp_sp)
+
+    opp_hops = (
+        hops[hops["Team"].astype(str).eq(opponent)].sort_values("Rating", ascending=False)
+        if not hops.empty and "Team" in hops.columns
+        else pd.DataFrame()
+    )
+
+    # ── Build scouting alerts ─────────────────────────────────────────
+    alerts: list[str] = []
+    if not opp_hops.empty:
+        for _, row in opp_hops.head(3).iterrows():
+            if row.get("Tier") == "Elite":
+                alerts.append(
+                    f"⚠ {row['Player']} — elite aerial threat (HOPS {row['Rating']:.3f}). Mark at every corner."
+                )
+    if not opp_corners.empty and "Delivery height" in opp_corners.columns:
+        top = opp_corners["Delivery height"].value_counts()
+        if not top.empty and top.iloc[0] / len(opp_corners) >= 0.55:
+            alerts.append(f"• {top.iloc[0] / len(opp_corners) * 100:.0f}% of corners delivered as {top.index[0].lower()} balls.")
+    if not opp_corners.empty and "side" in opp_corners.columns:
+        sc = opp_corners["side"].value_counts()
+        if not sc.empty and sc.iloc[0] / len(opp_corners) >= 0.60:
+            alerts.append(f"• Corner side bias: {sc.iloc[0] / len(opp_corners) * 100:.0f}% from {sc.index[0]} side.")
+    if opp_kpi["shot_rate"] >= 18:
+        alerts.append(f"• High shot rate: {opp_kpi['shot_rate']:.1f}% of set pieces generate a shot.")
+    if opp_kpi["top_taker"] not in {"Unknown", ""}:
+        alerts.append(f"• Primary corner taker: {opp_kpi['top_taker']}.")
+
+    with PdfPages(buffer) as pdf:
+        # Page 1: Cover
+        _pdf_cover_page(pdf, plt, my_team, opponent, my_kpi, opp_kpi, alerts, avg_xg_100)
+
+        # ── OPPONENT SECTION ─────────────────────────────────────────
+        _pdf_section_divider(pdf, plt, f"{opponent}", "Their set-piece attack — what you need to defend", "#ef4444")
+
+        # Corners
+        if not opp_corners.empty:
+            fig_del = mplsoccer_delivery_figure(opp_corners, "Corners")
+            fig_shot = mplsoccer_shot_figure(opp_corners, "Corners")
+            _pdf_two_figures(pdf, plt, fig_del, fig_shot, f"{opponent} — Corner deliveries & shots")
+            fig_out = mplsoccer_delivery_sp_outcome_figure(opp_corners, "Corners")
+            _pdf_two_figures(pdf, plt, fig_out, None, f"{opponent} — Corner delivery outcomes")
+            taker_lb = build_taker_leaderboard(opp_corners).head(12)
+            _pdf_df_page(pdf, plt, taker_lb, f"{opponent} — Corner takers", "Events, shot rate, xG/event, delivery tendency")
+            pattern_lb = build_pattern_library(opp_corners).head(12)
+            _pdf_df_page(pdf, plt, pattern_lb, f"{opponent} — Corner patterns", "Recurring delivery + zone combinations")
+
+        # Free kicks
+        if not opp_fks.empty:
+            fig_fk = freekick_origin_map_figure(opp_fks, f"{opponent} Freekick origins")
+            fig_fk_shot = mplsoccer_shot_figure(opp_fks, "Freekicks")
+            _pdf_two_figures(pdf, plt, fig_fk, fig_fk_shot, f"{opponent} — Freekick origins & shots")
+            fk_zones = freekick_zone_summary(opp_fks).head(10)
+            _pdf_df_page(pdf, plt, fk_zones, f"{opponent} — Freekick zone breakdown")
+            fk_takers = freekick_taker_summary(opp_fks).head(12)
+            _pdf_df_page(pdf, plt, fk_takers, f"{opponent} — Freekick takers")
+            fk_seq = freekick_sequence_summary(opp_fks).head(10)
+            _pdf_df_page(pdf, plt, fk_seq, f"{opponent} — Freekick sequences")
+
+        # Throw-ins
+        if not opp_tis.empty:
+            fig_ti = throwin_delivery_map_figure(opp_tis, f"{opponent} Throw-in deliveries")
+            _pdf_two_figures(pdf, plt, fig_ti, None, f"{opponent} — Throw-in delivery map")
+            ti_zones = throwin_zone_summary(opp_tis).head(10)
+            _pdf_df_page(pdf, plt, ti_zones, f"{opponent} — Throw-in zones")
+            ti_takers = throwin_taker_summary(opp_tis).head(12)
+            _pdf_df_page(pdf, plt, ti_takers, f"{opponent} — Throw-in takers (throwers)")
+
+        # HOPS aerial threats
+        if not opp_hops.empty:
+            _pdf_df_page(
+                pdf, plt,
+                opp_hops[["Player", "Rating", "Percentile", "Tier"]].head(20),
+                f"{opponent} — HOPS aerial threat watchlist",
+                "Players to mark at corners and free kicks",
+            )
+
+        # ── OUR SECTION ──────────────────────────────────────────────
+        _pdf_section_divider(pdf, plt, f"{my_team}", "Our attacking set pieces — reference", "#22c55e")
+
+        if not my_corners.empty:
+            fig_del = mplsoccer_delivery_figure(my_corners, "Corners")
+            fig_shot = mplsoccer_shot_figure(my_corners, "Corners")
+            _pdf_two_figures(pdf, plt, fig_del, fig_shot, f"{my_team} — Corner deliveries & shots")
+            taker_lb = build_taker_leaderboard(my_corners).head(12)
+            _pdf_df_page(pdf, plt, taker_lb, f"{my_team} — Corner takers")
+
+        if not my_fks.empty:
+            fig_fk = freekick_origin_map_figure(my_fks, f"{my_team} Freekick origins")
+            fig_fk_shot = mplsoccer_shot_figure(my_fks, "Freekicks")
+            _pdf_two_figures(pdf, plt, fig_fk, fig_fk_shot, f"{my_team} — Freekick origins & shots")
+            fk_takers = freekick_taker_summary(my_fks).head(12)
+            _pdf_df_page(pdf, plt, fk_takers, f"{my_team} — Freekick takers")
+
+        if not my_tis.empty:
+            fig_ti = throwin_delivery_map_figure(my_tis, f"{my_team} Throw-in deliveries")
+            _pdf_two_figures(pdf, plt, fig_ti, None, f"{my_team} — Throw-in delivery map")
+
+        # HOPS — our squad
+        my_hops = (
+            hops[hops["Team"].astype(str).eq(my_team)].sort_values("Rating", ascending=False)
+            if not hops.empty and "Team" in hops.columns
+            else pd.DataFrame()
+        )
+        if not my_hops.empty:
+            _pdf_df_page(
+                pdf, plt,
+                my_hops[["Player", "Rating", "Percentile", "Tier"]].head(20),
+                f"{my_team} — HOPS squad ratings",
+            )
+
+    buffer.seek(0)
+    return buffer.getvalue()

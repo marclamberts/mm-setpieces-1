@@ -32,6 +32,7 @@ from mm_setpieces_1.utils import (
     shotmap_figure,
     starting_location_map_figure,
     prematch_report_pdf_bytes,
+    full_scouting_report_pdf_bytes,
 )
 
 from sections._shared import (
@@ -466,38 +467,39 @@ def render_match_prep() -> None:
 
     # ── Export ────────────────────────────────────────────────────────────────
     with tab_export:
-        section_header("Download PDF brief")
+        section_header("Full scouting report", "All set-piece phases, both teams, HOPS watchlist — single PDF")
         st.markdown(
-            "The PDF report covers the **selected team's** attacking set pieces — corners, free kicks, and throw-ins — "
-            "plus a personnel summary. Generate one for each team to get a complete brief."
+            "<div class='mm-insight-card' style='margin-bottom:.9rem'>"
+            "Covers: threat index · head-to-head stats · scouting alerts · "
+            f"<strong>{opponent}</strong> corners/freekicks/throw-ins with pitch maps, taker tables and pattern library · "
+            f"HOPS aerial threat watchlist · <strong>{my_team}</strong> reference section."
+            "</div>",
+            unsafe_allow_html=True,
         )
 
-        report_for = st.radio("Generate report for", [my_team, opponent], horizontal=True, key="mp_pdf_team")
-        if report_for == my_team:
-            pdf_corners = my_corners
-            pdf_fks = my_fks
-        else:
-            pdf_corners = opp_corners
-            pdf_fks = opp_fks
+        safe_base = (
+            f"{my_team.lower().replace(' ', '_')}_vs_{opponent.lower().replace(' ', '_')}"
+            .replace("/", "_").replace("\\", "_")
+        )
 
-        pdf_data = pd.concat([pdf_corners, pdf_fks], ignore_index=True)
+        with st.spinner("Building full report — this takes ~15 seconds for large datasets…"):
+            full_pdf = full_scouting_report_pdf_bytes(
+                my_team, opponent,
+                my_corners, my_fks, my_tis,
+                opp_corners, opp_fks, opp_tis,
+                hops,
+            )
 
-        extra_label = st.text_input("Additional label / notes for filename", value="", key="mp_pdf_label")
-        safe_name = f"{report_for.lower().replace(' ', '_')}_vs_{opponent.lower().replace(' ', '_')}"
-        if extra_label.strip():
-            safe_name += f"_{extra_label.strip().lower().replace(' ', '_')}"
-
-        st.info("PDF generation may take a few seconds on large datasets.")
         st.download_button(
-            f"⬇ Download {report_for} pre-match PDF",
-            data=_cached_report_pdf(pdf_data, f"Match Prep — {report_for}", opponent if report_for == my_team else my_team),
-            file_name=f"{safe_name}_match_prep.pdf",
+            f"⬇  Download full scouting report — {my_team} vs {opponent}",
+            data=full_pdf,
+            file_name=f"{safe_base}_full_scouting_report.pdf",
             mime="application/pdf",
             use_container_width=True,
         )
 
         st.divider()
-        section_header("Export raw data")
+        section_header("Raw data export")
         export_choice = st.selectbox("Dataset", [
             f"{my_team} corners", f"{my_team} freekicks", f"{my_team} throw-ins",
             f"{opponent} corners", f"{opponent} freekicks", f"{opponent} throw-ins",
