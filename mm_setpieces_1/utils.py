@@ -679,7 +679,7 @@ def _folder_from_file(path: Path) -> str:
     return ""
 
 def _title_from_token(text: str) -> str:
-    upper_tokens = {"ii", "iii", "iv", "u21", "u23", "uae", "usa", "uk"}
+    upper_tokens = {"ii", "iii", "iv", "u21", "u23", "uae", "usa", "uk", "hnl", "snl", "mls", "nbl", "nfl", "nba", "usl", "az"}
     words = []
     for word in text.replace("_", " ").replace("-", " ").split():
         clean = word.strip()
@@ -806,7 +806,7 @@ def _league_from_filename(path: Path) -> str:
         return "Superliga"
     if "denmark" in text or "danish" in text or "dnk" in tokens or "den" in tokens:
         return "Denmark"
-    if "challenger pro" in text:
+    if "challenger pro" in text or "challenge league" in text:
         return "Challenger Pro League"
     if "jupiler" in text or "pro league" in text:
         return "Jupiler Pro League"
@@ -814,6 +814,12 @@ def _league_from_filename(path: Path) -> str:
         return "Jupiler Pro League"
     if "uae" in tokens or "emirates" in text:
         return "UAE Pro League"
+    if "hnl" in text or "croatia" in text or "croat" in text:
+        return "1. HNL"
+    if "snl" in text or "slovenia" in text or "slovenian" in text:
+        return "1. SNL"
+    if ("austria" in text or "austrian" in text) and ("2. liga" in text or "2 liga" in text or "zweite" in text):
+        return "2. Liga"
     return _league_from_generic_filename(path)
 
 
