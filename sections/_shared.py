@@ -19,6 +19,7 @@ from mm_setpieces_1.utils import (
     polish_plotly_figure,
     render_plotly_png_download,
     render_matplotlib_png_download,
+    matplotlib_figure_png_bytes,
     unique_start_events,
 )
 
@@ -530,8 +531,10 @@ def render_plotly_visual(fig, label: str, key: str) -> None:
     render_plotly_png_download(fig, label, key)
 
 
-def render_mpl_visual(fig, label: str, key: str) -> None:
-    st.pyplot(fig, use_container_width=True)
+def render_mpl_visual(fig, label: str, key: str, max_width: int = 500) -> None:
+    """Render a matplotlib figure as a compact PNG, capped at max_width pixels wide."""
+    png = matplotlib_figure_png_bytes(fig)
+    st.image(png, width=max_width)
     render_matplotlib_png_download(fig, label, key)
 
 
