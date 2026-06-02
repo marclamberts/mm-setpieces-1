@@ -62,6 +62,7 @@ def render_hops() -> None:
     scope_parts = [p for p in [team if team != "All" else None, league if league != "All" else None] if p]
     scope_str = " · ".join(scope_parts) if scope_parts else "All leagues"
     hero_block("Players", "HOPS", f"{scope_str} · {len(filtered):,} players")
+    st.session_state["ctx_row_count"] = f"HOPS · {len(filtered):,} players"
 
     render_export_controls(filtered, "hops", "HOPS")
     render_filter_summary("HOPS", len(df), len(filtered), [

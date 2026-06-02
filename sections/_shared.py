@@ -515,7 +515,7 @@ def render_plotly_visual(fig, label: str, key: str) -> None:
         st.plotly_chart(
             fig,
             use_container_width=True,
-            config={"displaylogo": False, "modeBarButtonsToRemove": ["toImage"]},
+            config={"displaylogo": False, "displayModeBar": False},
             key=f"{key}_chart",
         )
     else:

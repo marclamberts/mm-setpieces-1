@@ -285,6 +285,7 @@ def render_corners() -> None:
                                 selected_league if selected_league != "All" else None] if p]
     scope_str = " · ".join(scope_parts) if scope_parts else "All teams"
     hero_block("Set pieces", label, f"{scope_str} · {len(filtered):,} events")
+    st.session_state["ctx_row_count"] = f"{label} · {len(filtered):,} events"
 
     render_export_controls(filtered, label, label)
     render_filter_summary(label, len(df), len(filtered), filters)

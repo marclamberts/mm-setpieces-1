@@ -194,11 +194,18 @@ def _render_topnav(section: str) -> None:
         )
 
     home_href = f"?tok={urllib.parse.quote(token)}&section=Home"
+
+    ctx_rows = st.session_state.get("ctx_row_count", "")
+    ctx_html = ""
+    if section != "Home" and ctx_rows:
+        ctx_html = f'<div class="mm-topbar-right"><span class="mm-topbar-ctx">{ctx_rows}</span></div>'
+
     st.markdown(
         f"""
         <nav class="mm-topbar">
             <a class="mm-topbar-brand" href="{home_href}">{brand_inner}</a>
             <div class="mm-topbar-links">{links_html}</div>
+            {ctx_html}
         </nav>
         """,
         unsafe_allow_html=True,

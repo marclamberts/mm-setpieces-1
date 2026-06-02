@@ -246,14 +246,31 @@ def section_header(title: str, note: str = "") -> None:
 
 def polish_plotly_figure(fig: go.Figure) -> go.Figure:
     fig.update_layout(
-        font=dict(color="#e5e7eb", family="Inter, Arial, sans-serif"),
-        title_font=dict(color="#f1f5f9", size=16),
+        font=dict(color="#d1d5db", family="Inter, Arial, sans-serif", size=12),
+        title_font=dict(color="#f1f5f9", size=13, family="Inter, Arial, sans-serif"),
         paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="#1e2230",
-        colorway=["#22c55e", "#60a5fa", "#f59e0b", "#a78bfa", "#f87171", "#34d399", "#94a3b8"],
+        plot_bgcolor="#161922",
+        colorway=["#22c55e", "#3b82f6", "#f59e0b", "#8b5cf6", "#06b6d4", "#f43f5e", "#94a3b8"],
+        legend=dict(
+            bgcolor="rgba(0,0,0,0)",
+            bordercolor="rgba(255,255,255,0.08)",
+            borderwidth=1,
+            font=dict(size=11, color="#9ca3af"),
+        ),
+        margin=dict(l=8, r=8, t=32, b=8),
     )
-    fig.update_xaxes(showgrid=True, gridcolor="rgba(255,255,255,0.06)", zeroline=False, color="#9ca3af")
-    fig.update_yaxes(showgrid=True, gridcolor="rgba(255,255,255,0.06)", zeroline=False, color="#9ca3af")
+    fig.update_xaxes(
+        showgrid=True, gridcolor="rgba(255,255,255,0.05)",
+        zeroline=False, color="#6b7280",
+        tickfont=dict(size=11), title_font=dict(size=11),
+        linecolor="rgba(255,255,255,0.08)",
+    )
+    fig.update_yaxes(
+        showgrid=True, gridcolor="rgba(255,255,255,0.05)",
+        zeroline=False, color="#6b7280",
+        tickfont=dict(size=11), title_font=dict(size=11),
+        linecolor="rgba(255,255,255,0.08)",
+    )
     return fig
 
 
@@ -2264,6 +2281,24 @@ def render_analyst_table(
             styler = styler.format({col: _compact})
         else:
             styler = styler.format({col: _compact})
+
+    # Column alignment: numbers right, text left
+    text_cols = [c for c in display_df.columns if c not in all_numeric]
+    for col in all_numeric:
+        styler = styler.set_properties(subset=[col], **{
+            "text-align": "right",
+            "font-variant-numeric": "tabular-nums",
+        })
+    for col in text_cols:
+        styler = styler.set_properties(subset=[col], **{"text-align": "left"})
+
+    # Per-column header alignment to match
+    col_header_styles: dict[str, list[dict]] = {}
+    for col in display_df.columns:
+        align = "right" if col in all_numeric else "left"
+        col_header_styles[col] = [{"selector": "th", "props": [("text-align", align)]}]
+    if col_header_styles:
+        styler = styler.set_table_styles(col_header_styles, overwrite=False, axis=0)
 
     # Apply per-column gradients
     for col in target_cols:
