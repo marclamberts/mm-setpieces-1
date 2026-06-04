@@ -22,6 +22,7 @@ from sections._shared import (
     bar_chart,
     histogram_chart,
     render_plotly_visual,
+    set_section,
 )
 
 
@@ -62,6 +63,7 @@ def render_hops() -> None:
     scope_parts = [p for p in [team if team != "All" else None, league if league != "All" else None] if p]
     scope_str = " · ".join(scope_parts) if scope_parts else "All leagues"
     hero_block("Players", "HOPS", f"{scope_str} · {len(filtered):,} players")
+    st.session_state["ctx_row_count"] = f"HOPS · {len(filtered):,} players"
 
     render_export_controls(filtered, "hops", "HOPS")
     render_filter_summary("HOPS", len(df), len(filtered), [
@@ -188,6 +190,21 @@ def render_hops() -> None:
             with rc2:
                 st.caption(f"**{team_b}** — {len(sq_b)} players")
                 render_analyst_table(sq_b[["Player", "Rating", "Percentile", "Tier"]].head(20), height=380)
+
+            section_header("Jump to set-piece analysis")
+            ja1, ja2, ja3, ja4, ja5, ja6 = st.columns(6)
+            if ja1.button(f"⚽ {team_a} Corners", key="hops_jump_a_corners"):
+                set_section("Corners", team=team_a)
+            if ja2.button(f"🎯 {team_a} Freekicks", key="hops_jump_a_fk"):
+                set_section("Freekicks", team=team_a)
+            if ja3.button(f"↗ {team_a} Throw-ins", key="hops_jump_a_ti"):
+                set_section("Throw-ins", team=team_a)
+            if ja4.button(f"⚽ {team_b} Corners", key="hops_jump_b_corners"):
+                set_section("Corners", team=team_b)
+            if ja5.button(f"🎯 {team_b} Freekicks", key="hops_jump_b_fk"):
+                set_section("Freekicks", team=team_b)
+            if ja6.button(f"↗ {team_b} Throw-ins", key="hops_jump_b_ti"):
+                set_section("Throw-ins", team=team_b)
 
             section_header("Rating distributions")
             dist_l, dist_r = st.columns(2)

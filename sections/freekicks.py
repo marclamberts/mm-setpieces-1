@@ -160,7 +160,7 @@ def render_freekicks() -> None:
     if league != "All" and "League" in filtered.columns:
         filtered = filtered[filtered["League"].eq(league)].copy()
     filtered = _apply_team_perspective(filtered, team, perspective)
-    if sample == "Last 10 games" and "match_rank" in filtered.columns:
+    if sample == "Last 10" and "match_rank" in filtered.columns:
         filtered = filtered[filtered["match_rank"] <= 10].copy()
     if taker_filter and "Taker" in filtered.columns:
         filtered = filtered[filtered["Taker"].isin(taker_filter)].copy()
@@ -177,6 +177,7 @@ def render_freekicks() -> None:
     scope_parts = [p for p in [team if team != "All" else None, league if league != "All" else None] if p]
     scope_str = " · ".join(scope_parts) if scope_parts else "All teams"
     hero_block("Set pieces", label, f"{scope_str} · {len(filtered):,} events")
+    st.session_state["ctx_row_count"] = f"{label} · {len(filtered):,} events"
 
     render_export_controls(filtered, "freekicks", label)
     render_filter_summary(label, len(df), len(filtered), filters)

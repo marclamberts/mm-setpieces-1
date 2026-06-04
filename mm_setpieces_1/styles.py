@@ -130,6 +130,20 @@ def inject_app_style() -> None:  # noqa: C901
                 font-weight: 600;
                 border-bottom-color: {GREEN};
             }}
+            .mm-topbar-right {{
+                display: flex; align-items: center;
+                gap: .6rem; flex-shrink: 0; margin-left: .4rem;
+            }}
+            .mm-topbar-ctx {{
+                color: {MUTED_2};
+                font-size: .72rem; font-weight: 500;
+                background: rgba(255,255,255,0.06);
+                border: 1px solid rgba(255,255,255,0.10);
+                border-radius: 4px;
+                padding: .22rem .65rem;
+                letter-spacing: .01em;
+                white-space: nowrap;
+            }}
 
             /* ── Main-area inputs ───────────────────────────────── */
             [data-baseweb="select"] > div,
@@ -255,33 +269,41 @@ def inject_app_style() -> None:  # noqa: C901
                 align-items: center;
                 justify-content: space-between;
                 gap: 1rem;
-                padding: 0 0 .3rem;
-                margin: 1.1rem 0 .55rem;
+                padding: .1rem 0 .4rem .72rem;
+                margin: 1.2rem 0 .6rem;
                 border-bottom: 1px solid {BORDER};
+                border-left: 2px solid {GREEN};
             }}
             .mm-section-title {{
-                color: {MUTED} !important;
-                font-size: .58rem !important;
+                color: {MUTED_2} !important;
+                font-size: .7rem !important;
                 font-weight: 700 !important;
                 text-transform: uppercase !important;
-                letter-spacing: .16em !important;
+                letter-spacing: .13em !important;
             }}
             .mm-section-title::before {{ display: none !important; }}
             .mm-section-note {{
                 color: {MUTED} !important;
-                font-size: .71rem !important;
+                font-size: .72rem !important;
             }}
 
             /* ── Filter panel ───────────────────────────────────── */
             .mm-filter-panel {{
-                background: transparent;
-                border: none;
-                border-bottom: 1px solid {BORDER};
-                border-radius: 0;
-                padding: 0 0 .6rem;
-                margin-bottom: .85rem;
+                background: {SURFACE};
+                border: 1px solid {BORDER};
+                border-radius: 6px;
+                padding: .6rem .85rem .4rem;
+                margin-bottom: .9rem;
             }}
-            .mm-filter-panel-label {{ display: none; }}
+            .mm-filter-panel-label {{
+                color: {MUTED} !important;
+                font-size: .57rem !important;
+                font-weight: 700 !important;
+                text-transform: uppercase !important;
+                letter-spacing: .13em !important;
+                margin-bottom: .3rem !important;
+                display: block;
+            }}
 
             /* ── KPI deck ───────────────────────────────────────── */
             .mm-kpi-deck {{
@@ -593,24 +615,26 @@ def inject_app_style() -> None:  # noqa: C901
 
             /* ── Native st.metric ───────────────────────────────── */
             div[data-testid="stMetric"] {{
-                background: transparent !important;
-                border: none !important;
-                border-top: 1px solid {BORDER} !important;
-                border-radius: 0 !important;
-                padding: .65rem 0 .4rem !important;
+                background: {SURFACE} !important;
+                border: 1px solid {BORDER} !important;
+                border-top: 2px solid {GREEN} !important;
+                border-radius: 6px !important;
+                padding: .75rem .9rem .6rem !important;
                 box-shadow: none !important;
             }}
             div[data-testid="stMetric"]::before {{ display: none !important; }}
             div[data-testid="stMetricLabel"] p {{
-                color: #9ca3af !important;
-                font-size: .58rem !important; font-weight: 700 !important;
-                text-transform: uppercase !important; letter-spacing: .12em !important;
+                color: {MUTED} !important;
+                font-size: .57rem !important; font-weight: 700 !important;
+                text-transform: uppercase !important; letter-spacing: .13em !important;
+                margin-bottom: .25rem !important;
             }}
             div[data-testid="stMetricValue"] {{
                 color: #ffffff !important;
-                font-size: 1.5rem !important; font-weight: 800 !important;
+                font-size: 1.55rem !important; font-weight: 800 !important;
                 font-variant-numeric: tabular-nums !important;
-                letter-spacing: -.03em !important;
+                letter-spacing: -.035em !important;
+                line-height: 1 !important;
             }}
             div[data-testid="stMetricDelta"] {{ display: none; }}
 

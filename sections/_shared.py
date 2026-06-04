@@ -19,6 +19,7 @@ from mm_setpieces_1.utils import (
     polish_plotly_figure,
     render_plotly_png_download,
     render_matplotlib_png_download,
+    matplotlib_figure_png_bytes,
     unique_start_events,
 )
 
@@ -32,7 +33,7 @@ except Exception:
 from mm_setpieces_1.utils import plotly_figure_png_bytes  # noqa: F401
 
 
-APP_SECTIONS = ["Home", "Corners", "Freekicks", "Throw-ins", "HOPS", "League Comparison", "Delay Analysis", "Match Prep", "Data Justification"]
+APP_SECTIONS = ["Home", "Corners", "Freekicks", "Throw-ins", "HOPS", "League Comparison", "Delay Analysis", "Match Prep", "Takers", "Routines", "Impact Score", "Defensive", "Trends", "Intel Card", "Data Justification"]
 
 FILTER_PREFIXES = {
     "Corners": "corners",
@@ -42,6 +43,12 @@ FILTER_PREFIXES = {
     "League Comparison": "league_comparison",
     "Delay Analysis": "delay",
     "Match Prep": "match_prep",
+    "Takers": "takers",
+    "Routines": "routines",
+    "Impact Score": "impact",
+    "Defensive": "defensive",
+    "Trends": "trends",
+    "Intel Card": "intel_card",
 }
 
 # ---------------------------------------------------------------------------
@@ -194,7 +201,7 @@ def _with_match_names(df: pd.DataFrame) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 
 @st.cache_data(show_spinner=False)
-def load_hops_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
+def load_hops_data(_data_version: str = DATA_VERSION, _code_v: str = "league_fix_v3") -> pd.DataFrame:
     sources = []
     for path in _data_files("HOPS", (".parquet",)):
         try:
@@ -487,8 +494,12 @@ def search_people(query: str, corners: pd.DataFrame, freekicks: pd.DataFrame, th
 # Navigation helpers
 # ---------------------------------------------------------------------------
 
-def set_section(section: str) -> None:
+def set_section(section: str, team: str | None = None) -> None:
     st.session_state["section"] = section
+    if team:
+        prefix = FILTER_PREFIXES.get(section)
+        if prefix:
+            st.session_state[f"{prefix}_team"] = team
     try:
         st.query_params["section"] = section
     except Exception:
@@ -515,7 +526,7 @@ def render_plotly_visual(fig, label: str, key: str) -> None:
         st.plotly_chart(
             fig,
             use_container_width=True,
-            config={"displaylogo": False, "modeBarButtonsToRemove": ["toImage"]},
+            config={"displaylogo": False, "displayModeBar": False},
             key=f"{key}_chart",
         )
     else:
@@ -523,8 +534,10 @@ def render_plotly_visual(fig, label: str, key: str) -> None:
     render_plotly_png_download(fig, label, key)
 
 
-def render_mpl_visual(fig, label: str, key: str) -> None:
-    st.pyplot(fig, use_container_width=True)
+def render_mpl_visual(fig, label: str, key: str, max_width: int = 500) -> None:
+    """Render a matplotlib figure as a compact PNG, capped at max_width pixels wide."""
+    png = matplotlib_figure_png_bytes(fig)
+    st.image(png, width=max_width)
     render_matplotlib_png_download(fig, label, key)
 
 

@@ -23,6 +23,7 @@ from sections._shared import (
     selected_team_staff_read,
     search_people,
     set_section,
+    FILTER_PREFIXES,
 )
 
 LOGO_PATH = Path(__file__).resolve().parent.parent / "assets" / "setplaypro-logo.jpg"
@@ -42,6 +43,18 @@ MODULE_CARDS = [
      "Opponent-specific set piece intelligence for upcoming fixtures."),
     ("Delay Analysis",   "home_open_delay",             "⏱",  "Delay Analysis",
      "Corner delivery timing and delay patterns over time."),
+    ("Takers",           "home_open_takers",            "👤", "Set Piece Takers",
+     "Player-level delivery stats, xG per 100, shot-assist rate and foot preference."),
+    ("Routines",         "home_open_routines",          "📖", "Routines Playbook",
+     "Save, tag and review set piece routines for pre-match preparation."),
+    ("Impact Score",     "home_open_impact",            "🏆", "Impact Score",
+     "Composite set piece rating: xG threat, shot creation, conversion, volume, aerial power."),
+    ("Defensive",        "home_open_defensive",         "🛡", "Defensive Analysis",
+     "xG conceded, shot locations, GK analysis and defensive league ranking."),
+    ("Trends",           "home_open_trends",            "📈", "Set Piece Trends",
+     "Rolling match-by-match xG, shot rate and attack vs defence differential over time."),
+    ("Intel Card",       "home_open_intel",             "🗂", "Intel Card",
+     "One-page pre-match brief: threats, key personnel, preferences and PDF download."),
 ]
 
 
@@ -95,6 +108,84 @@ def _db_stats(corners, freekicks, throwins, hops) -> list[tuple[str, str, str]]:
     ]
 
 
+def _render_highlights(corners, freekicks, throwins, hops) -> None:
+    items: list[tuple[str, str, str]] = []
+
+    # Best HOPS player
+    if not hops.empty and "Player" in hops.columns and "Rating" in hops.columns:
+        top = hops.nlargest(1, "Rating").iloc[0]
+        items.append((
+            "Top aerial player",
+            str(top["Player"]),
+            f"Rating {top['Rating']:.3f} · {top.get('Team', '')}",
+        ))
+
+    # Team with most corner shots
+    shot_col = next((c for c in ["is_shot", "Shot", "shot"] if c in corners.columns), None)
+    if not corners.empty and "Team" in corners.columns and shot_col:
+        shot_col = shot_col
+        shot_df = corners[corners[shot_col].astype(str).str.lower().isin(["true", "1", "yes", "shot"])]
+        if shot_df.empty:
+            shot_df = corners
+        team_shots = shot_df.groupby("Team").size().sort_values(ascending=False)
+        if not team_shots.empty:
+            best_team = team_shots.index[0]
+            items.append((
+                "Most corner shots",
+                str(best_team),
+                f"{team_shots.iloc[0]:,} shots from corners",
+            ))
+    if len(items) < 2 and not corners.empty and "Team" in corners.columns:
+        team_counts = corners.groupby("Team").size().sort_values(ascending=False)
+        if not team_counts.empty:
+            items.append((
+                "Most active corner team",
+                str(team_counts.index[0]),
+                f"{team_counts.iloc[0]:,} corners taken",
+            ))
+
+    # League with most events
+    all_events = pd.concat(
+        [df[["League"]] for df in [corners, freekicks, throwins]
+         if not df.empty and "League" in df.columns],
+        ignore_index=True,
+    )
+    if not all_events.empty:
+        league_counts = all_events.groupby("League").size().sort_values(ascending=False)
+        if not league_counts.empty:
+            items.append((
+                "Most data",
+                str(league_counts.index[0]),
+                f"{league_counts.iloc[0]:,} events indexed",
+            ))
+
+    # Top freekick team by event count
+    if not freekicks.empty and "Team" in freekicks.columns:
+        fk_counts = freekicks.groupby("Team").size().sort_values(ascending=False)
+        if not fk_counts.empty:
+            items.append((
+                "Most active FK team",
+                str(fk_counts.index[0]),
+                f"{fk_counts.iloc[0]:,} free kicks",
+            ))
+
+    # Render up to 4 highlights
+    items = items[:4]
+    if not items:
+        return
+    cols = st.columns(len(items), gap="small")
+    for col, (label, value, sub) in zip(cols, items):
+        col.markdown(
+            f"""<div class="mm-kpi-card" style="background:#161922;border:1px solid rgba(255,255,255,0.08);
+                border-top:2px solid #22c55e;border-radius:6px;padding:.75rem .9rem .6rem">
+                <div class="mm-kpi-label">{label}</div>
+                <div class="mm-kpi-value" style="font-size:1rem;letter-spacing:-.01em;line-height:1.2">{value}</div>
+                <div class="mm-kpi-help">{sub}</div>
+            </div>""",
+            unsafe_allow_html=True,
+        )
+
+
 def render_home() -> None:
     corners, freekicks, throwins, hops = _home_data(DATA_VERSION)
 
@@ -112,6 +203,10 @@ def render_home() -> None:
         f'<div class="mm-dbstats-bar">{stat_items}</div>',
         unsafe_allow_html=True,
     )
+
+    # ── Highlights strip ─────────────────────────────────────────────
+    section_header("Season highlights")
+    _render_highlights(corners, freekicks, throwins, hops)
 
     # ── Module cards ─────────────────────────────────────────────────
     section_header("Analysis Modules")
@@ -197,6 +292,16 @@ def render_home() -> None:
         )
 
     render_analyst_table(snapshot, height=190)
+
+    jc1, jc2, jc3, jc4 = st.columns(4)
+    if jc1.button(f"⚽ {selected_team} Corners", key="home_jump_corners"):
+        set_section("Corners", team=selected_team)
+    if jc2.button(f"🎯 {selected_team} Freekicks", key="home_jump_fk"):
+        set_section("Freekicks", team=selected_team)
+    if jc3.button(f"↗ {selected_team} Throw-ins", key="home_jump_ti"):
+        set_section("Throw-ins", team=selected_team)
+    if jc4.button(f"🏃 {selected_team} HOPS", key="home_jump_hops"):
+        set_section("HOPS", team=selected_team)
 
     # ── Global player search ─────────────────────────────────────────
     st.markdown("<div style='height:.15rem'></div>", unsafe_allow_html=True)
