@@ -148,14 +148,17 @@ def load_matches(path):
         if not opta_id:
             continue
 
+        local_date = str(row.get("matchInfo/localDate", row.get("matchInfo/date", ""))).strip().rstrip("Z")[:10]
+
         matches[opta_id] = {
-            "opta_id":   opta_id,
-            "match_id":  _opta_id_to_int(opta_id),
-            "home_name": home_name,
-            "away_name": away_name,
-            "home_cid":  home_cid,
-            "away_cid":  away_cid,
-            "label":     f"{home_name} - {away_name}",
+            "opta_id":    opta_id,
+            "match_id":   _opta_id_to_int(opta_id),
+            "home_name":  home_name,
+            "away_name":  away_name,
+            "home_cid":   home_cid,
+            "away_cid":   away_cid,
+            "label":      f"{home_name} - {away_name}",
+            "local_date": local_date,
         }
         contestant_to_team[home_cid] = home_name
         contestant_to_team[away_cid] = away_name
@@ -164,25 +167,51 @@ def load_matches(path):
     return matches, contestant_to_team
 
 
+def _parse_filename(fname):
+    """
+    Parse filenames in either format:
+      YYYY-MM-DD_Home Team - Away Team.json      (new Saudi format)
+      YYYYMMDD_Home_Team__Away_Team.json         (old format)
+    Returns (date_str, home_raw, away_raw) or (None, None, None).
+    """
+    # Strip known suffixes before extension
+    stem = re.sub(r"_with_xA$", "", fname.replace(".json", ""))
+
+    # New format: YYYY-MM-DD_Home - Away
+    m = re.match(r"(\d{4}-\d{2}-\d{2})_(.+?) - (.+)$", stem)
+    if m:
+        return m.group(1), m.group(2).strip(), m.group(3).strip()
+
+    # Old format: YYYYMMDD_Home__Away
+    m = re.match(r"(\d{8})_(.+?)__(.+)$", stem)
+    if m:
+        return m.group(1), m.group(2).replace("_", " ").strip(), m.group(3).replace("_", " ").strip()
+
+    return None, None, None
+
+
 def _match_by_teams(fname, matches_by_id):
     """
-    Match filename like '20260506_Al_Ahli_FC__Al_Fateh_SC.json'
-    against match records by normalised team name comparison.
+    Match filename against match records by date + normalised team names.
     """
-    m = re.search(r"\d{8}_(.+?)__(.+?)\.json", fname)
-    if not m:
+    date, raw_home, raw_away = _parse_filename(fname)
+    if raw_home is None:
         return None
-    raw_home = _norm(m.group(1).replace("_", " "))
-    raw_away = _norm(m.group(2).replace("_", " "))
 
-    best = None
-    for mid, rec in matches_by_id.items():
+    norm_home = _norm(raw_home)
+    norm_away = _norm(raw_away)
+
+    # Filter by date first (much faster, avoids cross-match false hits)
+    candidates = [rec for rec in matches_by_id.values() if not date or rec.get("local_date", "") == date]
+    if not candidates:
+        candidates = list(matches_by_id.values())  # fallback: all matches
+
+    for rec in candidates:
         nh = _norm(rec["home_name"])
         na = _norm(rec["away_name"])
-        if (raw_home in nh or nh in raw_home) and (raw_away in na or na in raw_away):
-            best = rec
-            break
-    return best
+        if (norm_home in nh or nh in norm_home) and (norm_away in na or na in norm_away):
+            return rec
+    return None
 
 
 # ── Load JSON events ──────────────────────────────────────────────────────────
