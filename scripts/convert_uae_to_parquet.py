@@ -1,10 +1,7 @@
 from __future__ import annotations
 
 import csv
-import glob
 import json
-import math
-import os
 import re
 import zlib
 from collections import defaultdict
@@ -12,9 +9,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pandas as pd
-from openpyxl import Workbook, load_workbook
-from openpyxl.styles import Alignment, Font, PatternFill
-from openpyxl.utils import get_column_letter
 
 
 OPTA_PITCH_LENGTH = 100
@@ -455,40 +449,6 @@ def write_sp_parquet(rows: list[list], fk_path: Path, ti_path: Path) -> None:
         print(f"  {path.name}: {len(subset)} rows")
 
 
-# ── Excel writer ──────────────────────────────────────────────────────────────
-
-def write_workbook(path: Path, headers: list[str], rows: list[list]) -> None:
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Sheet 1"
-    ws.append(headers)
-    for row in rows:
-        ws.append(row[:len(headers)])  # Excel only gets its column subset
-
-    header_fill = PatternFill("solid", fgColor="D9EAF7")
-    for cell in ws[1]:
-        cell.font = Font(bold=True)
-        cell.fill = header_fill
-        cell.alignment = Alignment(horizontal="center")
-    ws.freeze_panes = "A2"
-    ws.auto_filter.ref = ws.dimensions
-
-    widths = {}
-    for row in ws.iter_rows():
-        for cell in row:
-            value = "" if cell.value is None else str(cell.value)
-            widths[cell.column] = min(max(widths.get(cell.column, 0), len(value) + 2), 48)
-    for col_idx, width in widths.items():
-        ws.column_dimensions[get_column_letter(col_idx)].width = max(width, 10)
-    for row in ws.iter_rows(min_row=2):
-        for cell in row:
-            if isinstance(cell.value, float) and not math.isclose(cell.value, round(cell.value)):
-                cell.number_format = "0.000"
-    ws.sheet_view.showGridLines = True
-    path.parent.mkdir(parents=True, exist_ok=True)
-    wb.save(path)
-
-
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -503,19 +463,6 @@ def main() -> None:
     sp_rows = build_sp_rows(matches, shots_by_match)
     print(f"  {len(sp_rows)} rows")
 
-    # Excel output (unchanged)
-    corner_xlsx = OUT_DIR / "Corners/UAE - Corners 2025-2026.xlsx"
-    sp_xlsx     = OUT_DIR / "UAE SP.xlsx"
-    write_workbook(corner_xlsx, CORNER_HEADERS, corner_rows)
-    write_workbook(sp_xlsx,     SP_HEADERS,     sp_rows)
-
-    for output in (corner_xlsx, sp_xlsx):
-        wb = load_workbook(output, read_only=True, data_only=True)
-        ws = wb.active
-        print(f"{output.name}: {ws.max_row - 1} data rows, {ws.max_column} columns")
-        wb.close()
-
-    # Parquet output
     print("\nWriting parquet files …")
     write_corners_parquet(
         corner_rows,
