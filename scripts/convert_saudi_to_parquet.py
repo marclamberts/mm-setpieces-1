@@ -21,11 +21,7 @@ Opta event conventions:
   qualifier 72 / 224       → inswinging / outswinging corner
 
 Usage (run on your local machine):
-    python scripts/convert_saudi_to_parquet.py \\
-        --done   "/Users/user/XG/Saudi/DONE" \\
-        --xgcsv  "/xgCSV" \\
-        --matches "/Users/user/XG/Saudi Matches.csv" \\
-        --out    "/path/to/mm-setpieces-1/Data"
+    python scripts/convert_saudi_to_parquet.py
 
 Outputs:
     Data/Corners/Saudi Pro League - Corners 2025-2026.parquet
@@ -33,28 +29,23 @@ Outputs:
     Data/SP/Saudi Pro League - Throwins.parquet
 """
 
-import argparse
 import json
 import os
 import glob
 import re
 import zlib
 from collections import Counter
+from pathlib import Path
 
 import pandas as pd
 
 
-# ── CLI ──────────────────────────────────────────────────────────────────────
-
-def parse_args():
-    p = argparse.ArgumentParser()
-    p.add_argument("--done",    required=True, help="Dir with Opta JSON event files")
-    p.add_argument("--xgcsv",  required=True, help="Dir with per-match metadata CSVs (can be empty)")
-    p.add_argument("--matches", required=True, help="Saudi Matches.csv")
-    p.add_argument("--out",     required=True, help="Root Data/ directory of the repo")
-    p.add_argument("--shot-window", type=int, default=30,
-                   help="Seconds after set piece to search for a linked shot (default 30)")
-    return p.parse_args()
+BASE       = Path("/Users/user/XG/Saudi")
+DONE_DIR   = BASE / "DONE"
+XGCSV_DIR  = BASE / "xgCSV"
+MATCHES_CSV = BASE / "Saudi Matches.csv"
+OUT_DIR    = Path("/Users/user/Documents/GitHub/mm-setpieces-1/Data")
+SHOT_WINDOW = 30  # seconds after set piece to look for a linked shot
 
 
 # ── Qualifier helpers ─────────────────────────────────────────────────────────
@@ -202,7 +193,7 @@ def load_json_events(done_dir, matches_by_id, contestant_to_team):
       { match_rec, team_map, events }
     """
     result = []
-    for fp in sorted(glob.glob(os.path.join(done_dir, "*.json"))):
+    for fp in sorted(glob.glob(os.path.join(str(done_dir), "*.json"))):
         fname = os.path.basename(fp)
         try:
             with open(fp, encoding="utf-8") as f:
@@ -465,35 +456,33 @@ def build_sp(all_matches, shot_window):
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 def main():
-    args = parse_args()
-
     print("Loading Saudi Matches.csv …")
-    matches_by_id, contestant_to_team = load_matches(args.matches)
+    matches_by_id, contestant_to_team = load_matches(MATCHES_CSV)
 
     print("Loading JSON event files …")
-    all_matches = load_json_events(args.done, matches_by_id, contestant_to_team)
+    all_matches = load_json_events(DONE_DIR, matches_by_id, contestant_to_team)
     print(f"  {len(all_matches)} matches loaded\n")
 
     if not all_matches:
         print("ERROR: No event files matched. Check team names in filenames vs CSV.")
         return
 
-    print(f"Building corners (shot window={args.shot_window}s) …")
-    corners_df = build_corners(all_matches, args.shot_window)
+    print(f"Building corners (shot window={SHOT_WINDOW}s) …")
+    corners_df = build_corners(all_matches, SHOT_WINDOW)
     print(f"  {len(corners_df)} rows")
 
     print("Building freekicks and throwins …")
-    fk_df, ti_df = build_sp(all_matches, args.shot_window)
+    fk_df, ti_df = build_sp(all_matches, SHOT_WINDOW)
     print(f"  {len(fk_df)} freekick rows, {len(ti_df)} throwin rows\n")
 
-    corners_dir = os.path.join(args.out, "Corners")
-    sp_dir      = os.path.join(args.out, "SP")
-    os.makedirs(corners_dir, exist_ok=True)
-    os.makedirs(sp_dir,      exist_ok=True)
+    corners_dir = OUT_DIR / "Corners"
+    sp_dir      = OUT_DIR / "SP"
+    corners_dir.mkdir(parents=True, exist_ok=True)
+    sp_dir.mkdir(parents=True, exist_ok=True)
 
-    corners_path = os.path.join(corners_dir, "Saudi Pro League - Corners 2025-2026.parquet")
-    fk_path      = os.path.join(sp_dir,      "Saudi Pro League - Freekicks.parquet")
-    ti_path      = os.path.join(sp_dir,      "Saudi Pro League - Throwins.parquet")
+    corners_path = corners_dir / "Saudi Pro League - Corners 2025-2026.parquet"
+    fk_path      = sp_dir      / "Saudi Pro League - Freekicks.parquet"
+    ti_path      = sp_dir      / "Saudi Pro League - Throwins.parquet"
 
     corners_df.to_parquet(corners_path, engine="pyarrow", compression="zstd", index=False)
     fk_df.to_parquet(fk_path,           engine="pyarrow", compression="zstd", index=False)
