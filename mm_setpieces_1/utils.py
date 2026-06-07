@@ -827,6 +827,12 @@ def _league_from_filename(path: Path) -> str:
         return "Challenger Pro League"
     if "saudi" in text or "ksa" in tokens:
         return "Saudi Pro League"
+    if "greece" in text or "greek" in text:
+        return "Greece Super League"
+    if "switzerland" in text or "swiss" in text:
+        if "challenge" in text:
+            return "Switzerland Challenge League"
+        return "Switzerland Super League"
     if "jupiler" in text or "pro league" in text:
         return "Jupiler Pro League"
     if "belgium" in text or "belgian" in text or "bel" in tokens:
