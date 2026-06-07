@@ -825,6 +825,8 @@ def _league_from_filename(path: Path) -> str:
         return "Denmark"
     if "challenger pro" in text or "challenge league" in text:
         return "Challenger Pro League"
+    if "saudi" in text or "ksa" in tokens:
+        return "Saudi Pro League"
     if "jupiler" in text or "pro league" in text:
         return "Jupiler Pro League"
     if "belgium" in text or "belgian" in text or "bel" in tokens:
@@ -1052,6 +1054,8 @@ def _normalise_league_name(value: object) -> str:
         "czech republic - 1. liga": "czech",
         "croatia - 1. hnl": "croatia",
         "uae - uae pro league": "uae",
+        "saudi arabian league": "saudi pro league",
+        "saudi league": "saudi pro league",
     }
     text = replacements.get(text, text)
     for prefix in ["australia - ", "italy - ", "germany - ", "sweden - ", "czech republic - ", "croatia - ", "uae - "]:
