@@ -218,17 +218,15 @@ def render_home() -> None:
         cols = st.columns(len(row), gap="small")
         for col, (section, key, icon, short, desc) in zip(cols, row):
             with col:
-                # Invisible overlay button fills the card; visible card is pure HTML
                 st.markdown(
                     f"""<div class="mm-mod-card" id="mc-{key}">
                         <div class="mm-mod-icon">{icon}</div>
                         <div class="mm-mod-title">{short}</div>
                         <div class="mm-mod-desc">{desc}</div>
-                        <div class="mm-mod-cta">Open →</div>
                     </div>""",
                     unsafe_allow_html=True,
                 )
-                if st.button("", key=key, use_container_width=True, help=f"Open {short}"):
+                if st.button("Open →", key=key, use_container_width=True):
                     set_section(section)
 
     # ── Team Snapshot ────────────────────────────────────────────────

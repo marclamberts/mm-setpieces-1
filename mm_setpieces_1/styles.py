@@ -882,17 +882,6 @@ def inject_app_style() -> None:  # noqa: C901
             .mm-mod-card:hover {{
                 border-color: {BORDER_2};
             }}
-            .mm-mod-card + div > button,
-            .mm-mod-card ~ div div.stButton > button {{
-                position: absolute !important;
-                inset: 0 !important;
-                opacity: 0 !important;
-                width: 100% !important;
-                height: 100% !important;
-                min-height: unset !important;
-                border-radius: 5px !important;
-                cursor: pointer !important;
-            }}
             .mm-mod-icon {{
                 font-size: 1.15rem;
                 margin-bottom: .38rem;
