@@ -949,16 +949,16 @@ def inject_app_style() -> None:  # noqa: C901
                 margin-bottom: .8rem !important;
             }}
             .mm-nav-card-action div.stButton > button {{
-                background: transparent !important;
-                border: 1px solid {BORDER_2} !important;
-                color: {MUTED} !important;
+                background: #2e3038 !important;
+                border: 1px solid rgba(255,255,255,0.14) !important;
+                color: #ffffff !important;
                 font-size: .72rem !important; font-weight: 600 !important;
                 min-height: 26px !important;
             }}
             .mm-nav-card-action div.stButton > button:hover {{
-                background: rgba(34,197,94,0.06) !important;
-                border-color: rgba(34,197,94,0.32) !important;
-                color: {GREEN} !important;
+                background: #383b45 !important;
+                border-color: rgba(255,255,255,0.22) !important;
+                color: #ffffff !important;
             }}
 
             /* ── Filter bar ─────────────────────────────────────── */
