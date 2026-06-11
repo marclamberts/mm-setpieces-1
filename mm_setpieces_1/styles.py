@@ -156,6 +156,8 @@ def inject_app_style() -> None:  # noqa: C901
             }}
             [data-baseweb="select"] span,
             [data-baseweb="select"] input,
+            [data-baseweb="select"] div,
+            [data-baseweb="select"] p,
             [data-baseweb="input"] input,
             textarea {{
                 color: #ffffff !important;
