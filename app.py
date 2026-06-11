@@ -134,11 +134,16 @@ def _render_landing() -> None:
             }
             [data-baseweb="input"] input { color: #f1f5f9 !important; -webkit-text-fill-color: #f1f5f9 !important; }
             div.stButton > button {
-                background: #22c55e !important; border: 0 !important;
-                color: #052e16 !important; font-weight: 700 !important;
+                background: #2e3038 !important;
+                border: 1px solid rgba(255,255,255,0.14) !important;
+                color: #ffffff !important; font-weight: 700 !important;
                 border-radius: 7px !important; min-height: 42px !important;
             }
-            div.stButton > button:hover { background: #16a34a !important; color: #ffffff !important; }
+            div.stButton > button:hover {
+                background: #383b45 !important;
+                border-color: rgba(255,255,255,0.22) !important;
+                color: #ffffff !important;
+            }
         </style>
         """,
         unsafe_allow_html=True,
