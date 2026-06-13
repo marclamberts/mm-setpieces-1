@@ -42,7 +42,7 @@ def _save_routines(routines: list[dict]) -> None:
 
 # ── Team name helpers ───────────────────────────────────────────────────────
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _all_teams(_dv: str = DATA_VERSION) -> list[str]:
     teams: set[str] = set()
     for df in [
@@ -165,6 +165,44 @@ def render_routines() -> None:
                 _save_routines(routines)
                 st.success("Routine saved!")
                 st.rerun()
+
+    # ── Export / Import ─────────────────────────────────────────────────
+    with st.expander("📤 Export / Import routines", expanded=False):
+        ei1, ei2 = st.columns(2)
+        with ei1:
+            st.caption("**Export** — download all routines as JSON")
+            if routines:
+                st.download_button(
+                    "⬇ Download routines.json",
+                    data=json.dumps(routines, indent=2),
+                    file_name="routines_export.json",
+                    mime="application/json",
+                    use_container_width=True,
+                    key="r_export",
+                )
+            else:
+                st.info("No routines to export yet.")
+        with ei2:
+            st.caption("**Import** — upload a previously exported JSON file")
+            uploaded = st.file_uploader("Upload routines JSON", type=["json"], key="r_import",
+                                        label_visibility="collapsed")
+            if uploaded is not None:
+                try:
+                    imported = json.loads(uploaded.read())
+                    if not isinstance(imported, list):
+                        st.error("Invalid format — expected a JSON array.")
+                    else:
+                        existing_ids = {r.get("id") for r in routines}
+                        new_items = [r for r in imported if r.get("id") not in existing_ids]
+                        if new_items:
+                            routines = routines + new_items
+                            _save_routines(routines)
+                            st.success(f"Imported {len(new_items)} new routine{'s' if len(new_items) != 1 else ''}.")
+                            st.rerun()
+                        else:
+                            st.info("All routines in that file already exist.")
+                except Exception as exc:
+                    st.error(f"Could not parse file: {exc}")
 
     if not routines:
         st.info("No routines yet. Add your first one above.")

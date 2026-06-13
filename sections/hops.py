@@ -140,7 +140,9 @@ def render_hops() -> None:
         with chart_left:
             section_header("Top rating evidence")
             chart_df = filtered.nlargest(min(20, len(filtered)), "Rating").sort_values("Rating")
-            fig = bar_chart(chart_df, x="Rating", y="Player", color="Team", orientation="h")
+            avg_rating_all = float(df["Rating"].mean()) if not df.empty else None
+            fig = bar_chart(chart_df, x="Rating", y="Player", color="Team", orientation="h",
+                            avg_line=round(avg_rating_all, 3) if avg_rating_all else None)
             fig.update_layout(height=560, margin=dict(l=10, r=10, t=30, b=10), legend_title_text="")
             render_plotly_visual(polish_plotly_figure(fig), "HOPS top rating evidence", "hops_top_rating_evidence_png")
         with chart_right:

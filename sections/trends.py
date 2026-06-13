@@ -25,7 +25,7 @@ from sections._shared import (
 _CODE_V = "trends_v1"
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _load(_dv: str = DATA_VERSION, _cv: str = _CODE_V):
     corners = _with_match_names(load_prepared_sp_data("Corners", _dv))
     freekicks = _with_match_names(load_prepared_freekick_brief_data(_dv))
