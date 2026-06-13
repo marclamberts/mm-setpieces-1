@@ -31,7 +31,7 @@ from sections._shared import (
 )
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _lc_datasets(_data_version: str = DATA_VERSION):
     corners = _with_match_names(load_prepared_sp_data("Corners", _data_version))
     freekicks = _with_match_names(load_prepared_freekick_brief_data(_data_version))

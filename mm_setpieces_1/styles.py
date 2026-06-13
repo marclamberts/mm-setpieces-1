@@ -985,11 +985,22 @@ def inject_app_style() -> None:  # noqa: C901
             }}
             @media (max-width: 760px) {{
                 .mm-topbar {{ padding: 0 .9rem; gap: .8rem; }}
-                .mm-topbar-links a {{ padding: 0 .5rem; font-size: .72rem; }}
-                .block-container {{ padding: 58px .85rem 2rem !important; }}
+                .mm-topbar-links {{ gap: 0; overflow-x: auto; }}
+                .mm-topbar-links a {{ padding: 0 .5rem; font-size: .7rem; white-space: nowrap; }}
+                .mm-topbar-brand span {{ display: none; }}
+                .block-container {{ padding: 58px .5rem 2rem !important; max-width: 100vw !important; }}
                 .mm-kpi-deck, .mm-stat-grid {{ grid-template-columns: repeat(2,minmax(0,1fr)); }}
                 .mm-read-strip, .mm-profile-strip {{ grid-template-columns: 1fr; }}
                 .mm-feature-strip, .mm-workflow-rail {{ grid-template-columns: repeat(2,minmax(0,1fr)); }}
+                .mm-dbstats-bar {{ flex-wrap: wrap; gap: .5rem; }}
+                div[data-testid="column"] {{ min-width: 0 !important; }}
+            }}
+            @media (max-width: 520px) {{
+                .mm-topbar-links a {{ padding: 0 .35rem; font-size: .65rem; }}
+                .block-container {{ padding: 56px .3rem 2rem !important; }}
+                .mm-kpi-deck {{ grid-template-columns: repeat(2,minmax(0,1fr)) !important; }}
+                .mm-mod-card {{ padding: .6rem !important; }}
+                .mm-page-title {{ font-size: 1.1rem !important; }}
             }}
         </style>
         """,

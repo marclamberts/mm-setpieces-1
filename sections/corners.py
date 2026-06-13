@@ -36,6 +36,7 @@ from mm_setpieces_1.utils import (
     add_delivery_zones,
     shotmap_figure,
     starting_location_map_figure,
+    corner_landing_heatmap_figure,
 )
 
 from sections._shared import (
@@ -316,6 +317,7 @@ def render_corners() -> None:
     tabs = st.tabs([
         "📊 Overview",
         "🎯 Delivery",
+        "🔥 Landing Zones",
         "🗺️ Zones",
         "👤 Takers",
         "🔁 Patterns",
@@ -326,7 +328,7 @@ def render_corners() -> None:
         "🗃️ Rows",
     ])
     (
-        tab_overview, tab_delivery, tab_zones, tab_takers,
+        tab_overview, tab_delivery, tab_heatmap, tab_zones, tab_takers,
         tab_patterns, tab_trends, tab_compare, tab_archetypes,
         tab_report, tab_rows,
     ) = tabs
@@ -394,6 +396,39 @@ def render_corners() -> None:
 
         section_header("Delivery & shot outcome combinations")
         render_analyst_table(_outcome_breakdown(filtered), height=340)
+
+    # ── Landing Zone Heatmap ─────────────────────────────────────────────────
+    with tab_heatmap:
+        section_header("Delivery landing zones", "KDE heatmap — where corners arrive in the box")
+        hl1, hl2 = st.columns([1, 2])
+        with hl1:
+            colour_opts = {"By density (KDE)": "density"}
+            render_mpl_visual(
+                corner_landing_heatmap_figure(filtered),
+                "Corner landing heatmap", "corners_landing_heatmap",
+            )
+        with hl2:
+            section_header("Zone breakdown table")
+            lz_df = filtered.copy()
+            if "delivery_end_x" in lz_df.columns and "delivery_end_y" in lz_df.columns:
+                from mm_setpieces_1.utils import add_delivery_zones
+                lz_df = add_delivery_zones(lz_df)
+                if "Delivery zone" in lz_df.columns:
+                    zone_counts = (
+                        lz_df.groupby("Delivery zone", dropna=False)
+                        .agg(
+                            Deliveries=("Delivery zone", "count"),
+                            Shots=("is_shot", "sum") if "is_shot" in lz_df.columns else ("Delivery zone", "count"),
+                            xG=("xg", "sum") if "xg" in lz_df.columns else ("Delivery zone", "count"),
+                        )
+                        .reset_index()
+                        .sort_values("Deliveries", ascending=False)
+                    )
+                    zone_counts["xG"] = zone_counts["xG"].round(2)
+                    zone_counts["xG / delivery"] = (zone_counts["xG"] / zone_counts["Deliveries"].clip(lower=1) * 100).round(2)
+                    render_analyst_table(zone_counts, height=300)
+            else:
+                st.info("Landing zone data (delivery_end_x/y) not available in this dataset.")
 
     # ── Zones ────────────────────────────────────────────────────────────────
     with tab_zones:

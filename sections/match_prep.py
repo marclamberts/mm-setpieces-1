@@ -52,7 +52,7 @@ from sections._shared import (
 
 # ── Data loading ─────────────────────────────────────────────────────────────
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _all_sp_data(_data_version: str = DATA_VERSION):
     corners = _with_match_names(load_prepared_sp_data("Corners", _data_version))
     freekicks = _with_match_names(load_prepared_freekick_brief_data(_data_version))

@@ -526,7 +526,7 @@ def render_matplotlib_png_download(fig, label: str, key: str) -> None:
         )
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def dataframe_to_excel_bytes(df: pd.DataFrame, sheet_name: str = "Data") -> bytes:
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
@@ -890,14 +890,14 @@ def _read_sp_source_path(path: Path, columns: list[str] | set[str] | None = None
         return pd.DataFrame()
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _read_excel_if_exists(filename: str, sheet_name=0):
     for path in _candidate_paths(filename):
         if path.exists():
             return _read_excel_path(path, sheet_name=sheet_name)
     return {} if sheet_name is None else pd.DataFrame()
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _read_csv_if_exists(filename: str) -> pd.DataFrame:
     for path in _candidate_paths(filename):
         if path.exists():
@@ -933,7 +933,7 @@ def _canonical_sp_type(value: object) -> str:
 def _canonical_sp_type_series(series: pd.Series) -> pd.Series:
     return series.map(_canonical_sp_type)
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _load_czech_sp_data() -> pd.DataFrame:
     cz = _read_excel_if_exists("Czech SP.xlsx")
     if cz.empty:
@@ -945,7 +945,7 @@ def _load_czech_sp_data() -> pd.DataFrame:
         cz["SP_Type"] = _canonical_sp_type_series(cz["SP_Type"])
     return cz
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _load_bundesliga_sp_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
     bundesliga = _read_excel_if_exists("Bundesliga SP.xlsx")
     if bundesliga.empty:
@@ -957,7 +957,7 @@ def _load_bundesliga_sp_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
         bundesliga["SP_Type"] = _canonical_sp_type_series(bundesliga["SP_Type"])
     return bundesliga
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _load_uae_sp_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
     uae = _read_excel_if_exists("UAE SP.xlsx")
     if uae.empty:
@@ -991,7 +991,7 @@ def _fill_from_candidates(df: pd.DataFrame, target: str, candidates: list[str], 
             df.loc[missing, target] = df.loc[missing, cand]
     df[target] = df[target].fillna(default)
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _cz_taker_team_map(_data_version: str = DATA_VERSION) -> dict[str, str]:
     cz_sp = _load_czech_sp_data()
     if cz_sp.empty or "team.name" not in cz_sp.columns:
@@ -1008,7 +1008,7 @@ def _cz_taker_team_map(_data_version: str = DATA_VERSION) -> dict[str, str]:
     )
     return taker_team.to_dict()
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _bundesliga_taker_team_map(_data_version: str = DATA_VERSION) -> dict[str, str]:
     bundesliga = _load_bundesliga_sp_data()
     if bundesliga.empty or "team.name" not in bundesliga.columns:
@@ -1026,7 +1026,7 @@ def _bundesliga_taker_team_map(_data_version: str = DATA_VERSION) -> dict[str, s
     return taker_team.to_dict()
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _sp_taker_team_map(league: str, _data_version: str = DATA_VERSION) -> dict[str, str]:
     sources = []
     for path in _data_files("SP", (".parquet",)):
@@ -1087,7 +1087,7 @@ def _normalise_league_name(value: object) -> str:
     )
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _match_competition_lookup(_data_version: str = DATA_VERSION) -> dict[str, str]:
     path = DATA_DIR / "all_matches.csv"
     if not path.exists():
@@ -1117,7 +1117,7 @@ def _sp_source_matches_filename_league(df: pd.DataFrame, league: str) -> bool:
     return _normalise_league_name(dominant_competition) == _normalise_league_name(league)
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _sp_match_taker_team_map(league: str, _data_version: str = DATA_VERSION) -> dict[tuple[str, str], str]:
     sources = []
     for path in _data_files("SP", (".parquet",)):
@@ -1164,7 +1164,7 @@ def _assign_corner_team_from_sp(corners: pd.DataFrame, league: str) -> pd.DataFr
         corners.loc[missing, "Team"] = corners.loc[missing, "Taker"].astype(str).map(_sp_taker_team_map(league))
     return corners
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def load_corner_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
     sources = []
     for path in _data_files("Corners", (".parquet",)):
@@ -1179,7 +1179,7 @@ def load_corner_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
     sources = [df for df in sources if not df.empty]
     return pd.concat(sources, ignore_index=True, sort=False) if sources else pd.DataFrame()
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def load_swe_sp_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
     sources = []
     for path in _data_files("SP", (".parquet",)):
@@ -1191,7 +1191,7 @@ def load_swe_sp_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
     sources = [df for df in sources if not df.empty]
     return pd.concat(sources, ignore_index=True, sort=False) if sources else pd.DataFrame()
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def load_sp_data(label: str, _data_version: str = DATA_VERSION) -> pd.DataFrame:
     if label == "Corners":
         return load_corner_data(_data_version).copy()
@@ -1420,7 +1420,7 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
     return df
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def load_prepared_sp_data(label: str, _data_version: str = DATA_VERSION) -> pd.DataFrame:
     if label != "Corners":
         prepared = _read_prepared_sp_data(label)
@@ -1431,7 +1431,7 @@ def load_prepared_sp_data(label: str, _data_version: str = DATA_VERSION) -> pd.D
     return filter_by_sp_type(prepare_sp_dataframe(raw, label=label), label)
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def load_prepared_freekick_brief_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
     prepared_source = _read_prepared_sp_data("Freekicks")
     if not prepared_source.empty:
@@ -1988,7 +1988,7 @@ def freekick_start_end_arrow_figure(df: pd.DataFrame, title: str) -> go.Figure:
     return add_half_vertical_pitch_layout(fig, title, source_df=df)
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def build_summary_tables(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     if df.empty or "Team" not in df.columns:
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
@@ -2157,7 +2157,7 @@ def render_set_piece_kpi_deck(df: pd.DataFrame, label: str = "Set pieces") -> No
     st.markdown(read_html, unsafe_allow_html=True)
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def build_team_leaderboard(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "Team" not in df.columns:
         return pd.DataFrame()
@@ -2265,7 +2265,7 @@ def build_pattern_library(df: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def build_match_log(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return pd.DataFrame()
@@ -3124,7 +3124,7 @@ def mplsoccer_center_xy(pitch: dict[str, object], x_share: float = 0.75) -> tupl
     return float(pitch["width"]) / 2, float(pitch["length"]) * x_share
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def build_role_archetypes(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
     if df.empty or "Taker" not in df.columns:
         return pd.DataFrame()
@@ -3190,7 +3190,7 @@ def build_role_archetypes(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
     return pd.DataFrame(rows).sort_values(["xG / 100", "Shot rate", "Events"], ascending=False)
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def build_team_archetypes(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "Team" not in df.columns:
         return pd.DataFrame()
@@ -3270,6 +3270,41 @@ def generate_set_piece_insights(df: pd.DataFrame, label: str = "") -> list[str]:
             insights.append(f"Restart side bias: {side_counts.index[0]} side accounts for {side_counts.iloc[0] / len(base) * 100:.1f}% of the sample.")
 
     return insights[:6]
+
+
+def corner_landing_heatmap_figure(df: pd.DataFrame, colour_by: str = "density"):
+    """KDE heatmap of corner delivery end locations (where the ball arrives in the box)."""
+    import matplotlib.pyplot as plt
+    from mplsoccer import VerticalPitch
+
+    fig, ax = plt.subplots(figsize=(5, 7))
+    fig.patch.set_facecolor("#161922")
+    pitch = VerticalPitch(pitch_type="statsbomb", half=True,
+                          pitch_color="#1a2438", line_color="#4b5563", linewidth=1.2)
+    pitch.draw(ax=ax)
+    ax.set_title("Delivery landing zones", fontsize=13, fontweight="bold",
+                 color="#f1f5f9", pad=8)
+
+    if df.empty or not {"delivery_end_x", "delivery_end_y"}.issubset(df.columns):
+        ax.text(40, 85, "No landing location data", ha="center", va="center",
+                color="#94a3b8", fontsize=11)
+        return fig
+
+    plot_df = df.dropna(subset=["delivery_end_x", "delivery_end_y"]).copy()
+    plot_df = plot_df[pd.to_numeric(plot_df["delivery_end_x"], errors="coerce") >= 60].copy()
+    if plot_df.empty:
+        ax.text(40, 85, "No in-box landing data", ha="center", va="center",
+                color="#94a3b8", fontsize=11)
+        return fig
+
+    xs = pd.to_numeric(plot_df["delivery_end_x"], errors="coerce")
+    ys = pd.to_numeric(plot_df["delivery_end_y"], errors="coerce")
+
+    pitch.kdeplot(xs, ys, ax=ax, cmap="YlOrRd", fill=True, levels=100,
+                  thresh=0.05, alpha=0.85)
+    pitch.scatter(xs, ys, ax=ax, s=8, color="white", alpha=0.25, zorder=4)
+    fig.tight_layout(pad=0.5)
+    return fig
 
 
 def mplsoccer_delivery_figure(df: pd.DataFrame, label: str = ""):
