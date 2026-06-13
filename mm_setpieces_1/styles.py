@@ -156,6 +156,8 @@ def inject_app_style() -> None:  # noqa: C901
             }}
             [data-baseweb="select"] span,
             [data-baseweb="select"] input,
+            [data-baseweb="select"] div,
+            [data-baseweb="select"] p,
             [data-baseweb="input"] input,
             textarea {{
                 color: #ffffff !important;
@@ -882,17 +884,6 @@ def inject_app_style() -> None:  # noqa: C901
             .mm-mod-card:hover {{
                 border-color: {BORDER_2};
             }}
-            .mm-mod-card + div > button,
-            .mm-mod-card ~ div div.stButton > button {{
-                position: absolute !important;
-                inset: 0 !important;
-                opacity: 0 !important;
-                width: 100% !important;
-                height: 100% !important;
-                min-height: unset !important;
-                border-radius: 5px !important;
-                cursor: pointer !important;
-            }}
             .mm-mod-icon {{
                 font-size: 1.15rem;
                 margin-bottom: .38rem;
@@ -949,16 +940,16 @@ def inject_app_style() -> None:  # noqa: C901
                 margin-bottom: .8rem !important;
             }}
             .mm-nav-card-action div.stButton > button {{
-                background: transparent !important;
-                border: 1px solid {BORDER_2} !important;
-                color: {MUTED} !important;
+                background: #2e3038 !important;
+                border: 1px solid rgba(255,255,255,0.14) !important;
+                color: #ffffff !important;
                 font-size: .72rem !important; font-weight: 600 !important;
                 min-height: 26px !important;
             }}
             .mm-nav-card-action div.stButton > button:hover {{
-                background: rgba(34,197,94,0.06) !important;
-                border-color: rgba(34,197,94,0.32) !important;
-                color: {GREEN} !important;
+                background: #383b45 !important;
+                border-color: rgba(255,255,255,0.22) !important;
+                color: #ffffff !important;
             }}
 
             /* ── Filter bar ─────────────────────────────────────── */
@@ -994,11 +985,22 @@ def inject_app_style() -> None:  # noqa: C901
             }}
             @media (max-width: 760px) {{
                 .mm-topbar {{ padding: 0 .9rem; gap: .8rem; }}
-                .mm-topbar-links a {{ padding: 0 .5rem; font-size: .72rem; }}
-                .block-container {{ padding: 58px .85rem 2rem !important; }}
+                .mm-topbar-links {{ gap: 0; overflow-x: auto; }}
+                .mm-topbar-links a {{ padding: 0 .5rem; font-size: .7rem; white-space: nowrap; }}
+                .mm-topbar-brand span {{ display: none; }}
+                .block-container {{ padding: 58px .5rem 2rem !important; max-width: 100vw !important; }}
                 .mm-kpi-deck, .mm-stat-grid {{ grid-template-columns: repeat(2,minmax(0,1fr)); }}
                 .mm-read-strip, .mm-profile-strip {{ grid-template-columns: 1fr; }}
                 .mm-feature-strip, .mm-workflow-rail {{ grid-template-columns: repeat(2,minmax(0,1fr)); }}
+                .mm-dbstats-bar {{ flex-wrap: wrap; gap: .5rem; }}
+                div[data-testid="column"] {{ min-width: 0 !important; }}
+            }}
+            @media (max-width: 520px) {{
+                .mm-topbar-links a {{ padding: 0 .35rem; font-size: .65rem; }}
+                .block-container {{ padding: 56px .3rem 2rem !important; }}
+                .mm-kpi-deck {{ grid-template-columns: repeat(2,minmax(0,1fr)) !important; }}
+                .mm-mod-card {{ padding: .6rem !important; }}
+                .mm-page-title {{ font-size: 1.1rem !important; }}
             }}
         </style>
         """,

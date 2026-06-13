@@ -42,7 +42,7 @@ def _save_routines(routines: list[dict]) -> None:
 
 # ── Team name helpers ───────────────────────────────────────────────────────
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _all_teams(_dv: str = DATA_VERSION) -> list[str]:
     teams: set[str] = set()
     for df in [
@@ -166,24 +166,62 @@ def render_routines() -> None:
                 st.success("Routine saved!")
                 st.rerun()
 
+    # ── Export / Import ─────────────────────────────────────────────────
+    with st.expander("📤 Export / Import routines", expanded=False):
+        ei1, ei2 = st.columns(2)
+        with ei1:
+            st.caption("**Export** — download all routines as JSON")
+            if routines:
+                st.download_button(
+                    "⬇ Download routines.json",
+                    data=json.dumps(routines, indent=2),
+                    file_name="routines_export.json",
+                    mime="application/json",
+                    use_container_width=True,
+                    key="r_export",
+                )
+            else:
+                st.info("No routines to export yet.")
+        with ei2:
+            st.caption("**Import** — upload a previously exported JSON file")
+            uploaded = st.file_uploader("Upload routines JSON", type=["json"], key="r_import",
+                                        label_visibility="collapsed")
+            if uploaded is not None:
+                try:
+                    imported = json.loads(uploaded.read())
+                    if not isinstance(imported, list):
+                        st.error("Invalid format — expected a JSON array.")
+                    else:
+                        existing_ids = {r.get("id") for r in routines}
+                        new_items = [r for r in imported if r.get("id") not in existing_ids]
+                        if new_items:
+                            routines = routines + new_items
+                            _save_routines(routines)
+                            st.success(f"Imported {len(new_items)} new routine{'s' if len(new_items) != 1 else ''}.")
+                            st.rerun()
+                        else:
+                            st.info("All routines in that file already exist.")
+                except Exception as exc:
+                    st.error(f"Could not parse file: {exc}")
+
     if not routines:
         st.info("No routines yet. Add your first one above.")
         return
 
     # ── Filters ─────────────────────────────────────────────────────────
-    st.markdown('<div class="mm-filter-panel"><div class="mm-filter-panel-label">Filters</div>', unsafe_allow_html=True)
-    rf1, rf2, rf3, rf4 = st.columns(4)
-    with rf1:
-        f_type  = st.selectbox("Type",  ["All"] + SP_TYPES,  key="r_f_type")
-    with rf2:
-        f_phase = st.selectbox("Phase", ["All"] + PHASES,    key="r_f_phase")
-    with rf3:
-        all_teams_in_data = sorted({r.get("team","") for r in routines if r.get("team")})
-        f_team  = st.selectbox("Team",  ["All"] + all_teams_in_data, key="r_f_team")
-    with rf4:
-        all_tags = sorted({t for r in routines for t in r.get("tags", [])})
-        f_tag   = st.selectbox("Tag",   ["All"] + all_tags,  key="r_f_tag")
-    st.markdown('</div>', unsafe_allow_html=True)
+    with st.container():
+        st.markdown('<div class="mm-filter-panel"><div class="mm-filter-panel-label">Filters</div>', unsafe_allow_html=True)
+        rf1, rf2, rf3, rf4 = st.columns(4)
+        with rf1:
+            f_type  = st.selectbox("Type",  ["All"] + SP_TYPES,  key="r_f_type")
+        with rf2:
+            f_phase = st.selectbox("Phase", ["All"] + PHASES,    key="r_f_phase")
+        with rf3:
+            all_teams_in_data = sorted({r.get("team","") for r in routines if r.get("team")})
+            f_team  = st.selectbox("Team",  ["All"] + all_teams_in_data, key="r_f_team")
+        with rf4:
+            all_tags = sorted({t for r in routines for t in r.get("tags", [])})
+            f_tag   = st.selectbox("Tag",   ["All"] + all_tags,  key="r_f_tag")
 
     displayed = routines
     if f_type  != "All": displayed = [r for r in displayed if r.get("sp_type") == f_type]

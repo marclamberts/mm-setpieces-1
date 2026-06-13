@@ -21,6 +21,7 @@ from sections._shared import (
     _with_match_names,
     load_hops_data,
     render_plotly_visual,
+    set_section,
 )
 
 _CODE_V = "defensive_v1"
@@ -36,7 +37,7 @@ OUTCOME_COLOURS = {
 }
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _load(_dv: str = DATA_VERSION, _cv: str = _CODE_V):
     corners = _with_match_names(load_prepared_sp_data("Corners", _dv))
     freekicks = _with_match_names(load_prepared_freekick_brief_data(_dv))
@@ -240,7 +241,6 @@ def render_defensive() -> None:
         selected_team = st.selectbox("Team", ["All"] + all_teams, key="defensive_team")
     with fc2:
         selected_league = st.selectbox("League", all_leagues, key="defensive_league")
-    st.markdown('</div>', unsafe_allow_html=True)
 
     def _filter(df: pd.DataFrame) -> pd.DataFrame:
         result = _apply_team_perspective(df, selected_team, "Against") if selected_team != "All" else df.copy()
@@ -367,3 +367,17 @@ def render_defensive() -> None:
                     xG=("xg", "sum") if "xg" in gk_df.columns else ("is_goal", "sum"),
                 ).reset_index()
                 render_analyst_table(grp, height=260, color_cols=["Goals", "xG"])
+
+    section_header("Jump to attacking analysis", "See how this team attacks from set pieces")
+    team_label = selected_team if selected_team != "All" else None
+    jd1, jd2, jd3, jd4, jd5 = st.columns(5)
+    if jd1.button("⚽ Corners", key="def_jump_corners", use_container_width=True):
+        set_section("Corners", team=team_label)
+    if jd2.button("🎯 Free Kicks", key="def_jump_fk", use_container_width=True):
+        set_section("Freekicks", team=team_label)
+    if jd3.button("↗ Throw-ins", key="def_jump_ti", use_container_width=True):
+        set_section("Throw-ins", team=team_label)
+    if jd4.button("🏃 HOPS", key="def_jump_hops", use_container_width=True):
+        set_section("HOPS", team=team_label)
+    if jd5.button("🏆 Impact Score", key="def_jump_impact", use_container_width=True):
+        set_section("Impact Score")

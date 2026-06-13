@@ -13,6 +13,7 @@ from mm_setpieces_1.utils import (
     hero_block,
     section_header,
     polish_plotly_figure,
+    render_export_controls,
 )
 
 from sections._shared import (
@@ -20,12 +21,14 @@ from sections._shared import (
     _with_match_names,
     load_hops_data,
     render_plotly_visual,
+    render_mpl_visual,
+    set_section,
 )
 
 _CODE_V = "takers_v1"
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _takers_data(_dv: str = DATA_VERSION, _cv: str = _CODE_V):
     corners   = _with_match_names(load_prepared_sp_data("Corners",   _dv))
     freekicks = _with_match_names(load_prepared_freekick_brief_data(  _dv))
@@ -92,7 +95,6 @@ def render_takers() -> None:
         team = st.selectbox("Team",   teams,   key="takers_team")
     with fc3:
         sp_type = st.selectbox("Type", sp_types, key="takers_type")
-    st.markdown('</div>', unsafe_allow_html=True)
 
     filtered = combined.copy()
     if league != "All" and "League" in filtered.columns:
@@ -133,6 +135,9 @@ def render_takers() -> None:
 
     # ── Taker Profile ─────────────────────────────────────────────────────
     with tab_profile:
+        corners_raw, freekicks_raw, throwins_raw = _takers_data(DATA_VERSION, _CODE_V)
+        hops = load_hops_data(DATA_VERSION)
+
         taker_names = _safe_sorted(tbl["Taker"])
         if not taker_names:
             st.info("No takers available.")
@@ -141,36 +146,90 @@ def render_takers() -> None:
             taker_rows = filtered[filtered["Taker"] == selected_taker]
             taker_stats = tbl[tbl["Taker"] == selected_taker]
 
-            k1, k2, k3, k4, k5 = st.columns(5)
+            # Team + HOPS badge
+            taker_team = taker_stats["Team"].iloc[0] if not taker_stats.empty and "Team" in taker_stats.columns else ""
+            hops_row = hops[hops["Player"].astype(str).eq(selected_taker)] if not hops.empty and "Player" in hops.columns else pd.DataFrame()
+
+            header_col, badge_col = st.columns([3, 1])
+            with header_col:
+                st.markdown(
+                    f"<div style='font-size:1.5rem;font-weight:800;color:#fff;margin-bottom:.1rem'>{selected_taker}</div>"
+                    f"<div style='font-size:.82rem;color:#94a3b8'>{taker_team}</div>",
+                    unsafe_allow_html=True,
+                )
+            with badge_col:
+                if not hops_row.empty:
+                    hr = hops_row.iloc[0]
+                    tier_colors = {"Elite": "#22c55e", "Strong": "#3b82f6", "Rotation": "#f59e0b", "Depth": "#94a3b8"}
+                    tc = tier_colors.get(str(hr.get("Tier", "")), "#94a3b8")
+                    st.markdown(
+                        f"<div style='background:#161922;border:1px solid {tc};border-radius:6px;"
+                        f"padding:.5rem .8rem;text-align:center'>"
+                        f"<div style='font-size:.6rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em'>HOPS</div>"
+                        f"<div style='font-size:1.3rem;font-weight:800;color:{tc}'>{float(hr['Rating']):.3f}</div>"
+                        f"<div style='font-size:.65rem;color:{tc}'>{hr.get('Tier','')}</div>"
+                        f"</div>",
+                        unsafe_allow_html=True,
+                    )
+
+            # KPI strip
             if not taker_stats.empty:
-                row = taker_stats.iloc[0]
-                k1.metric("Deliveries", int(row["Deliveries"]))
-                k2.metric("Shots",      int(row["Shots"]))
-                k3.metric("Goals",      int(row["Goals"]))
-                k4.metric("xG",         f"{row['xG']:.2f}")
-                k5.metric("xG / 100",   f"{row['xG / 100']:.2f}")
+                agg = taker_stats.agg({"Deliveries": "sum", "Shots": "sum", "Goals": "sum", "xG": "sum"}).to_dict()
+                dels = max(int(agg["Deliveries"]), 1)
+                k1, k2, k3, k4, k5, k6 = st.columns(6)
+                k1.metric("Deliveries", f"{dels:,}")
+                k2.metric("Shots",      int(agg["Shots"]))
+                k3.metric("Goals",      int(agg["Goals"]))
+                k4.metric("xG",         f"{agg['xG']:.2f}")
+                k5.metric("xG / 100",   f"{agg['xG'] / dels * 100:.2f}")
+                k6.metric("Shot %",     f"{agg['Shots'] / dels * 100:.1f}%")
 
-            # Delivery zone scatter
-            if "pass_x" in taker_rows.columns and "pass_y" in taker_rows.columns:
+            # Pitch delivery map + type breakdown side by side
+            pm_col, tb_col = st.columns([1, 1])
+            with pm_col:
                 section_header("Delivery start locations")
-                pos_df = taker_rows[["pass_x", "pass_y", "SP_Type"]].dropna()
-                if not pos_df.empty:
-                    fig2 = px.scatter(pos_df, x="pass_x", y="pass_y", color="SP_Type",
-                                      color_discrete_sequence=["#22c55e", "#3b82f6", "#f59e0b"],
-                                      opacity=0.7)
-                    fig2.update_layout(xaxis_range=[0, 120], yaxis_range=[0, 80],
-                                       xaxis_title="x", yaxis_title="y")
-                    render_plotly_visual(polish_plotly_figure(fig2), "Delivery Locations", "takers_delivery_scatter")
+                if "pass_x" in taker_rows.columns and "pass_y" in taker_rows.columns:
+                    import matplotlib.pyplot as plt
+                    from mplsoccer import Pitch as MplPitch
+                    pos_df = taker_rows[["pass_x", "pass_y", "SP_Type"]].dropna()
+                    pos_df["pass_x"] = pd.to_numeric(pos_df["pass_x"], errors="coerce")
+                    pos_df["pass_y"] = pd.to_numeric(pos_df["pass_y"], errors="coerce")
+                    pos_df = pos_df.dropna()
+                    if not pos_df.empty:
+                        mfig, max_ = plt.subplots(figsize=(6, 4))
+                        mfig.patch.set_facecolor("#161922")
+                        mp = MplPitch(pitch_type="statsbomb", pitch_color="#1a2438", line_color="#4b5563", linewidth=1.2)
+                        mp.draw(ax=max_)
+                        color_map = {"Corner": "#22c55e", "Free Kick": "#3b82f6", "Throw-in": "#f59e0b"}
+                        for sp, grp in pos_df.groupby("SP_Type", dropna=False):
+                            mp.scatter(grp["pass_x"], grp["pass_y"], ax=max_,
+                                       s=40, color=color_map.get(str(sp), "#94a3b8"),
+                                       alpha=0.75, label=str(sp), zorder=4)
+                        max_.legend(loc="lower right", fontsize=7, framealpha=0,
+                                    labelcolor="white")
+                        mfig.tight_layout(pad=0.3)
+                        render_mpl_visual(mfig, "Delivery start map", "takers_profile_pitch")
+                else:
+                    st.info("No pass location data available.")
 
-            # Type breakdown
-            section_header("Deliveries by type")
-            type_grp = taker_rows.groupby("SP_Type").agg(
-                Deliveries=("Taker", "count"),
-                Shots=("is_shot", "sum"),
-                xG=("xg", "sum"),
-            ).reset_index()
-            type_grp["xG"] = type_grp["xG"].round(2)
-            render_analyst_table(type_grp, height=150)
+            with tb_col:
+                section_header("Deliveries by type")
+                type_grp = taker_rows.groupby("SP_Type", dropna=False).agg(
+                    Deliveries=("Taker", "count"),
+                    Shots=("is_shot", "sum"),
+                    Goals=("is_goal", "sum"),
+                    xG=("xg", "sum"),
+                ).reset_index()
+                type_grp["xG"] = type_grp["xG"].round(2)
+                type_grp["xG / 100"] = (type_grp["xG"] / type_grp["Deliveries"].clip(lower=1) * 100).round(2)
+                render_analyst_table(type_grp, height=200)
+
+                section_header("Jump to detailed analysis")
+                jt1, jt2 = st.columns(2)
+                if jt1.button(f"⚽ Corners — {taker_team}", key="takers_jump_corners", use_container_width=True):
+                    set_section("Corners", team=taker_team if taker_team else None)
+                if jt2.button(f"🎯 Free Kicks — {taker_team}", key="takers_jump_fk", use_container_width=True):
+                    set_section("Freekicks", team=taker_team if taker_team else None)
 
     # ── Compare ───────────────────────────────────────────────────────────
     with tab_compare:

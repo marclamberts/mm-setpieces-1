@@ -526,7 +526,7 @@ def render_matplotlib_png_download(fig, label: str, key: str) -> None:
         )
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def dataframe_to_excel_bytes(df: pd.DataFrame, sheet_name: str = "Data") -> bytes:
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
@@ -566,20 +566,22 @@ def categorical_breakdown_figure(
     *,
     top_n: int = 8,
     color: str = RED,
+    exclude_unknown: bool = True,
 ) -> go.Figure:
     fig = go.Figure()
     if df.empty or column not in df.columns:
         fig.add_annotation(text="No data available", x=0.5, y=0.5, xref="paper", yref="paper", showarrow=False)
         return polish_plotly_figure(fig)
 
-    counts = (
-        df[column]
-        .fillna("Unknown")
-        .astype(str)
-        .value_counts()
-        .head(top_n)
-        .sort_values(ascending=True)
-    )
+    raw = df[column].fillna("Unknown").astype(str)
+    if exclude_unknown:
+        raw = raw[~raw.str.strip().str.lower().isin(["unknown", "nan", "none", ""])]
+
+    if raw.empty:
+        fig.add_annotation(text="No data available", x=0.5, y=0.5, xref="paper", yref="paper", showarrow=False)
+        return polish_plotly_figure(fig)
+
+    counts = raw.value_counts().head(top_n).sort_values(ascending=True)
 
     fig.add_trace(
         go.Bar(
@@ -605,15 +607,23 @@ def minute_distribution_figure(df: pd.DataFrame, title: str) -> go.Figure:
         fig.add_annotation(text="No minute data available", x=0.5, y=0.5, xref="paper", yref="paper", showarrow=False)
         return polish_plotly_figure(fig)
 
-    bins = list(range(0, int(max(95, minutes.max())) + 6, 5))
+    max_minute = max(95, int(minutes.max()))
+    bins = list(range(0, max_minute + 6, 5))
     bucket = pd.cut(minutes, bins=bins, right=False, include_lowest=True)
     counts = bucket.value_counts().sort_index()
+    # Reindex to ensure all standard bands 0-90 are present even when empty
+    standard_bins = list(range(0, 96, 5))
+    standard_intervals = pd.cut(pd.Series(standard_bins[:-1]), bins=bins, right=False, include_lowest=True)
+    for interval in standard_intervals:
+        if interval is not pd.NaT and interval not in counts.index:
+            counts.loc[interval] = 0  # type: ignore[index]
+    counts = counts.sort_index()
     labels = [f"{int(interval.left)}-{int(interval.right - 1)}" for interval in counts.index]
     fig.add_trace(
         go.Bar(
             x=labels,
             y=counts.values,
-            marker=dict(color=BLACK),
+            marker=dict(color="#60a5fa"),
             hovertemplate="Minute window %{x}: %{y}<extra></extra>",
         )
     )
@@ -880,14 +890,14 @@ def _read_sp_source_path(path: Path, columns: list[str] | set[str] | None = None
         return pd.DataFrame()
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _read_excel_if_exists(filename: str, sheet_name=0):
     for path in _candidate_paths(filename):
         if path.exists():
             return _read_excel_path(path, sheet_name=sheet_name)
     return {} if sheet_name is None else pd.DataFrame()
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _read_csv_if_exists(filename: str) -> pd.DataFrame:
     for path in _candidate_paths(filename):
         if path.exists():
@@ -923,7 +933,7 @@ def _canonical_sp_type(value: object) -> str:
 def _canonical_sp_type_series(series: pd.Series) -> pd.Series:
     return series.map(_canonical_sp_type)
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _load_czech_sp_data() -> pd.DataFrame:
     cz = _read_excel_if_exists("Czech SP.xlsx")
     if cz.empty:
@@ -935,7 +945,7 @@ def _load_czech_sp_data() -> pd.DataFrame:
         cz["SP_Type"] = _canonical_sp_type_series(cz["SP_Type"])
     return cz
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _load_bundesliga_sp_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
     bundesliga = _read_excel_if_exists("Bundesliga SP.xlsx")
     if bundesliga.empty:
@@ -947,7 +957,7 @@ def _load_bundesliga_sp_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
         bundesliga["SP_Type"] = _canonical_sp_type_series(bundesliga["SP_Type"])
     return bundesliga
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _load_uae_sp_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
     uae = _read_excel_if_exists("UAE SP.xlsx")
     if uae.empty:
@@ -981,7 +991,7 @@ def _fill_from_candidates(df: pd.DataFrame, target: str, candidates: list[str], 
             df.loc[missing, target] = df.loc[missing, cand]
     df[target] = df[target].fillna(default)
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _cz_taker_team_map(_data_version: str = DATA_VERSION) -> dict[str, str]:
     cz_sp = _load_czech_sp_data()
     if cz_sp.empty or "team.name" not in cz_sp.columns:
@@ -998,7 +1008,7 @@ def _cz_taker_team_map(_data_version: str = DATA_VERSION) -> dict[str, str]:
     )
     return taker_team.to_dict()
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _bundesliga_taker_team_map(_data_version: str = DATA_VERSION) -> dict[str, str]:
     bundesliga = _load_bundesliga_sp_data()
     if bundesliga.empty or "team.name" not in bundesliga.columns:
@@ -1016,7 +1026,7 @@ def _bundesliga_taker_team_map(_data_version: str = DATA_VERSION) -> dict[str, s
     return taker_team.to_dict()
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _sp_taker_team_map(league: str, _data_version: str = DATA_VERSION) -> dict[str, str]:
     sources = []
     for path in _data_files("SP", (".parquet",)):
@@ -1077,7 +1087,7 @@ def _normalise_league_name(value: object) -> str:
     )
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _match_competition_lookup(_data_version: str = DATA_VERSION) -> dict[str, str]:
     path = DATA_DIR / "all_matches.csv"
     if not path.exists():
@@ -1107,7 +1117,7 @@ def _sp_source_matches_filename_league(df: pd.DataFrame, league: str) -> bool:
     return _normalise_league_name(dominant_competition) == _normalise_league_name(league)
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _sp_match_taker_team_map(league: str, _data_version: str = DATA_VERSION) -> dict[tuple[str, str], str]:
     sources = []
     for path in _data_files("SP", (".parquet",)):
@@ -1154,7 +1164,7 @@ def _assign_corner_team_from_sp(corners: pd.DataFrame, league: str) -> pd.DataFr
         corners.loc[missing, "Team"] = corners.loc[missing, "Taker"].astype(str).map(_sp_taker_team_map(league))
     return corners
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def load_corner_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
     sources = []
     for path in _data_files("Corners", (".parquet",)):
@@ -1169,7 +1179,7 @@ def load_corner_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
     sources = [df for df in sources if not df.empty]
     return pd.concat(sources, ignore_index=True, sort=False) if sources else pd.DataFrame()
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def load_swe_sp_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
     sources = []
     for path in _data_files("SP", (".parquet",)):
@@ -1181,7 +1191,7 @@ def load_swe_sp_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
     sources = [df for df in sources if not df.empty]
     return pd.concat(sources, ignore_index=True, sort=False) if sources else pd.DataFrame()
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def load_sp_data(label: str, _data_version: str = DATA_VERSION) -> pd.DataFrame:
     if label == "Corners":
         return load_corner_data(_data_version).copy()
@@ -1410,7 +1420,7 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
     return df
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def load_prepared_sp_data(label: str, _data_version: str = DATA_VERSION) -> pd.DataFrame:
     if label != "Corners":
         prepared = _read_prepared_sp_data(label)
@@ -1421,7 +1431,7 @@ def load_prepared_sp_data(label: str, _data_version: str = DATA_VERSION) -> pd.D
     return filter_by_sp_type(prepare_sp_dataframe(raw, label=label), label)
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def load_prepared_freekick_brief_data(_data_version: str = DATA_VERSION) -> pd.DataFrame:
     prepared_source = _read_prepared_sp_data("Freekicks")
     if not prepared_source.empty:
@@ -1678,7 +1688,7 @@ def shotmap_figure(df: pd.DataFrame, title: str) -> go.Figure:
                 mode="markers",
                 name=result,
                 marker=dict(
-                    size=np.clip(part["xg"].fillna(0) * 95 + 10, 10, 38),
+                    size=12 if result == "Shot" else 16,
                     color=color_map[result],
                     opacity=0.78,
                     line=dict(width=1, color="white"),
@@ -1884,7 +1894,101 @@ def starting_location_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
     return add_half_vertical_pitch_layout(fig, title, source_df=df)
 
 
-@st.cache_data(show_spinner=False)
+FK_PITCH_ZONES = ["Left Wide", "Left Half Space", "Central", "Right Half Space", "Right Wide"]
+
+def classify_fk_pitch_zone(pass_y: pd.Series, pitch_width: float = 80.0) -> pd.Series:
+    """Classify FK start location y-coordinate into 5 horizontal zones."""
+    w = pitch_width
+    return pd.cut(
+        pass_y,
+        bins=[-0.001, w * 0.2, w * 0.38, w * 0.52, w * 0.70, w + 1],
+        labels=["Left Wide", "Left Half Space", "Central", "Right Half Space", "Right Wide"],
+    ).astype(str)
+
+
+def freekick_start_end_arrow_figure(df: pd.DataFrame, title: str) -> go.Figure:
+    """Show FK start locations as circles with arrows pointing to delivery end locations."""
+    fig = go.Figure()
+    pitch = pitch_dimensions(df)
+    pitch_width = float(pitch["width"])
+    half_start = float(pitch["half_start"])
+    pitch_length = float(pitch["length"])
+
+    if df.empty:
+        fig.add_annotation(text="No data available", x=pitch_width / 2, y=(half_start + pitch_length) / 2, showarrow=False, font=dict(size=18, color="#64748b"))
+        return add_half_vertical_pitch_layout(fig, title, source_df=df)
+
+    has_start = "pass_x" in df.columns and "pass_y" in df.columns
+    has_end = "delivery_end_x" in df.columns and "delivery_end_y" in df.columns
+
+    if not has_start:
+        fig.add_annotation(text="No start location data available", x=pitch_width / 2, y=(half_start + pitch_length) / 2, showarrow=False, font=dict(size=18, color="#64748b"))
+        return add_half_vertical_pitch_layout(fig, title, source_df=df)
+
+    starts = df[df["pass_x"].notna() & df["pass_y"].notna()].copy()
+    starts = unique_start_events(starts)
+
+    if starts.empty:
+        fig.add_annotation(text="No start locations for current filter", x=pitch_width / 2, y=(half_start + pitch_length) / 2, showarrow=False, font=dict(size=18, color="#64748b"))
+        return add_half_vertical_pitch_layout(fig, title, source_df=df)
+
+    starts["plot_x"], starts["plot_y"] = coords_to_statsbomb(starts, "pass_x", "pass_y")
+    starts["vx"], starts["vy"] = vertical_coords_from_pitch(starts["plot_x"], starts["plot_y"], pitch)
+
+    # Draw start location circles
+    fig.add_trace(
+        go.Scatter(
+            x=starts["vx"], y=starts["vy"],
+            mode="markers",
+            name="Start",
+            marker=dict(size=10, color="#f59e0b", opacity=0.9, line=dict(width=1.5, color="white")),
+            hovertemplate="Taker: %{customdata[0]}<br>Minute: %{customdata[1]}<extra></extra>",
+            customdata=np.stack([
+                starts["Taker"].fillna("Unknown") if "Taker" in starts.columns else pd.Series(["Unknown"] * len(starts)),
+                starts["minute"].fillna(0) if "minute" in starts.columns else pd.Series([0] * len(starts)),
+            ], axis=1),
+        )
+    )
+
+    # Draw arrows to end locations if available
+    if has_end:
+        ends = starts[starts["delivery_end_x"].notna() & starts["delivery_end_y"].notna()].copy()
+        if not ends.empty:
+            ends["end_plot_x"], ends["end_plot_y"] = coords_to_statsbomb(ends, "delivery_end_x", "delivery_end_y")
+            ends["end_vx"], ends["end_vy"] = vertical_coords_from_pitch(ends["end_plot_x"], ends["end_plot_y"], pitch)
+
+            # Build line segments with None separators for efficiency
+            xs: list = []
+            ys: list = []
+            for _, row in ends.head(150).iterrows():
+                xs.extend([row["vx"], row["end_vx"], None])
+                ys.extend([row["vy"], row["end_vy"], None])
+
+            fig.add_trace(
+                go.Scatter(
+                    x=xs, y=ys,
+                    mode="lines",
+                    name="Delivery",
+                    line=dict(color="#60a5fa", width=1.5),
+                    opacity=0.65,
+                    hoverinfo="skip",
+                )
+            )
+            # End location markers
+            fig.add_trace(
+                go.Scatter(
+                    x=ends.head(150)["end_vx"], y=ends.head(150)["end_vy"],
+                    mode="markers",
+                    name="End",
+                    marker=dict(size=8, color="#60a5fa", symbol="triangle-right", opacity=0.85),
+                    hoverinfo="skip",
+                )
+            )
+
+    return add_half_vertical_pitch_layout(fig, title, source_df=df)
+
+
+@st.cache_data(show_spinner="Loading data…")
 def build_summary_tables(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     if df.empty or "Team" not in df.columns:
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
@@ -2053,7 +2157,7 @@ def render_set_piece_kpi_deck(df: pd.DataFrame, label: str = "Set pieces") -> No
     st.markdown(read_html, unsafe_allow_html=True)
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def build_team_leaderboard(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "Team" not in df.columns:
         return pd.DataFrame()
@@ -2161,7 +2265,7 @@ def build_pattern_library(df: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def build_match_log(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return pd.DataFrame()
@@ -3020,7 +3124,7 @@ def mplsoccer_center_xy(pitch: dict[str, object], x_share: float = 0.75) -> tupl
     return float(pitch["width"]) / 2, float(pitch["length"]) * x_share
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def build_role_archetypes(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
     if df.empty or "Taker" not in df.columns:
         return pd.DataFrame()
@@ -3086,7 +3190,7 @@ def build_role_archetypes(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
     return pd.DataFrame(rows).sort_values(["xG / 100", "Shot rate", "Events"], ascending=False)
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def build_team_archetypes(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "Team" not in df.columns:
         return pd.DataFrame()
@@ -3166,6 +3270,41 @@ def generate_set_piece_insights(df: pd.DataFrame, label: str = "") -> list[str]:
             insights.append(f"Restart side bias: {side_counts.index[0]} side accounts for {side_counts.iloc[0] / len(base) * 100:.1f}% of the sample.")
 
     return insights[:6]
+
+
+def corner_landing_heatmap_figure(df: pd.DataFrame, colour_by: str = "density"):
+    """KDE heatmap of corner delivery end locations (where the ball arrives in the box)."""
+    import matplotlib.pyplot as plt
+    from mplsoccer import VerticalPitch
+
+    fig, ax = plt.subplots(figsize=(5, 7))
+    fig.patch.set_facecolor("#161922")
+    pitch = VerticalPitch(pitch_type="statsbomb", half=True,
+                          pitch_color="#1a2438", line_color="#4b5563", linewidth=1.2)
+    pitch.draw(ax=ax)
+    ax.set_title("Delivery landing zones", fontsize=13, fontweight="bold",
+                 color="#f1f5f9", pad=8)
+
+    if df.empty or not {"delivery_end_x", "delivery_end_y"}.issubset(df.columns):
+        ax.text(40, 85, "No landing location data", ha="center", va="center",
+                color="#94a3b8", fontsize=11)
+        return fig
+
+    plot_df = df.dropna(subset=["delivery_end_x", "delivery_end_y"]).copy()
+    plot_df = plot_df[pd.to_numeric(plot_df["delivery_end_x"], errors="coerce") >= 60].copy()
+    if plot_df.empty:
+        ax.text(40, 85, "No in-box landing data", ha="center", va="center",
+                color="#94a3b8", fontsize=11)
+        return fig
+
+    xs = pd.to_numeric(plot_df["delivery_end_x"], errors="coerce")
+    ys = pd.to_numeric(plot_df["delivery_end_y"], errors="coerce")
+
+    pitch.kdeplot(xs, ys, ax=ax, cmap="YlOrRd", fill=True, levels=100,
+                  thresh=0.05, alpha=0.85)
+    pitch.scatter(xs, ys, ax=ax, s=8, color="white", alpha=0.25, zorder=4)
+    fig.tight_layout(pad=0.5)
+    return fig
 
 
 def mplsoccer_delivery_figure(df: pd.DataFrame, label: str = ""):

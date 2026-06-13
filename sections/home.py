@@ -58,7 +58,7 @@ MODULE_CARDS = [
 ]
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _home_data(_data_version: str = DATA_VERSION):
     corners   = _with_match_names(load_prepared_sp_data("Corners",    _data_version))
     freekicks = _with_match_names(load_prepared_freekick_brief_data(   _data_version))
@@ -210,25 +210,23 @@ def render_home() -> None:
 
     # ── Module cards ─────────────────────────────────────────────────
     section_header("Analysis Modules")
-    # 4-col first row, 3-col second row
-    rows = [MODULE_CARDS[:4], MODULE_CARDS[4:]]
+    # Three rows: 4 + 5 + 4
+    rows = [MODULE_CARDS[:4], MODULE_CARDS[4:9], MODULE_CARDS[9:]]
     for row in rows:
         if not row:
             continue
         cols = st.columns(len(row), gap="small")
         for col, (section, key, icon, short, desc) in zip(cols, row):
             with col:
-                # Invisible overlay button fills the card; visible card is pure HTML
                 st.markdown(
                     f"""<div class="mm-mod-card" id="mc-{key}">
                         <div class="mm-mod-icon">{icon}</div>
                         <div class="mm-mod-title">{short}</div>
                         <div class="mm-mod-desc">{desc}</div>
-                        <div class="mm-mod-cta">Open →</div>
                     </div>""",
                     unsafe_allow_html=True,
                 )
-                if st.button("", key=key, use_container_width=True, help=f"Open {short}"):
+                if st.button("Open →", key=key, use_container_width=True):
                     set_section(section)
 
     # ── Team Snapshot ────────────────────────────────────────────────
@@ -268,13 +266,27 @@ def render_home() -> None:
     phase_read, role_read, hops_read = selected_team_staff_read(selected_team, snapshot, hops)
 
     # KPI row
-    k1, k2, k3, k4, k5, k6 = st.columns(6)
+    if xg_per_100 >= 3.5:
+        threat_label, threat_colour = "HIGH THREAT", "#ef4444"
+    elif xg_per_100 >= 1.5:
+        threat_label, threat_colour = "AVG THREAT", "#f59e0b"
+    else:
+        threat_label, threat_colour = "LOW THREAT", "#22c55e"
+
+    k1, k2, k3, k4, k5, k6, k7 = st.columns(7)
     k1.metric("Set pieces",  f"{total_sp:,}")
     k2.metric("Shots",       f"{total_shots:,}")
     k3.metric("Goals",       f"{total_goals:,}")
     k4.metric("xG",          _fmt_num(total_xg, 2))
     k5.metric("Shot rate",   f"{_fmt_num(shot_rate, 1)}%")
     k6.metric("xG / 100",    _fmt_num(xg_per_100, 2))
+    k7.markdown(
+        f"<div style='padding:.5rem 0'>"
+        f"<div style='font-size:.58rem;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.12em;margin-bottom:.3rem'>Threat level</div>"
+        f"<div style='font-size:1.1rem;font-weight:800;color:{threat_colour}'>{threat_label}</div>"
+        f"</div>",
+        unsafe_allow_html=True,
+    )
 
     # Insight cards
     ins_l, ins_r = st.columns(2)

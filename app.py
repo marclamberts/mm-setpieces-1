@@ -67,35 +67,30 @@ inject_app_style()
 # Token-based auth (persists across page loads / nav clicks)
 # ---------------------------------------------------------------------------
 
+DEFAULT_PASSWORD = "setplaypro"
+
+
+def _configured_password() -> str:
+    try:
+        return st.secrets.get("SETPLAYPRO_PASSWORD") or os.environ.get("SETPLAYPRO_PASSWORD") or DEFAULT_PASSWORD
+    except Exception:
+        return os.environ.get("SETPLAYPRO_PASSWORD") or DEFAULT_PASSWORD
+
+
 def _auth_token() -> str:
-    """Hourly HMAC token. When no password set, uses 'open' as secret."""
-    secret = os.environ.get("SETPLAYPRO_PASSWORD") or "open"
+    """Hourly HMAC token derived from the configured password."""
+    secret = _configured_password()
     hour = int(time.time() // 3600)
     return hashlib.sha256(f"{secret}{hour}".encode()).hexdigest()[:16]
 
 
 def _check_auth_token(tok: str) -> bool:
-    secret = os.environ.get("SETPLAYPRO_PASSWORD") or "open"
+    secret = _configured_password()
     for offset in range(-12, 1):  # accept tokens up to 12 hours old
         hour = int(time.time() // 3600) + offset
         if tok == hashlib.sha256(f"{secret}{hour}".encode()).hexdigest()[:16]:
             return True
     return False
-
-
-def _password_required() -> bool:
-    try:
-        pw = st.secrets.get("SETPLAYPRO_PASSWORD") or os.environ.get("SETPLAYPRO_PASSWORD")
-    except Exception:
-        pw = os.environ.get("SETPLAYPRO_PASSWORD")
-    return bool(pw)
-
-
-def _expected_password() -> str | None:
-    try:
-        return st.secrets.get("SETPLAYPRO_PASSWORD") or os.environ.get("SETPLAYPRO_PASSWORD")
-    except Exception:
-        return os.environ.get("SETPLAYPRO_PASSWORD")
 
 
 def _check_password() -> bool:
@@ -112,9 +107,6 @@ def _check_password() -> bool:
 
 def _render_landing() -> None:
     """Full-page login screen."""
-    pw_required = _password_required()
-    expected = _expected_password()
-
     st.markdown(
         """
         <style>
@@ -142,11 +134,16 @@ def _render_landing() -> None:
             }
             [data-baseweb="input"] input { color: #f1f5f9 !important; -webkit-text-fill-color: #f1f5f9 !important; }
             div.stButton > button {
-                background: #22c55e !important; border: 0 !important;
-                color: #052e16 !important; font-weight: 700 !important;
+                background: #2e3038 !important;
+                border: 1px solid rgba(255,255,255,0.14) !important;
+                color: #ffffff !important; font-weight: 700 !important;
                 border-radius: 7px !important; min-height: 42px !important;
             }
-            div.stButton > button:hover { background: #16a34a !important; color: #ffffff !important; }
+            div.stButton > button:hover {
+                background: #383b45 !important;
+                border-color: rgba(255,255,255,0.22) !important;
+                color: #ffffff !important;
+            }
         </style>
         """,
         unsafe_allow_html=True,
@@ -157,23 +154,16 @@ def _render_landing() -> None:
     else:
         st.markdown("## SetPlay**Pro**")
 
-    if pw_required:
-        pwd = st.text_input("Password", type="password", key="login_pwd",
-                            label_visibility="collapsed", placeholder="Enter password")
-        if st.button("Enter portal", key="portal_submit", use_container_width=True):
-            if pwd == expected:
-                st.session_state["authenticated"] = True
-                st.query_params["tok"] = _auth_token()
-                st.query_params["section"] = "Home"
-                st.rerun()
-            else:
-                st.error("Incorrect password.")
-    else:
-        if st.button("Go to portal", key="portal_submit", use_container_width=True):
+    pwd = st.text_input("Password", type="password", key="login_pwd",
+                        label_visibility="collapsed", placeholder="Enter password")
+    if st.button("Enter portal", key="portal_submit", use_container_width=True):
+        if pwd == _configured_password():
             st.session_state["authenticated"] = True
             st.query_params["tok"] = _auth_token()
             st.query_params["section"] = "Home"
             st.rerun()
+        else:
+            st.error("Incorrect password.")
 
 
 # ---------------------------------------------------------------------------
@@ -201,7 +191,7 @@ def _render_topnav(section: str) -> None:
         active_cls = " mm-active" if sec == section else ""
         href = f"?tok={urllib.parse.quote(token)}&section={urllib.parse.quote(sec)}"
         links_html += (
-            f'<a href="{href}" class="mm-topbar-link{active_cls}">'
+            f'<a href="{href}" target="_self" class="mm-topbar-link{active_cls}">'
             f'{icon}&thinsp;{sec}</a>'
         )
 
@@ -215,7 +205,7 @@ def _render_topnav(section: str) -> None:
     st.markdown(
         f"""
         <nav class="mm-topbar">
-            <a class="mm-topbar-brand" href="{home_href}">{brand_inner}</a>
+            <a class="mm-topbar-brand" href="{home_href}" target="_self">{brand_inner}</a>
             <div class="mm-topbar-links">{links_html}</div>
             {ctx_html}
         </nav>

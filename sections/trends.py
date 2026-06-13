@@ -25,7 +25,7 @@ from sections._shared import (
 _CODE_V = "trends_v1"
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _load(_dv: str = DATA_VERSION, _cv: str = _CODE_V):
     corners = _with_match_names(load_prepared_sp_data("Corners", _dv))
     freekicks = _with_match_names(load_prepared_freekick_brief_data(_dv))
@@ -249,7 +249,6 @@ def render_trends() -> None:
         sp_type = st.selectbox("Set Piece Type", ["All", "Corner", "FK", "Throw-in"], key="trends_sp_type")
     with fc4:
         window = st.selectbox("Rolling window", [3, 5, 10], index=1, key="trends_window")
-    st.markdown('</div>', unsafe_allow_html=True)
 
     def _apply_league(df: pd.DataFrame) -> pd.DataFrame:
         if selected_league != "All" and "League" in df.columns:
