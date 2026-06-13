@@ -24,6 +24,9 @@ from mm_setpieces_1.utils import (
     freekick_origin_map_figure,
     shotmap_figure,
     starting_location_map_figure,
+    freekick_start_end_arrow_figure,
+    classify_fk_pitch_zone,
+    FK_PITCH_ZONES,
     set_piece_kpi_values,
     categorical_breakdown_figure,
     minute_distribution_figure,
@@ -133,7 +136,6 @@ def render_freekicks() -> None:
 
     leagues = _league_filter_options(df, "SP")
     teams = _set_piece_team_options(df)
-    takers = _safe_sorted(df["Taker"]) if "Taker" in df.columns else []
     heights = _safe_sorted(df["Delivery height"]) if "Delivery height" in df.columns else []
 
     st.markdown('<div class="mm-filter-panel"><div class="mm-filter-panel-label">Filters</div>', unsafe_allow_html=True)
@@ -146,15 +148,26 @@ def render_freekicks() -> None:
         perspective = st.radio("Perspective", ["For", "Against"], horizontal=True, key="freekicks_perspective")
     with fc4:
         sample = st.radio("Sample", ["Total", "Last 10"], horizontal=True, key="freekicks_sample")
+
+    # Takers filtered to selected team
+    if team != "All":
+        team_df_fk = _apply_team_perspective(df.copy(), team, perspective)
+        takers = _safe_sorted(team_df_fk["Taker"]) if "Taker" in team_df_fk.columns else []
+    else:
+        takers = _safe_sorted(df["Taker"]) if "Taker" in df.columns else []
+
     taker_filter: list = []
     height_filter: list = []
+    zone_filter: list = []
     with st.expander("More filters", expanded=False):
-        mx1, mx2 = st.columns(2)
+        mx1, mx2, mx3 = st.columns(3)
         with mx1:
             taker_filter = st.multiselect("Taker", takers, key="freekicks_taker")
         with mx2:
             height_filter = st.multiselect("Delivery height", heights, key="freekicks_height")
-    st.markdown('</div>', unsafe_allow_html=True)
+        with mx3:
+            zone_filter = st.multiselect("Start zone", FK_PITCH_ZONES, key="freekicks_zone_filter",
+                                         help="Filter by FK start location zone on pitch")
 
     filtered = df.copy()
     if league != "All" and "League" in filtered.columns:
@@ -166,12 +179,18 @@ def render_freekicks() -> None:
         filtered = filtered[filtered["Taker"].isin(taker_filter)].copy()
     if height_filter and "Delivery height" in filtered.columns:
         filtered = filtered[filtered["Delivery height"].isin(height_filter)].copy()
+    if zone_filter and "pass_y" in filtered.columns:
+        import numpy as np
+        filtered = filtered.copy()
+        filtered["_fk_zone"] = classify_fk_pitch_zone(pd.to_numeric(filtered["pass_y"], errors="coerce"))
+        filtered = filtered[filtered["_fk_zone"].isin(zone_filter)].drop(columns=["_fk_zone"])
 
     sequences = freekick_sequence_summary(filtered)
     filters = [
         ("League", league), ("Team", team),
         ("Perspective", perspective if team != "All" else "All"),
         ("Sample", sample), ("Taker", taker_filter), ("Height", height_filter),
+        ("Zone", zone_filter),
     ]
 
     scope_parts = [p for p in [team if team != "All" else None, league if league != "All" else None] if p]
@@ -300,29 +319,29 @@ def render_freekicks() -> None:
         section_header("FK origin map", "Where free kicks are taken from")
         render_mpl_visual(freekick_origin_map_figure(filtered), "FK origin map", "freekicks_origin_map_png")
 
-        section_header("Start locations and shot map")
-        p1, p2 = st.columns(2)
-        with p1:
-            render_plotly_visual(
-                polish_plotly_figure(starting_location_map_figure(filtered, f"{label} start locations")),
-                "Start locations", "freekicks_start_locations_png",
-            )
-        with p2:
-            render_plotly_visual(
-                polish_plotly_figure(shotmap_figure(filtered, f"{scope} — FK shots")),
-                "Shot map", "freekicks_shot_map_png",
-            )
+        section_header("Start locations → end locations")
+        st.caption("Circles = FK start positions · Arrows = delivery direction and end location")
+        render_plotly_visual(
+            polish_plotly_figure(freekick_start_end_arrow_figure(filtered, f"{label} — start to end locations")),
+            "Start → End locations", "freekicks_start_end_arrow_png",
+        )
+
+        section_header("Shot map")
+        render_plotly_visual(
+            polish_plotly_figure(shotmap_figure(filtered, f"{scope} — FK shots")),
+            "Shot map", "freekicks_shot_map_png",
+        )
 
         section_header("Technique breakdown")
         if "Technique" in filtered.columns:
             render_plotly_visual(
-                categorical_breakdown_figure(filtered, "Technique", "Technique", top_n=10, color="#0f172a"),
+                categorical_breakdown_figure(filtered, "Technique", "Technique", top_n=10, color="#e2e8f0"),
                 "FK technique", "freekicks_technique_png",
             )
         section_header("Delivery height breakdown")
         if "Delivery height" in filtered.columns:
             render_plotly_visual(
-                categorical_breakdown_figure(filtered, "Delivery height", "Delivery height", top_n=8, color="#1d4ed8"),
+                categorical_breakdown_figure(filtered, "Delivery height", "Delivery height", top_n=8, color="#93c5fd"),
                 "Delivery height", "freekicks_height_png",
             )
 
@@ -335,7 +354,7 @@ def render_freekicks() -> None:
             color_cols=["Sequences", "Shots", "Goals", "Total_xG", "Avg_xG", "Shots / seq"],
         )
         render_plotly_visual(
-            categorical_breakdown_figure(filtered, "Taker", "Top FK takers", top_n=15, color="#c1121f"),
+            categorical_breakdown_figure(filtered, "Taker", "Top FK takers", top_n=15, color="#fca5a5"),
             "Top FK takers", "freekicks_top_takers_png",
         )
 
@@ -347,7 +366,7 @@ def render_freekicks() -> None:
         )
         if not shooter_df.empty and "Shooter" in shooter_df.columns:
             render_plotly_visual(
-                categorical_breakdown_figure(filtered, "Shooter", "Top FK shooters", top_n=15, color="#1d4ed8"),
+                categorical_breakdown_figure(filtered, "Shooter", "Top FK shooters", top_n=15, color="#93c5fd"),
                 "Top FK shooters", "freekicks_top_shooters_png",
             )
 
@@ -367,6 +386,7 @@ def render_freekicks() -> None:
             top_m = match_log.sort_values("Total xG", ascending=False).head(20)
             match_col = "Match" if "Match" in top_m.columns else top_m.columns[0]
             fig = bar_chart(top_m.sort_values("Total xG"), x="Total xG", y=match_col, orientation="h")
+            fig.update_traces(marker_color="#60a5fa")
             fig.update_layout(height=480, margin=dict(l=8, r=8, t=24, b=8), showlegend=False)
             render_plotly_visual(polish_plotly_figure(fig), "xG per match", "freekicks_match_xg_png")
         else:

@@ -377,7 +377,6 @@ def render_match_prep() -> None:
     my_team = col_my.selectbox("Your team", teams, key="mp_my_team")
     opp_options = [t for t in teams if t != my_team]
     opponent = col_opp.selectbox("Opponent", opp_options, key="mp_opponent") if opp_options else None
-    st.markdown('</div>', unsafe_allow_html=True)
 
     if not opponent:
         st.info("Add more teams to compare.")

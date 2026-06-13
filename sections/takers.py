@@ -92,7 +92,6 @@ def render_takers() -> None:
         team = st.selectbox("Team",   teams,   key="takers_team")
     with fc3:
         sp_type = st.selectbox("Type", sp_types, key="takers_type")
-    st.markdown('</div>', unsafe_allow_html=True)
 
     filtered = combined.copy()
     if league != "All" and "League" in filtered.columns:

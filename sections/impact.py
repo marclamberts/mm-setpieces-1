@@ -21,6 +21,7 @@ from sections._shared import (
     _with_match_names,
     load_hops_data,
     render_plotly_visual,
+    set_section,
 )
 
 _CODE_V = "impact_v2"
@@ -410,7 +411,6 @@ def render_impact() -> None:
         pre = st.session_state.get("impact_team")
         default_idx = teams_in_scope.index(pre) if pre and pre in teams_in_scope else 0
         selected_team = st.selectbox("Team", teams_in_scope, index=default_idx, key="impact_team")
-    st.markdown('</div>', unsafe_allow_html=True)
 
     team_row = scores_df[scores_df["Team"] == selected_team]
     if team_row.empty:
@@ -718,3 +718,16 @@ def render_impact() -> None:
                 margin=dict(l=50, r=50, t=40, b=40),
             )
             render_plotly_visual(polish_plotly_figure(fig_ov), "Radar Overlay", "impact_radar_cmp")
+
+    section_header("Drill down", "Jump to detailed analysis for the selected team")
+    jb1, jb2, jb3, jb4, jb5 = st.columns(5)
+    if jb1.button(f"⚽ {selected_team} Corners", key="impact_jump_corners", use_container_width=True):
+        set_section("Corners", team=selected_team)
+    if jb2.button(f"🎯 {selected_team} Free Kicks", key="impact_jump_fk", use_container_width=True):
+        set_section("Freekicks", team=selected_team)
+    if jb3.button(f"↗ {selected_team} Throw-ins", key="impact_jump_ti", use_container_width=True):
+        set_section("Throw-ins", team=selected_team)
+    if jb4.button(f"🏃 {selected_team} HOPS", key="impact_jump_hops", use_container_width=True):
+        set_section("HOPS", team=selected_team)
+    if jb5.button(f"🛡 {selected_team} Defensive", key="impact_jump_def", use_container_width=True):
+        set_section("Defensive")

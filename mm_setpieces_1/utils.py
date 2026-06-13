@@ -566,20 +566,22 @@ def categorical_breakdown_figure(
     *,
     top_n: int = 8,
     color: str = RED,
+    exclude_unknown: bool = True,
 ) -> go.Figure:
     fig = go.Figure()
     if df.empty or column not in df.columns:
         fig.add_annotation(text="No data available", x=0.5, y=0.5, xref="paper", yref="paper", showarrow=False)
         return polish_plotly_figure(fig)
 
-    counts = (
-        df[column]
-        .fillna("Unknown")
-        .astype(str)
-        .value_counts()
-        .head(top_n)
-        .sort_values(ascending=True)
-    )
+    raw = df[column].fillna("Unknown").astype(str)
+    if exclude_unknown:
+        raw = raw[~raw.str.strip().str.lower().isin(["unknown", "nan", "none", ""])]
+
+    if raw.empty:
+        fig.add_annotation(text="No data available", x=0.5, y=0.5, xref="paper", yref="paper", showarrow=False)
+        return polish_plotly_figure(fig)
+
+    counts = raw.value_counts().head(top_n).sort_values(ascending=True)
 
     fig.add_trace(
         go.Bar(
@@ -605,15 +607,23 @@ def minute_distribution_figure(df: pd.DataFrame, title: str) -> go.Figure:
         fig.add_annotation(text="No minute data available", x=0.5, y=0.5, xref="paper", yref="paper", showarrow=False)
         return polish_plotly_figure(fig)
 
-    bins = list(range(0, int(max(95, minutes.max())) + 6, 5))
+    max_minute = max(95, int(minutes.max()))
+    bins = list(range(0, max_minute + 6, 5))
     bucket = pd.cut(minutes, bins=bins, right=False, include_lowest=True)
     counts = bucket.value_counts().sort_index()
+    # Reindex to ensure all standard bands 0-90 are present even when empty
+    standard_bins = list(range(0, 96, 5))
+    standard_intervals = pd.cut(pd.Series(standard_bins[:-1]), bins=bins, right=False, include_lowest=True)
+    for interval in standard_intervals:
+        if interval is not pd.NaT and interval not in counts.index:
+            counts.loc[interval] = 0  # type: ignore[index]
+    counts = counts.sort_index()
     labels = [f"{int(interval.left)}-{int(interval.right - 1)}" for interval in counts.index]
     fig.add_trace(
         go.Bar(
             x=labels,
             y=counts.values,
-            marker=dict(color=BLACK),
+            marker=dict(color="#60a5fa"),
             hovertemplate="Minute window %{x}: %{y}<extra></extra>",
         )
     )
@@ -1678,7 +1688,7 @@ def shotmap_figure(df: pd.DataFrame, title: str) -> go.Figure:
                 mode="markers",
                 name=result,
                 marker=dict(
-                    size=np.clip(part["xg"].fillna(0) * 95 + 10, 10, 38),
+                    size=12 if result == "Shot" else 16,
                     color=color_map[result],
                     opacity=0.78,
                     line=dict(width=1, color="white"),
@@ -1880,6 +1890,100 @@ def starting_location_map_figure(df: pd.DataFrame, title: str) -> go.Figure:
                 hovertemplate="<b>%{customdata[0]}</b><br>Taker: %{customdata[1]}<br>%{customdata[2]}<br>Minute: %{customdata[3]}<extra></extra>",
             )
         )
+
+    return add_half_vertical_pitch_layout(fig, title, source_df=df)
+
+
+FK_PITCH_ZONES = ["Left Wide", "Left Half Space", "Central", "Right Half Space", "Right Wide"]
+
+def classify_fk_pitch_zone(pass_y: pd.Series, pitch_width: float = 80.0) -> pd.Series:
+    """Classify FK start location y-coordinate into 5 horizontal zones."""
+    w = pitch_width
+    return pd.cut(
+        pass_y,
+        bins=[-0.001, w * 0.2, w * 0.38, w * 0.52, w * 0.70, w + 1],
+        labels=["Left Wide", "Left Half Space", "Central", "Right Half Space", "Right Wide"],
+    ).astype(str)
+
+
+def freekick_start_end_arrow_figure(df: pd.DataFrame, title: str) -> go.Figure:
+    """Show FK start locations as circles with arrows pointing to delivery end locations."""
+    fig = go.Figure()
+    pitch = pitch_dimensions(df)
+    pitch_width = float(pitch["width"])
+    half_start = float(pitch["half_start"])
+    pitch_length = float(pitch["length"])
+
+    if df.empty:
+        fig.add_annotation(text="No data available", x=pitch_width / 2, y=(half_start + pitch_length) / 2, showarrow=False, font=dict(size=18, color="#64748b"))
+        return add_half_vertical_pitch_layout(fig, title, source_df=df)
+
+    has_start = "pass_x" in df.columns and "pass_y" in df.columns
+    has_end = "delivery_end_x" in df.columns and "delivery_end_y" in df.columns
+
+    if not has_start:
+        fig.add_annotation(text="No start location data available", x=pitch_width / 2, y=(half_start + pitch_length) / 2, showarrow=False, font=dict(size=18, color="#64748b"))
+        return add_half_vertical_pitch_layout(fig, title, source_df=df)
+
+    starts = df[df["pass_x"].notna() & df["pass_y"].notna()].copy()
+    starts = unique_start_events(starts)
+
+    if starts.empty:
+        fig.add_annotation(text="No start locations for current filter", x=pitch_width / 2, y=(half_start + pitch_length) / 2, showarrow=False, font=dict(size=18, color="#64748b"))
+        return add_half_vertical_pitch_layout(fig, title, source_df=df)
+
+    starts["plot_x"], starts["plot_y"] = coords_to_statsbomb(starts, "pass_x", "pass_y")
+    starts["vx"], starts["vy"] = vertical_coords_from_pitch(starts["plot_x"], starts["plot_y"], pitch)
+
+    # Draw start location circles
+    fig.add_trace(
+        go.Scatter(
+            x=starts["vx"], y=starts["vy"],
+            mode="markers",
+            name="Start",
+            marker=dict(size=10, color="#f59e0b", opacity=0.9, line=dict(width=1.5, color="white")),
+            hovertemplate="Taker: %{customdata[0]}<br>Minute: %{customdata[1]}<extra></extra>",
+            customdata=np.stack([
+                starts["Taker"].fillna("Unknown") if "Taker" in starts.columns else pd.Series(["Unknown"] * len(starts)),
+                starts["minute"].fillna(0) if "minute" in starts.columns else pd.Series([0] * len(starts)),
+            ], axis=1),
+        )
+    )
+
+    # Draw arrows to end locations if available
+    if has_end:
+        ends = starts[starts["delivery_end_x"].notna() & starts["delivery_end_y"].notna()].copy()
+        if not ends.empty:
+            ends["end_plot_x"], ends["end_plot_y"] = coords_to_statsbomb(ends, "delivery_end_x", "delivery_end_y")
+            ends["end_vx"], ends["end_vy"] = vertical_coords_from_pitch(ends["end_plot_x"], ends["end_plot_y"], pitch)
+
+            # Build line segments with None separators for efficiency
+            xs: list = []
+            ys: list = []
+            for _, row in ends.head(150).iterrows():
+                xs.extend([row["vx"], row["end_vx"], None])
+                ys.extend([row["vy"], row["end_vy"], None])
+
+            fig.add_trace(
+                go.Scatter(
+                    x=xs, y=ys,
+                    mode="lines",
+                    name="Delivery",
+                    line=dict(color="#60a5fa", width=1.5),
+                    opacity=0.65,
+                    hoverinfo="skip",
+                )
+            )
+            # End location markers
+            fig.add_trace(
+                go.Scatter(
+                    x=ends.head(150)["end_vx"], y=ends.head(150)["end_vy"],
+                    mode="markers",
+                    name="End",
+                    marker=dict(size=8, color="#60a5fa", symbol="triangle-right", opacity=0.85),
+                    hoverinfo="skip",
+                )
+            )
 
     return add_half_vertical_pitch_layout(fig, title, source_df=df)
 

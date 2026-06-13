@@ -58,7 +58,6 @@ def render_hops() -> None:
         filtered = filtered[filtered["Team"] == team].copy()
     if tier_filter:
         filtered = filtered[filtered["Tier"].isin(tier_filter)].copy()
-    st.markdown('</div>', unsafe_allow_html=True)
 
     scope_parts = [p for p in [team if team != "All" else None, league if league != "All" else None] if p]
     scope_str = " · ".join(scope_parts) if scope_parts else "All leagues"
@@ -124,6 +123,19 @@ def render_hops() -> None:
 
     # ── Charts ────────────────────────────────────────────────────────────────
     with tab_charts:
+        # Tier range reference
+        st.markdown(
+            """<div style="background:#161922;border:1px solid rgba(255,255,255,.08);border-radius:6px;
+            padding:.7rem 1rem;margin-bottom:.8rem;font-size:.82rem;color:#94a3b8">
+            <strong style="color:#e2e8f0">HOPS Tier Ranges</strong> (based on squad-wide percentiles) &nbsp;·&nbsp;
+            <span style="color:#22c55e">⬛ Elite</span>: top 10% (≥ 90th pct) &nbsp;·&nbsp;
+            <span style="color:#60a5fa">⬛ Strong</span>: 75th–90th pct &nbsp;·&nbsp;
+            <span style="color:#fbbf24">⬛ Rotation</span>: 50th–75th pct &nbsp;·&nbsp;
+            <span style="color:#94a3b8">⬛ Depth</span>: below 50th pct
+            </div>""",
+            unsafe_allow_html=True,
+        )
+
         chart_left, chart_right = st.columns(2)
         with chart_left:
             section_header("Top rating evidence")

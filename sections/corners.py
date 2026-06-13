@@ -62,8 +62,8 @@ def _filter_data(df: pd.DataFrame, key_prefix: str):
     periods = ["All"] + _safe_sorted(df["game_period"]) if "game_period" in df.columns else ["All"]
     techniques = _safe_sorted(df["Technique"]) if "Technique" in df.columns else []
     heights = _safe_sorted(df["Delivery height"]) if "Delivery height" in df.columns else []
-    takers = _safe_sorted(df["Taker"]) if "Taker" in df.columns else []
     shot_outcomes = _safe_sorted(df["Shot outcome"]) if "Shot outcome" in df.columns else []
+    delivery_outcomes = _safe_sorted(df["Delivery outcome"]) if "Delivery outcome" in df.columns else []
 
     minute_min, minute_max = 0, 95
     if "minute" in df.columns:
@@ -82,9 +82,17 @@ def _filter_data(df: pd.DataFrame, key_prefix: str):
     with fc4:
         sample = st.radio("Sample", ["Total", "Last 10"], horizontal=True, key=f"{key_prefix}_sample")
 
+    # Compute takers from selected team's data (team-specific player list)
+    if team != "All":
+        team_df = _apply_team_perspective(df.copy(), team, perspective)
+        takers = _safe_sorted(team_df["Taker"]) if "Taker" in team_df.columns else []
+    else:
+        takers = _safe_sorted(df["Taker"]) if "Taker" in df.columns else []
+
     side = "All"; time_in_game = "All"; minute_range = (minute_min, minute_max)
     taker_filter: list = []; technique_filter: list = []; height_filter: list = []
-    shot_outcome_filter: list = []; only_shots = False
+    shot_outcome_filter: list = []; delivery_outcome_filter: list = []; only_shots = False
+    xg_min: float = 0.0
 
     with st.expander("More filters", expanded=False):
         mx1, mx2, mx3, mx4 = st.columns(4)
@@ -100,6 +108,11 @@ def _filter_data(df: pd.DataFrame, key_prefix: str):
         with mx4:
             height_filter = st.multiselect("Height", heights, key=f"{key_prefix}_height")
             shot_outcome_filter = st.multiselect("Shot outcome", shot_outcomes, key=f"{key_prefix}_outcome")
+        mx5, mx6 = st.columns(2)
+        with mx5:
+            delivery_outcome_filter = st.multiselect("First contact (Delivery outcome)", delivery_outcomes, key=f"{key_prefix}_delivery_outcome")
+        with mx6:
+            xg_min = st.number_input("Min xG (shot map filter)", min_value=0.0, max_value=1.0, value=0.0, step=0.05, key=f"{key_prefix}_xg_min")
 
     filtered = df.copy()
     filtered = _apply_team_perspective(filtered, team, perspective)
@@ -121,6 +134,8 @@ def _filter_data(df: pd.DataFrame, key_prefix: str):
         filtered = filtered[filtered["Delivery height"].isin(height_filter)]
     if shot_outcome_filter and "Shot outcome" in filtered.columns:
         filtered = filtered[filtered["Shot outcome"].isin(shot_outcome_filter)]
+    if delivery_outcome_filter and "Delivery outcome" in filtered.columns:
+        filtered = filtered[filtered["Delivery outcome"].isin(delivery_outcome_filter)]
     if only_shots and "is_shot" in filtered.columns:
         filtered = filtered[filtered["is_shot"]]
 
@@ -130,8 +145,12 @@ def _filter_data(df: pd.DataFrame, key_prefix: str):
         ("Minutes", f"{minute_range[0]}-{minute_range[1]}" if minute_range != (minute_min, minute_max) else "All"),
         ("Taker", taker_filter), ("Technique", technique_filter),
         ("Height", height_filter), ("Shot outcome", shot_outcome_filter),
+        ("First contact", delivery_outcome_filter),
+        ("Min xG", f"≥{xg_min:.2f}" if xg_min > 0 else "All"),
         ("Shot only", "Yes" if only_shots else "All"),
     ]
+    # Store xg_min for use in calling code
+    st.session_state[f"{key_prefix}_current_xg_min"] = xg_min
     return filtered, filters, team, league
 
 
@@ -279,7 +298,6 @@ def render_corners() -> None:
 
     st.markdown('<div class="mm-filter-panel"><div class="mm-filter-panel-label">Filters</div>', unsafe_allow_html=True)
     filtered, filters, selected_team, selected_league = _filter_data(df, "corners")
-    st.markdown('</div>', unsafe_allow_html=True)
 
     scope_parts = [p for p in [selected_team if selected_team != "All" else None,
                                 selected_league if selected_league != "All" else None] if p]
@@ -350,19 +368,23 @@ def render_corners() -> None:
         render_mpl_visual(mplsoccer_delivery_sp_outcome_figure(filtered, label), "Delivery SP outcomes", "corners_delivery_sp_outcomes_png")
 
         section_header("Shot map")
+        xg_min = st.session_state.get(f"corners_current_xg_min", 0.0)
+        shot_map_df = filtered.copy()
+        if xg_min > 0 and "xg" in shot_map_df.columns:
+            shot_map_df = shot_map_df[pd.to_numeric(shot_map_df["xg"], errors="coerce").fillna(0) >= xg_min]
         render_plotly_visual(
-            polish_plotly_figure(shotmap_figure(filtered, f"{scope} — corner shots")),
+            polish_plotly_figure(shotmap_figure(shot_map_df, f"{scope} — corner shots (xG ≥ {xg_min:.2f})" if xg_min > 0 else f"{scope} — corner shots")),
             "Shot map", "corners_shot_map_png",
         )
 
         section_header("Technique, height & side breakdown")
         ch1, ch2, ch3 = st.columns(3)
         with ch1:
-            render_plotly_visual(categorical_breakdown_figure(filtered, "Technique", "Technique", top_n=8, color="#111827"), "Technique", "corners_technique_png")
+            render_plotly_visual(categorical_breakdown_figure(filtered, "Technique", "Technique", top_n=8, color="#e2e8f0"), "Technique", "corners_technique_png")
         with ch2:
-            render_plotly_visual(categorical_breakdown_figure(filtered, "Delivery height", "Height", top_n=8, color="#1d4ed8"), "Height", "corners_height_png")
+            render_plotly_visual(categorical_breakdown_figure(filtered, "Delivery height", "Height", top_n=8, color="#93c5fd"), "Height", "corners_height_png")
         with ch3:
-            render_plotly_visual(categorical_breakdown_figure(filtered, "side", "Side", top_n=6, color="#c1121f"), "Side", "corners_side_png")
+            render_plotly_visual(categorical_breakdown_figure(filtered, "side", "Side", top_n=6, color="#fca5a5"), "Side", "corners_side_png")
 
         section_header("Technique × Height — detailed table")
         render_analyst_table(
@@ -387,11 +409,13 @@ def render_corners() -> None:
             with zc1:
                 section_header("xG / corner by zone")
                 fig = bar_chart(zone_df.sort_values("xG / corner"), x="xG / corner", y="Delivery zone", orientation="h")
+                fig.update_traces(marker_color="#60a5fa")
                 fig.update_layout(height=380, margin=dict(l=8, r=8, t=24, b=8), showlegend=False)
                 render_plotly_visual(polish_plotly_figure(fig), "Zone xG per corner", "corners_zone_xg_png")
             with zc2:
                 section_header("Shot rate by zone")
                 fig2 = bar_chart(zone_df.sort_values("Shot rate %"), x="Shot rate %", y="Delivery zone", orientation="h")
+                fig2.update_traces(marker_color="#4ade80")
                 fig2.update_layout(height=380, margin=dict(l=8, r=8, t=24, b=8), showlegend=False)
                 render_plotly_visual(polish_plotly_figure(fig2), "Zone shot rate", "corners_zone_shot_rate_png")
 
@@ -411,9 +435,13 @@ def render_corners() -> None:
 
     # ── Takers ───────────────────────────────────────────────────────────────
     with tab_takers:
-        section_header("Taker leaderboard", "Ranked by xG / 100 corners")
+        taker_sort = st.radio("Sort takers by", ["Events", "xG / 100"], horizontal=True, key="corners_taker_sort")
+        section_header("Taker leaderboard")
+        taker_lb = build_taker_leaderboard(filtered)
+        if taker_sort == "Events" and "Events" in taker_lb.columns:
+            taker_lb = taker_lb.sort_values("Events", ascending=False)
         render_analyst_table(
-            build_taker_leaderboard(filtered).head(35), height=460,
+            taker_lb.head(35), height=460,
             color_cols=["Events", "Shots", "Goals", "Shot rate", "xG / event", "xG / 100"],
         )
 
@@ -423,15 +451,15 @@ def render_corners() -> None:
             color_cols=["Shots", "Goals", "Total xG", "xG / shot", "Conversion %"],
         )
 
-        section_header("Top takers by volume")
+        section_header("Top takers by volume (events)")
         render_plotly_visual(
-            categorical_breakdown_figure(filtered, "Taker", "Top takers", top_n=15, color="#c1121f"),
+            categorical_breakdown_figure(filtered, "Taker", "Top takers", top_n=15, color="#fca5a5"),
             "Top takers", "corners_top_takers_png",
         )
 
         section_header("Shot outcomes by player")
         render_plotly_visual(
-            categorical_breakdown_figure(filtered, "Shooter", "Top shooters", top_n=15, color="#1d4ed8"),
+            categorical_breakdown_figure(filtered, "Shooter", "Top shooters", top_n=15, color="#93c5fd"),
             "Top shooters", "corners_top_shooters_png",
         )
 
@@ -446,14 +474,14 @@ def render_corners() -> None:
         section_header("Delivery outcome chart")
         if "Delivery outcome" in filtered.columns:
             render_plotly_visual(
-                categorical_breakdown_figure(filtered, "Delivery outcome", "Delivery outcomes", top_n=14, color="#15803d"),
+                categorical_breakdown_figure(filtered, "Delivery outcome", "Delivery outcomes", top_n=14, color="#86efac"),
                 "Delivery outcomes", "corners_delivery_outcomes_png",
             )
 
         section_header("Shot outcome chart")
         if "Shot outcome" in filtered.columns:
             render_plotly_visual(
-                categorical_breakdown_figure(filtered, "Shot outcome", "Shot outcomes", top_n=12, color="#b45309"),
+                categorical_breakdown_figure(filtered, "Shot outcome", "Shot outcomes", top_n=12, color="#fcd34d"),
                 "Shot outcomes", "corners_shot_outcomes_png",
             )
 
@@ -474,6 +502,7 @@ def render_corners() -> None:
             top_matches = match_log.sort_values("Total xG", ascending=False).head(20)
             match_col = "Match" if "Match" in top_matches.columns else top_matches.columns[0]
             fig = bar_chart(top_matches.sort_values("Total xG"), x="Total xG", y=match_col, orientation="h")
+            fig.update_traces(marker_color="#60a5fa")
             fig.update_layout(height=480, margin=dict(l=8, r=8, t=24, b=8), showlegend=False)
             render_plotly_visual(polish_plotly_figure(fig), "xG per match", "corners_match_xg_png")
         else:
@@ -569,13 +598,13 @@ def render_corners() -> None:
 
         section_header("Technique chart — full breakdown")
         render_plotly_visual(
-            categorical_breakdown_figure(filtered, "Technique", "Technique share", top_n=12, color="#0f172a"),
+            categorical_breakdown_figure(filtered, "Technique", "Technique share", top_n=12, color="#e2e8f0"),
             "Technique share", "corners_tech_arch_png",
         )
 
         section_header("Delivery height chart")
         render_plotly_visual(
-            categorical_breakdown_figure(filtered, "Delivery height", "Delivery height", top_n=8, color="#c1121f"),
+            categorical_breakdown_figure(filtered, "Delivery height", "Delivery height", top_n=8, color="#fca5a5"),
             "Delivery height", "corners_height_arch_png",
         )
 
