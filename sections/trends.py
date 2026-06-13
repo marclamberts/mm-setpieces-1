@@ -249,7 +249,6 @@ def render_trends() -> None:
         sp_type = st.selectbox("Set Piece Type", ["All", "Corner", "FK", "Throw-in"], key="trends_sp_type")
     with fc4:
         window = st.selectbox("Rolling window", [3, 5, 10], index=1, key="trends_window")
-    st.markdown('</div>', unsafe_allow_html=True)
 
     def _apply_league(df: pd.DataFrame) -> pd.DataFrame:
         if selected_league != "All" and "League" in df.columns:

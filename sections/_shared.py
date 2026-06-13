@@ -542,7 +542,7 @@ def render_mpl_visual(fig, label: str, key: str, max_width: int = 500) -> None:
 
 
 def _plot_colors() -> list[str]:
-    return ["#111827", "#c1121f", "#1d4ed8", "#15803d", "#b45309", "#7c3aed", "#64748b"]
+    return ["#60a5fa", "#f87171", "#4ade80", "#fbbf24", "#a78bfa", "#34d399", "#94a3b8"]
 
 
 def bar_chart(df: pd.DataFrame, x: str, y: str, title: str = "", color: str | None = None, orientation: str = "v", barmode: str = "relative") -> go.Figure:

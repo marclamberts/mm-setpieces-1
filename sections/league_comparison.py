@@ -27,6 +27,7 @@ from sections._shared import (
     _league_set_piece_difference_table,
     bar_chart,
     render_plotly_visual,
+    set_section,
 )
 
 
@@ -66,7 +67,6 @@ def render_league_comparison() -> None:
         filtered = filtered[filtered["Phase"].eq(phase)].copy()
     if selected_leagues and "League" in filtered.columns:
         filtered = filtered[filtered["League"].isin(selected_leagues)].copy()
-    st.markdown('</div>', unsafe_allow_html=True)
 
     phase_label = phase if phase != "All" else "All phases"
     hero_block("League comparison", "League Comparison", f"{phase_label} · {len(selected_leagues)} leagues · {len(filtered):,} events")
@@ -152,3 +152,14 @@ def render_league_comparison() -> None:
             "Technique", "Delivery height", "Shot outcome", "xg", "Delivery outcome",
         ] if c in filtered.columns]
         render_analyst_table(filtered[display_cols], height=640)
+
+    section_header("Drill down", "Jump to a detailed section")
+    ja1, ja2, ja3, ja4 = st.columns(4)
+    if ja1.button("⏱ Delay Analysis", key="lc_jump_delay", use_container_width=True):
+        set_section("Delay Analysis")
+    if ja2.button("⚽ Corners", key="lc_jump_corners", use_container_width=True):
+        set_section("Corners")
+    if ja3.button("🎯 Free Kicks", key="lc_jump_freekicks", use_container_width=True):
+        set_section("Freekicks")
+    if ja4.button("↗ Throw-ins", key="lc_jump_throwins", use_container_width=True):
+        set_section("Throw-ins")

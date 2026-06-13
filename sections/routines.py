@@ -171,19 +171,19 @@ def render_routines() -> None:
         return
 
     # ── Filters ─────────────────────────────────────────────────────────
-    st.markdown('<div class="mm-filter-panel"><div class="mm-filter-panel-label">Filters</div>', unsafe_allow_html=True)
-    rf1, rf2, rf3, rf4 = st.columns(4)
-    with rf1:
-        f_type  = st.selectbox("Type",  ["All"] + SP_TYPES,  key="r_f_type")
-    with rf2:
-        f_phase = st.selectbox("Phase", ["All"] + PHASES,    key="r_f_phase")
-    with rf3:
-        all_teams_in_data = sorted({r.get("team","") for r in routines if r.get("team")})
-        f_team  = st.selectbox("Team",  ["All"] + all_teams_in_data, key="r_f_team")
-    with rf4:
-        all_tags = sorted({t for r in routines for t in r.get("tags", [])})
-        f_tag   = st.selectbox("Tag",   ["All"] + all_tags,  key="r_f_tag")
-    st.markdown('</div>', unsafe_allow_html=True)
+    with st.container():
+        st.markdown('<div class="mm-filter-panel"><div class="mm-filter-panel-label">Filters</div>', unsafe_allow_html=True)
+        rf1, rf2, rf3, rf4 = st.columns(4)
+        with rf1:
+            f_type  = st.selectbox("Type",  ["All"] + SP_TYPES,  key="r_f_type")
+        with rf2:
+            f_phase = st.selectbox("Phase", ["All"] + PHASES,    key="r_f_phase")
+        with rf3:
+            all_teams_in_data = sorted({r.get("team","") for r in routines if r.get("team")})
+            f_team  = st.selectbox("Team",  ["All"] + all_teams_in_data, key="r_f_team")
+        with rf4:
+            all_tags = sorted({t for r in routines for t in r.get("tags", [])})
+            f_tag   = st.selectbox("Tag",   ["All"] + all_tags,  key="r_f_tag")
 
     displayed = routines
     if f_type  != "All": displayed = [r for r in displayed if r.get("sp_type") == f_type]
