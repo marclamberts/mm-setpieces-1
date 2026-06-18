@@ -38,6 +38,7 @@ from sections._shared import (
     _set_piece_team_options,
     _apply_team_perspective,
     _with_match_names,
+    _cached_report_pdf,
     bar_chart,
     render_plotly_visual,
     render_mpl_visual,
@@ -233,9 +234,9 @@ def render_throwins() -> None:
 
     tabs = st.tabs([
         "📊 Overview", "🔗 Sequences", "🗺️ Zones", "🎯 Pitch",
-        "👤 Roles", "📈 Trends", "⚖️ Compare", "🗃️ Rows",
+        "👤 Roles", "📈 Trends", "⚖️ Compare", "📋 Report", "🗃️ Rows",
     ])
-    tab_overview, tab_sequences, tab_zones, tab_pitch, tab_roles, tab_trends, tab_compare, tab_rows = tabs
+    tab_overview, tab_sequences, tab_zones, tab_pitch, tab_roles, tab_trends, tab_compare, tab_report, tab_rows = tabs
 
     # ── Overview ─────────────────────────────────────────────────────────────
     with tab_overview:
@@ -367,7 +368,7 @@ def render_throwins() -> None:
         section_header("Height breakdown chart")
         if "Delivery height" in filtered.columns:
             render_plotly_visual(
-                categorical_breakdown_figure(filtered, "Delivery height", "Delivery height", top_n=8, color="#1d4ed8"),
+                categorical_breakdown_figure(filtered, "Delivery height", "Delivery height", top_n=8, color="#60a5fa"),
                 "Delivery height", "throwins_height_png",
             )
 
@@ -474,6 +475,27 @@ def render_throwins() -> None:
             with tc2:
                 st.caption(f"**{team_b}**")
                 render_analyst_table(throwin_taker_summary(df_b).head(12), height=320, color_cols=["Box entry %", "Total_xG"])
+
+    # ── Report ────────────────────────────────────────────────────────────────
+    with tab_report:
+        section_header("Pre-match PDF brief")
+        pdf_teams = ["All"] + _safe_sorted(filtered["Team"]) if "Team" in filtered.columns else ["All"]
+        if st.session_state.get("throwins_pdf_team") not in pdf_teams:
+            st.session_state["throwins_pdf_team"] = "All"
+        pdf_team = st.selectbox("Report team", pdf_teams, key="throwins_pdf_team")
+        opponent = st.text_input("Opponent / label for filename", value="", key="throwins_pdf_label")
+        pdf_filtered = filtered[filtered["Team"].astype(str).eq(pdf_team)].copy() if pdf_team != "All" and "Team" in filtered.columns else filtered.copy()
+        pdf_label = f"Throw-ins – {pdf_team}" if pdf_team != "All" else "Throw-ins"
+        safe_name = (opponent.strip() or pdf_label).lower().replace(" ", "_").replace("/", "-")
+        st.info("PDF generation may take a few seconds on large datasets.")
+        st.download_button(
+            "⬇ Download pre-match PDF",
+            data=_cached_report_pdf(pdf_filtered, pdf_label, opponent.strip()),
+            file_name=f"{safe_name}_throwins_report.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+            key="throwins_pdf_download",
+        )
 
     # ── Rows ──────────────────────────────────────────────────────────────────
     with tab_rows:

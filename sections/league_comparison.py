@@ -25,6 +25,7 @@ from sections._shared import (
     _league_summary_table,
     _league_phase_summary_table,
     _league_set_piece_difference_table,
+    _apply_team_perspective,
     bar_chart,
     render_plotly_visual,
     set_section,
@@ -37,6 +38,46 @@ def _lc_datasets(_data_version: str = DATA_VERSION):
     freekicks = _with_match_names(load_prepared_freekick_brief_data(_data_version))
     throwins = _with_match_names(load_prepared_sp_data("Throw ins", _data_version))
     return corners, freekicks, throwins
+
+
+def _build_team_sp_table(df: pd.DataFrame, top_n: int = 25) -> pd.DataFrame:
+    if df.empty or "Team" not in df.columns:
+        return pd.DataFrame()
+    all_teams_in_df = [t for t in df["Team"].dropna().astype(str).unique() if t.strip() and t not in ("Unknown", "nan")]
+    corner_df = df[df["Phase"].eq("Corners")] if "Phase" in df.columns else pd.DataFrame()
+    rows = []
+    for team in sorted(all_teams_in_df):
+        sp_for = df[df["Team"].astype(str).eq(team)]
+        c_for  = corner_df[corner_df["Team"].astype(str).eq(team)] if not corner_df.empty else pd.DataFrame()
+        sp_vs  = _apply_team_perspective(df, team, "Against")
+        c_vs   = _apply_team_perspective(corner_df, team, "Against") if not corner_df.empty else pd.DataFrame()
+
+        sp_n   = max(len(sp_for), 1)
+        c_n    = max(len(c_for), 1)
+        vs_n   = max(len(sp_vs), 1)
+        c_vs_n = max(len(c_vs), 1)
+
+        goals_for = int(sp_for["is_goal"].sum()) if not sp_for.empty and "is_goal" in sp_for.columns else 0
+        goals_vs  = int(sp_vs["is_goal"].sum()) if not sp_vs.empty and "is_goal" in sp_vs.columns else 0
+        xg_for    = float(sp_for["xg"].fillna(0).sum()) if not sp_for.empty and "xg" in sp_for.columns else 0.0
+        xg_vs     = float(sp_vs["xg"].fillna(0).sum()) if not sp_vs.empty and "xg" in sp_vs.columns else 0.0
+        xg_c_for  = float(c_for["xg"].fillna(0).sum()) if not c_for.empty and "xg" in c_for.columns else 0.0
+        xg_c_vs   = float(c_vs["xg"].fillna(0).sum()) if not c_vs.empty and "xg" in c_vs.columns else 0.0
+
+        rows.append({
+            "Team":                    team,
+            "SP Goals":                goals_for,
+            "SP Goals Conceded":       goals_vs,
+            "SP xG":                   round(xg_for, 2),
+            "SP xG Conceded":          round(xg_vs, 2),
+            "SP xG / 100":             round(xg_for / sp_n * 100, 2),
+            "SP xG / 100 Conceded":    round(xg_vs / vs_n * 100, 2),
+            "Corner xG / corner":      round(xg_c_for / c_n, 3),
+            "Corner xG / corner Conc": round(xg_c_vs / c_vs_n, 3),
+            "Set Pieces":              len(sp_for),
+            "Corners":                 len(c_for),
+        })
+    return pd.DataFrame(rows).sort_values("SP xG / 100", ascending=False)
 
 
 def render_league_comparison() -> None:
@@ -99,8 +140,8 @@ def render_league_comparison() -> None:
     c4.metric("Shot rate", f"{(shots / set_pieces * 100) if set_pieces else 0:.1f}%")
     c5.metric("xG / 100", f"{(total_xg / set_pieces * 100) if set_pieces else 0:.2f}")
 
-    tab_summary, tab_charts, tab_phase, tab_rows = st.tabs([
-        "📊 Summary", "📈 Charts", "🔀 Phase split", "🗃️ Rows"
+    tab_summary, tab_charts, tab_phase, tab_teams, tab_rows = st.tabs([
+        "📊 Summary", "📈 Charts", "🔀 Phase split", "🏆 Teams", "🗃️ Rows"
     ])
 
     with tab_summary:
@@ -144,6 +185,38 @@ def render_league_comparison() -> None:
             fig = bar_chart(phase_chart, x="League", y="xG / 100", color="Phase", barmode="group")
             fig.update_layout(height=430, margin=dict(l=10, r=10, t=30, b=10), legend_title_text="")
             render_plotly_visual(polish_plotly_figure(fig), "Phase threat mix", "lc_phase_threat_png")
+
+    with tab_teams:
+        section_header("Team comparison", "Set piece output and conceded metrics by team")
+        team_table = _build_team_sp_table(filtered, top_n)
+        if team_table.empty:
+            st.info("No team data available for the current filter.")
+        else:
+            render_analyst_table(
+                team_table.head(top_n * 3), height=520,
+                color_cols=["SP Goals", "SP Goals Conceded", "SP xG", "SP xG Conceded",
+                            "SP xG / 100", "SP xG / 100 Conceded",
+                            "Corner xG / corner", "Corner xG / corner Conc"],
+            )
+
+            chart_top = team_table.head(top_n).copy()
+            tc1, tc2 = st.columns(2)
+            with tc1:
+                section_header("Set piece goals — attack vs conceded")
+                goals_melt = chart_top[["Team", "SP Goals", "SP Goals Conceded"]].melt(
+                    "Team", var_name="Type", value_name="Goals"
+                )
+                fig_goals = bar_chart(goals_melt, x="Team", y="Goals", color="Type", barmode="group")
+                fig_goals.update_layout(height=400, margin=dict(l=8, r=8, t=30, b=8))
+                render_plotly_visual(polish_plotly_figure(fig_goals), "SP goals vs conceded", "lc_team_goals_png")
+            with tc2:
+                section_header("Corner xG — attack vs conceded")
+                xg_melt = chart_top[["Team", "Corner xG / corner", "Corner xG / corner Conc"]].melt(
+                    "Team", var_name="Type", value_name="xG"
+                )
+                fig_xg = bar_chart(xg_melt, x="Team", y="xG", color="Type", barmode="group")
+                fig_xg.update_layout(height=400, margin=dict(l=8, r=8, t=30, b=8))
+                render_plotly_visual(polish_plotly_figure(fig_xg), "Corner xG per corner", "lc_team_corner_xg_png")
 
     with tab_rows:
         section_header("Raw rows", f"{len(filtered):,} restart events")

@@ -40,6 +40,7 @@ from sections._shared import (
     _set_piece_team_options,
     _apply_team_perspective,
     _with_match_names,
+    _cached_report_pdf,
     bar_chart,
     render_plotly_visual,
     render_mpl_visual,
@@ -208,9 +209,9 @@ def render_freekicks() -> None:
 
     tabs = st.tabs([
         "📊 Overview", "🔗 Sequences", "🗺️ Zones", "🎯 Pitch",
-        "👤 Roles", "📈 Trends", "⚖️ Compare", "🗃️ Rows",
+        "👤 Roles", "📈 Trends", "⚖️ Compare", "📋 Report", "🗃️ Rows",
     ])
-    tab_overview, tab_sequences, tab_zones, tab_pitch, tab_roles, tab_trends, tab_compare, tab_rows = tabs
+    tab_overview, tab_sequences, tab_zones, tab_pitch, tab_roles, tab_trends, tab_compare, tab_report, tab_rows = tabs
 
     # ── Overview ─────────────────────────────────────────────────────────────
     with tab_overview:
@@ -320,9 +321,20 @@ def render_freekicks() -> None:
         render_mpl_visual(freekick_origin_map_figure(filtered), "FK origin map", "freekicks_origin_map_png")
 
         section_header("Start locations → end locations")
-        st.caption("Circles = FK start positions · Arrows = delivery direction and end location")
+        st.caption("Circles = FK start positions · Lines = delivery direction and end location")
+        zone_sel = st.multiselect(
+            "Filter by pitch zone",
+            FK_PITCH_ZONES,
+            default=[],
+            key="fk_arrow_zone_filter",
+            help="Left Wide / Left Half Space / Central / Right Half Space / Right Wide",
+        )
+        arrow_df = filtered.copy()
+        if zone_sel and "pass_y" in arrow_df.columns:
+            arrow_df["_fk_zone"] = classify_fk_pitch_zone(pd.to_numeric(arrow_df["pass_y"], errors="coerce"))
+            arrow_df = arrow_df[arrow_df["_fk_zone"].isin(zone_sel)].drop(columns=["_fk_zone"])
         render_plotly_visual(
-            polish_plotly_figure(freekick_start_end_arrow_figure(filtered, f"{label} — start to end locations")),
+            polish_plotly_figure(freekick_start_end_arrow_figure(arrow_df, f"{label} — start to end locations")),
             "Start → End locations", "freekicks_start_end_arrow_png",
         )
 
@@ -448,6 +460,27 @@ def render_freekicks() -> None:
             with tc2:
                 st.caption(f"**{team_b}**")
                 render_analyst_table(freekick_taker_summary(df_b).head(12), height=320, color_cols=["Total_xG", "Avg_xG"])
+
+    # ── Report ────────────────────────────────────────────────────────────────
+    with tab_report:
+        section_header("Pre-match PDF brief")
+        pdf_teams = ["All"] + _safe_sorted(filtered["Team"]) if "Team" in filtered.columns else ["All"]
+        if st.session_state.get("fk_pdf_team") not in pdf_teams:
+            st.session_state["fk_pdf_team"] = "All"
+        pdf_team = st.selectbox("Report team", pdf_teams, key="fk_pdf_team")
+        opponent = st.text_input("Opponent / label for filename", value="", key="fk_pdf_label")
+        pdf_filtered = filtered[filtered["Team"].astype(str).eq(pdf_team)].copy() if pdf_team != "All" and "Team" in filtered.columns else filtered.copy()
+        pdf_label = f"Free Kicks – {pdf_team}" if pdf_team != "All" else "Free Kicks"
+        safe_name = (opponent.strip() or pdf_label).lower().replace(" ", "_").replace("/", "-")
+        st.info("PDF generation may take a few seconds on large datasets.")
+        st.download_button(
+            "⬇ Download pre-match PDF",
+            data=_cached_report_pdf(pdf_filtered, pdf_label, opponent.strip()),
+            file_name=f"{safe_name}_freekicks_report.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+            key="fk_pdf_download",
+        )
 
     # ── Rows ──────────────────────────────────────────────────────────────────
     with tab_rows:

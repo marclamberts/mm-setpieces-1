@@ -607,21 +607,16 @@ def minute_distribution_figure(df: pd.DataFrame, title: str) -> go.Figure:
         fig.add_annotation(text="No minute data available", x=0.5, y=0.5, xref="paper", yref="paper", showarrow=False)
         return polish_plotly_figure(fig)
 
+    # Always include all 5-min bands from 0 to at least 95; extend if data has extra time
     max_minute = max(95, int(minutes.max()))
-    bins = list(range(0, max_minute + 6, 5))
-    bucket = pd.cut(minutes, bins=bins, right=False, include_lowest=True)
-    counts = bucket.value_counts().sort_index()
-    # Reindex to ensure all standard bands 0-90 are present even when empty
-    standard_bins = list(range(0, 96, 5))
-    standard_intervals = pd.cut(pd.Series(standard_bins[:-1]), bins=bins, right=False, include_lowest=True)
-    for interval in standard_intervals:
-        if interval is not pd.NaT and interval not in counts.index:
-            counts.loc[interval] = 0  # type: ignore[index]
-    counts = counts.sort_index()
-    labels = [f"{int(interval.left)}-{int(interval.right - 1)}" for interval in counts.index]
+    n_bins = (max_minute // 5) + 1
+    bin_edges = [i * 5 for i in range(n_bins + 1)]
+    labels = [f"{b}-{b + 4}" for b in bin_edges[:-1]]
+    bucket = pd.cut(minutes, bins=bin_edges, right=False, include_lowest=True, labels=labels)
+    counts = bucket.value_counts().reindex(labels, fill_value=0)
     fig.add_trace(
         go.Bar(
-            x=labels,
+            x=counts.index.tolist(),
             y=counts.values,
             marker=dict(color="#60a5fa"),
             hovertemplate="Minute window %{x}: %{y}<extra></extra>",
@@ -2696,10 +2691,13 @@ def freekick_origin_map_figure(df: pd.DataFrame, title: str = "Freekick origins"
         )
 
     ax.legend(
-        loc="upper right",
+        loc="lower left",
         fontsize=7,
         frameon=True,
-        framealpha=0.9,
+        framealpha=0.85,
+        facecolor="#1a2438",
+        edgecolor="#4b5563",
+        labelcolor="#cbd5e1",
         title="Lane",
         title_fontsize=7,
     )
@@ -3481,48 +3479,55 @@ def prematch_report_pdf_bytes(df: pd.DataFrame, label: str = "", opponent: str =
     roles = build_role_archetypes(df, label).head(8)
     teams = build_team_archetypes(df).head(8)
 
+    _PDF_BG   = "#0b0f14"
+    _PDF_INK  = "#f1f5f9"
+    _PDF_MUTED = "#9ca3af"
+    _PDF_HEAD = "#22c55e"
+
     with PdfPages(buffer) as pdf:
         fig = plt.figure(figsize=(8.27, 11.69), dpi=150)
+        fig.patch.set_facecolor(_PDF_BG)
         ax = fig.add_axes([0, 0, 1, 1])
+        ax.set_facecolor(_PDF_BG)
         ax.axis("off")
         title = f"{label} pre-match report"
         if opponent:
             title = f"{title}: {opponent}"
-        ax.text(0.07, 0.94, title, fontsize=22, fontweight="bold", color="#f1f5f9")
-        ax.text(0.07, 0.905, "Roles, archetypes, delivery tendencies, and preparation notes", fontsize=10, color=MUTED)
+        ax.text(0.07, 0.94, title, fontsize=22, fontweight="bold", color=_PDF_INK)
+        ax.text(0.07, 0.905, "Roles, archetypes, delivery tendencies, and preparation notes", fontsize=10, color=_PDF_MUTED)
 
         y = 0.84
-        ax.text(0.07, y, "Key insights", fontsize=13, fontweight="bold", color=RED_DARK)
+        ax.text(0.07, y, "Key insights", fontsize=13, fontweight="bold", color=_PDF_HEAD)
         y -= 0.035
         for insight in insights:
             wrapped = textwrap.wrap(insight, width=92)
             for i, line in enumerate(wrapped):
                 prefix = "- " if i == 0 else "  "
-                ax.text(0.08, y, prefix + line, fontsize=9.4, color=INK)
+                ax.text(0.08, y, prefix + line, fontsize=9.4, color=_PDF_INK)
                 y -= 0.022
             y -= 0.006
 
         if not roles.empty:
             y -= 0.02
-            ax.text(0.07, y, "Taker roles", fontsize=13, fontweight="bold", color=RED_DARK)
+            ax.text(0.07, y, "Taker roles", fontsize=13, fontweight="bold", color=_PDF_HEAD)
             y -= 0.035
             for _, row in roles.iterrows():
                 line = f"{row['Taker']} ({row['Team']}): {row['Role']} · {row['Archetype']} · {row['Events']} events · {row['xG / event']:.3f} xG/event"
-                ax.text(0.08, y, line[:118], fontsize=8.8, color=INK)
+                ax.text(0.08, y, line[:118], fontsize=8.8, color=_PDF_INK)
                 y -= 0.024
 
         if not teams.empty and y > 0.18:
             y -= 0.02
-            ax.text(0.07, y, "Team archetypes", fontsize=13, fontweight="bold", color=RED_DARK)
+            ax.text(0.07, y, "Team archetypes", fontsize=13, fontweight="bold", color=_PDF_HEAD)
             y -= 0.035
             for _, row in teams.iterrows():
                 line = f"{row['Team']}: {row['Archetype']} · {row['Primary delivery']} · {row['Shot rate']:.1f}% shot rate"
-                ax.text(0.08, y, line[:118], fontsize=8.8, color=INK)
+                ax.text(0.08, y, line[:118], fontsize=8.8, color=_PDF_INK)
                 y -= 0.024
                 if y < 0.08:
                     break
         add_logo_to_matplotlib_figure(fig)
-        pdf.savefig(fig, bbox_inches="tight")
+        pdf.savefig(fig, bbox_inches="tight", facecolor=fig.get_facecolor())
         plt.close(fig)
 
         fig = mplsoccer_delivery_figure(df, label)

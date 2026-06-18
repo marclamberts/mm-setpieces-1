@@ -210,7 +210,6 @@ def render_routines() -> None:
 
     # ── Filters ─────────────────────────────────────────────────────────
     with st.container():
-        st.markdown('<div class="mm-filter-panel"><div class="mm-filter-panel-label">Filters</div>', unsafe_allow_html=True)
         rf1, rf2, rf3, rf4 = st.columns(4)
         with rf1:
             f_type  = st.selectbox("Type",  ["All"] + SP_TYPES,  key="r_f_type")

@@ -51,6 +51,7 @@ from sections._shared import (
     histogram_chart,
     render_plotly_visual,
     render_mpl_visual,
+    set_section,
 )
 
 
@@ -500,6 +501,13 @@ def render_corners() -> None:
 
     # ── Patterns ─────────────────────────────────────────────────────────────
     with tab_patterns:
+        st.info(
+            "**What is the Patterns tab?**  "
+            "It cross-references every delivery technique, height, landing zone, and shot outcome "
+            "to reveal which combinations produce the most threat. "
+            "Use it to identify your team's highest-value routines and expose the opponent's most dangerous patterns — "
+            "then design training sessions or defensive setups around the evidence."
+        )
         section_header("Full pattern library", "Every Technique × Height × Zone × Outcome combination")
         render_analyst_table(
             build_pattern_library(filtered).head(60), height=520,
@@ -524,6 +532,9 @@ def render_corners() -> None:
     with tab_trends:
         section_header("Minute distribution", "When corners are taken across 90 minutes")
         render_plotly_visual(minute_distribution_figure(filtered, "Minute distribution"), "Minute distribution", "corners_minute_distribution_png")
+
+        if st.button("⏱ Analyse corner delivery delays →", key="corners_jump_delay", help="Jump to Delay Analysis"):
+            set_section("Delay Analysis")
 
         section_header("Match log", "Per-match corner output")
         match_log = build_match_log(filtered)
