@@ -42,6 +42,7 @@ from sections._shared import (
     bar_chart,
     render_plotly_visual,
     render_mpl_visual,
+    set_section,
 )
 
 
@@ -401,6 +402,9 @@ def render_throwins() -> None:
     with tab_trends:
         section_header("Minute distribution", "When throw-ins are taken across 90 minutes")
         render_plotly_visual(minute_distribution_figure(filtered, "Throw-in minute distribution"), "Minute distribution", "throwins_minute_png")
+
+        if st.button("⏱ Analyse throw-in delivery delays →", key="ti_jump_delay", help="Jump to Delay Analysis"):
+            set_section("Delay Analysis")
 
         section_header("Match log", "Per-match throw-in output")
         match_log = build_match_log(filtered)

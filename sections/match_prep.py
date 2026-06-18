@@ -481,21 +481,27 @@ def render_match_prep() -> None:
             .replace("/", "_").replace("\\", "_")
         )
 
-        with st.spinner("Building full report — this takes ~15 seconds for large datasets…"):
-            full_pdf = full_scouting_report_pdf_bytes(
-                my_team, opponent,
-                my_corners, my_fks, my_tis,
-                opp_corners, opp_fks, opp_tis,
-                hops,
-            )
+        if st.button("⚙️ Generate full scouting report PDF", key="mp_gen_pdf", type="primary", use_container_width=True):
+            with st.spinner("Building full report — this takes ~15 seconds for large datasets…"):
+                full_pdf = full_scouting_report_pdf_bytes(
+                    my_team, opponent,
+                    my_corners, my_fks, my_tis,
+                    opp_corners, opp_fks, opp_tis,
+                    hops,
+                )
+            st.session_state["mp_pdf_bytes"] = full_pdf
 
-        st.download_button(
-            f"⬇  Download full scouting report — {my_team} vs {opponent}",
-            data=full_pdf,
-            file_name=f"{safe_base}_full_scouting_report.pdf",
-            mime="application/pdf",
-            use_container_width=True,
-        )
+        if "mp_pdf_bytes" in st.session_state and st.session_state["mp_pdf_bytes"]:
+            st.download_button(
+                f"⬇  Download full scouting report — {my_team} vs {opponent}",
+                data=st.session_state["mp_pdf_bytes"],
+                file_name=f"{safe_base}_full_scouting_report.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+                key="mp_dl_pdf",
+            )
+        else:
+            st.info("Click the button above to generate the PDF. This is done on-demand to avoid slow page loads.")
 
         st.divider()
         section_header("Raw data export")

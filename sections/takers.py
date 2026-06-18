@@ -231,6 +231,67 @@ def render_takers() -> None:
                 if jt2.button(f"🎯 Free Kicks — {taker_team}", key="takers_jump_fk", use_container_width=True):
                     set_section("Freekicks", team=taker_team if taker_team else None)
 
+            # ── Extra profile detail ─────────────────────────────────────
+            # Pull full data for selected taker (corners + freekicks raw)
+            _detail_frames = []
+            for _src, _lbl in [(corners_raw, "Corner"), (freekicks_raw, "Free Kick")]:
+                if not _src.empty and "Taker" in _src.columns:
+                    _sub = _src[_src["Taker"].astype(str).eq(selected_taker)].copy()
+                    _sub["_type"] = _lbl
+                    _detail_frames.append(_sub)
+            _detail = pd.concat(_detail_frames, ignore_index=True) if _detail_frames else pd.DataFrame()
+
+            d1, d2, d3 = st.columns(3)
+            with d1:
+                section_header("Technique breakdown")
+                if not _detail.empty and "Technique" in _detail.columns:
+                    tech_df = (
+                        _detail.groupby("Technique", dropna=False)
+                        .agg(Deliveries=("Technique", "count"), xG=("xg", "sum"))
+                        .reset_index()
+                        .assign(xG=lambda d: d["xG"].round(2))
+                        .sort_values("Deliveries", ascending=False)
+                    )
+                    tech_df = tech_df[~tech_df["Technique"].astype(str).str.lower().isin(["unknown", "nan", ""])]
+                    render_analyst_table(tech_df, height=220)
+                else:
+                    st.caption("No technique data available.")
+
+            with d2:
+                section_header("Delivery height")
+                if not _detail.empty and "Delivery height" in _detail.columns:
+                    ht_df = (
+                        _detail.groupby("Delivery height", dropna=False)
+                        .agg(Deliveries=("Delivery height", "count"), xG=("xg", "sum"))
+                        .reset_index()
+                        .assign(xG=lambda d: d["xG"].round(2))
+                        .sort_values("Deliveries", ascending=False)
+                    )
+                    ht_df = ht_df[~ht_df["Delivery height"].astype(str).str.lower().isin(["unknown", "nan", ""])]
+                    render_analyst_table(ht_df, height=220)
+                else:
+                    st.caption("No height data available.")
+
+            with d3:
+                section_header("Top shooters assisted")
+                _shooters = pd.DataFrame()
+                if not _detail.empty and "Shooter" in _detail.columns:
+                    _shots = _detail[_detail["is_shot"].eq(True)] if "is_shot" in _detail.columns else _detail[_detail["Shooter"].notna()]
+                    if not _shots.empty:
+                        _shooters = (
+                            _shots.groupby("Shooter", dropna=False)
+                            .agg(Shots=("Shooter", "count"), Goals=("is_goal", "sum"), xG=("xg", "sum"))
+                            .reset_index()
+                            .assign(xG=lambda d: d["xG"].round(2))
+                            .sort_values("Shots", ascending=False)
+                            .head(8)
+                        )
+                        _shooters = _shooters[~_shooters["Shooter"].astype(str).str.lower().isin(["unknown", "nan", ""])]
+                if not _shooters.empty:
+                    render_analyst_table(_shooters, height=220)
+                else:
+                    st.caption("No shooter data available.")
+
     # ── Compare ───────────────────────────────────────────────────────────
     with tab_compare:
         taker_names_all = _safe_sorted(tbl["Taker"])

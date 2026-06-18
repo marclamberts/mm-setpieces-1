@@ -44,6 +44,7 @@ from sections._shared import (
     bar_chart,
     render_plotly_visual,
     render_mpl_visual,
+    set_section,
 )
 
 
@@ -386,6 +387,9 @@ def render_freekicks() -> None:
     with tab_trends:
         section_header("Minute distribution", "When FKs are awarded across 90 minutes")
         render_plotly_visual(minute_distribution_figure(filtered, "FK minute distribution"), "FK minute distribution", "freekicks_minute_png")
+
+        if st.button("⏱ Analyse FK delivery delays →", key="fk_jump_delay", help="Jump to Delay Analysis"):
+            set_section("Delay Analysis")
 
         section_header("Match log", "Per-match FK output")
         match_log = build_match_log(filtered)
