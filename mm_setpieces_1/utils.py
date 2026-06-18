@@ -1242,6 +1242,51 @@ def _match_count(df: pd.DataFrame) -> int:
 def _ensure_column(df: pd.DataFrame, target: str, candidates: list[str], default=np.nan):
     _fill_from_candidates(df, target, candidates, default)
 
+
+def _apply_period_minute_offsets(df: pd.DataFrame) -> pd.DataFrame:
+    """Convert period-relative minutes to absolute match minutes.
+
+    Some data sources store the minute field as time-within-period (resets to 0
+    at the start of each half).  For those, a corner at second-half minute 7 is
+    stored as 7, not 52.  We detect the reset by finding rows where the minute
+    drops from >30 to <10 within the same match (sorted by possession), then
+    add the max first-half minute as the offset for the second half.
+
+    Files that already use absolute match minutes (e.g. Saudi Pro League) never
+    have a minute drop, so this function is a no-op for them.
+    """
+    if "match_id" not in df.columns or "minute" not in df.columns:
+        return df
+
+    poss_col = "possession" if "possession" in df.columns else None
+    minutes = pd.to_numeric(df["minute"], errors="coerce").fillna(0)
+    offsets = pd.Series(0.0, index=df.index)
+
+    for _mid, grp in df.groupby("match_id", sort=False):
+        idx = grp.sort_values(poss_col).index if poss_col else grp.index
+        mins = minutes.loc[idx].values
+
+        offset = 0.0
+        half_max = 0.0
+        prev = -1.0
+        result = []
+
+        for m in mins:
+            # Minute reset from a high first-half value to a low second-half value
+            if prev > 30 and m < 10:
+                offset = half_max  # use actual first-half peak, not a fixed 45
+                half_max = 0.0    # reset tracker for this new half
+            half_max = max(half_max, m + offset)
+            result.append(offset)
+            prev = m
+
+        offsets.loc[idx] = result
+
+    df = df.copy()
+    df["minute"] = (minutes + offsets).astype(int)
+    return df
+
+
 def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
     df = df.copy()
     if df.empty:
@@ -1260,6 +1305,7 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
         _ensure_column(df, "Match", ["Match"], "Unknown")
         _ensure_column(df, "minute", ["minute", "Minute"], 0)
         _ensure_column(df, "second", ["second", "Second"], 0)
+        df = _apply_period_minute_offsets(df)
         _ensure_column(df, "Technique", ["Technique", "pass.technique.name", "pass_technique"], "Unknown")
         _ensure_column(df, "Delivery height", ["Delivery height", "pass.height.name", "pass_height"], "Unknown")
         _ensure_column(df, "Delivery outcome", ["SP_outcome", "Delivery outcome", "pass.outcome.name", "pass_outcome"], "Unknown")
