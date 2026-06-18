@@ -191,7 +191,7 @@ def _render_topnav(section: str) -> None:
         active_cls = " mm-active" if sec == section else ""
         href = f"?tok={urllib.parse.quote(token)}&section={urllib.parse.quote(sec)}"
         links_html += (
-            f'<a href="{href}" class="mm-topbar-link{active_cls}">'
+            f'<a href="{href}" target="_self" class="mm-topbar-link{active_cls}">'
             f'{icon}&thinsp;{sec}</a>'
         )
 
@@ -205,7 +205,7 @@ def _render_topnav(section: str) -> None:
     st.markdown(
         f"""
         <nav class="mm-topbar">
-            <a class="mm-topbar-brand" href="{home_href}">{brand_inner}</a>
+            <a class="mm-topbar-brand" href="{home_href}" target="_self">{brand_inner}</a>
             <div class="mm-topbar-links">{links_html}</div>
             {ctx_html}
         </nav>

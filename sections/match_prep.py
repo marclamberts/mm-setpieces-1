@@ -52,7 +52,7 @@ from sections._shared import (
 
 # ── Data loading ─────────────────────────────────────────────────────────────
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _all_sp_data(_data_version: str = DATA_VERSION):
     corners = _with_match_names(load_prepared_sp_data("Corners", _data_version))
     freekicks = _with_match_names(load_prepared_freekick_brief_data(_data_version))
@@ -377,7 +377,6 @@ def render_match_prep() -> None:
     my_team = col_my.selectbox("Your team", teams, key="mp_my_team")
     opp_options = [t for t in teams if t != my_team]
     opponent = col_opp.selectbox("Opponent", opp_options, key="mp_opponent") if opp_options else None
-    st.markdown('</div>', unsafe_allow_html=True)
 
     if not opponent:
         st.info("Add more teams to compare.")
@@ -482,21 +481,27 @@ def render_match_prep() -> None:
             .replace("/", "_").replace("\\", "_")
         )
 
-        with st.spinner("Building full report — this takes ~15 seconds for large datasets…"):
-            full_pdf = full_scouting_report_pdf_bytes(
-                my_team, opponent,
-                my_corners, my_fks, my_tis,
-                opp_corners, opp_fks, opp_tis,
-                hops,
-            )
+        if st.button("⚙️ Generate full scouting report PDF", key="mp_gen_pdf", type="primary", use_container_width=True):
+            with st.spinner("Building full report — this takes ~15 seconds for large datasets…"):
+                full_pdf = full_scouting_report_pdf_bytes(
+                    my_team, opponent,
+                    my_corners, my_fks, my_tis,
+                    opp_corners, opp_fks, opp_tis,
+                    hops,
+                )
+            st.session_state["mp_pdf_bytes"] = full_pdf
 
-        st.download_button(
-            f"⬇  Download full scouting report — {my_team} vs {opponent}",
-            data=full_pdf,
-            file_name=f"{safe_base}_full_scouting_report.pdf",
-            mime="application/pdf",
-            use_container_width=True,
-        )
+        if "mp_pdf_bytes" in st.session_state and st.session_state["mp_pdf_bytes"]:
+            st.download_button(
+                f"⬇  Download full scouting report — {my_team} vs {opponent}",
+                data=st.session_state["mp_pdf_bytes"],
+                file_name=f"{safe_base}_full_scouting_report.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+                key="mp_dl_pdf",
+            )
+        else:
+            st.info("Click the button above to generate the PDF. This is done on-demand to avoid slow page loads.")
 
         st.divider()
         section_header("Raw data export")

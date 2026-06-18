@@ -38,9 +38,11 @@ from sections._shared import (
     _set_piece_team_options,
     _apply_team_perspective,
     _with_match_names,
+    _cached_report_pdf,
     bar_chart,
     render_plotly_visual,
     render_mpl_visual,
+    set_section,
 )
 
 
@@ -134,8 +136,16 @@ def render_throwins() -> None:
         return
 
     leagues = _league_filter_options(df, "SP")
-    teams = _set_piece_team_options(df)
+    _cur_league = st.session_state.get("throwins_league", "All")
+    if _cur_league not in leagues:
+        _cur_league = "All"
+    _df_for_teams = df[df["League"].eq(_cur_league)] if _cur_league != "All" and "League" in df.columns else df
+    teams = _set_piece_team_options(_df_for_teams)
+    if st.session_state.get("throwins_team", "All") not in teams:
+        st.session_state["throwins_team"] = "All"
     periods = ["All"] + _safe_sorted(df["game_period"]) if "game_period" in df.columns else ["All"]
+    # Throw-in pitch area zones
+    TI_AREAS = ["Defensive Third", "Middle Third", "Attacking Third"]
     st.markdown('<div class="mm-filter-panel"><div class="mm-filter-panel-label">Filters</div>', unsafe_allow_html=True)
     takers = _safe_sorted(df["Taker"]) if "Taker" in df.columns else []
     shooters = _safe_sorted(df["Shooter"]) if "Shooter" in df.columns else []
@@ -157,9 +167,10 @@ def render_throwins() -> None:
 
     period = "All"; minute_range = (minute_min, minute_max)
     taker_filter: list = []; shooter_filter: list = []; height_filter: list = []; outcome_filter: list = []
+    area_filter: list = []
 
     with st.expander("More filters", expanded=False):
-        mx1, mx2, mx3 = st.columns(3)
+        mx1, mx2, mx3, mx4 = st.columns(4)
         with mx1:
             period = st.selectbox("Game period", periods, key="throwins_period")
             minute_range = st.slider("Minutes", minute_min, minute_max, (minute_min, minute_max), key="throwins_minutes")
@@ -169,7 +180,9 @@ def render_throwins() -> None:
         with mx3:
             height_filter = st.multiselect("Height", heights, key="throwins_height")
             outcome_filter = st.multiselect("Shot outcome", outcomes, key="throwins_outcome")
-    st.markdown('</div>', unsafe_allow_html=True)
+        with mx4:
+            area_filter = st.multiselect("Pitch area", TI_AREAS, key="throwins_area",
+                                         help="Filter throw-ins by pitch third (based on x-coordinate)")
 
     filtered = df.copy()
     if league != "All" and "League" in filtered.columns:
@@ -189,6 +202,19 @@ def render_throwins() -> None:
         filtered = filtered[filtered["Delivery height"].isin(height_filter)].copy()
     if outcome_filter and "Shot outcome" in filtered.columns:
         filtered = filtered[filtered["Shot outcome"].isin(outcome_filter)].copy()
+    if area_filter and "pass_x" in filtered.columns:
+        import numpy as np
+        x_num = pd.to_numeric(filtered["pass_x"], errors="coerce")
+        max_x = float(x_num.quantile(0.99)) if not x_num.isna().all() else 120.0
+        t1, t2 = max_x * 0.33, max_x * 0.67
+        def _area(x):
+            if pd.isna(x): return None
+            if x < t1: return "Defensive Third"
+            if x < t2: return "Middle Third"
+            return "Attacking Third"
+        filtered = filtered.copy()
+        filtered["_ti_area"] = x_num.map(_area)
+        filtered = filtered[filtered["_ti_area"].isin(area_filter)].drop(columns=["_ti_area"])
 
     sequences = throwin_sequence_summary(filtered)
     filters = [
@@ -198,6 +224,7 @@ def render_throwins() -> None:
         ("Minutes", f"{minute_range[0]}-{minute_range[1]}" if minute_range != (minute_min, minute_max) else "All"),
         ("Thrower", taker_filter), ("Shooter", shooter_filter),
         ("Height", height_filter), ("Shot outcome", outcome_filter),
+        ("Pitch area", area_filter),
     ]
 
     scope_parts = [p for p in [team if team != "All" else None, league if league != "All" else None] if p]
@@ -214,9 +241,9 @@ def render_throwins() -> None:
 
     tabs = st.tabs([
         "📊 Overview", "🔗 Sequences", "🗺️ Zones", "🎯 Pitch",
-        "👤 Roles", "📈 Trends", "⚖️ Compare", "🗃️ Rows",
+        "👤 Roles", "📈 Trends", "⚖️ Compare", "📋 Report", "🗃️ Rows",
     ])
-    tab_overview, tab_sequences, tab_zones, tab_pitch, tab_roles, tab_trends, tab_compare, tab_rows = tabs
+    tab_overview, tab_sequences, tab_zones, tab_pitch, tab_roles, tab_trends, tab_compare, tab_report, tab_rows = tabs
 
     # ── Overview ─────────────────────────────────────────────────────────────
     with tab_overview:
@@ -256,10 +283,15 @@ def render_throwins() -> None:
 
     # ── Sequences ─────────────────────────────────────────────────────────────
     with tab_sequences:
-        section_header("Priority sequences", "Ranked by xG — highest-threat throw-in sequences")
+        seq_sort = st.radio("Order sequences by", ["Sequence (Minute)", "xG"], horizontal=True, key="throwins_seq_sort")
+        section_header("Throw-in sequences")
         base_cols = ["Match", "Team", "Minute", "Zone", "Side", "Initial taker", "Initial height",
                      "Box entry", "Shots", "Goals", "Total xG", "Best shooter", "Best shot xG", "Shot outcome"]
         priority = sequences[[c for c in base_cols if c in sequences.columns]] if not sequences.empty else sequences
+        if seq_sort == "Sequence (Minute)" and "Minute" in priority.columns:
+            priority = priority.sort_values("Minute")
+        elif "Total xG" in priority.columns:
+            priority = priority.sort_values("Total xG", ascending=False)
         render_analyst_table(
             priority.head(60), height=520,
             color_cols=["Shots", "Goals", "Total xG", "Best shot xG"],
@@ -297,11 +329,13 @@ def render_throwins() -> None:
                 section_header("Box entry % by zone")
                 if "Box entry %" in zone_df.columns:
                     fig = bar_chart(zone_df.sort_values("Box entry %"), x="Box entry %", y=label_col, orientation="h")
+                    fig.update_traces(marker_color="#4ade80")
                     fig.update_layout(height=360, margin=dict(l=8, r=8, t=24, b=8), showlegend=False)
                     render_plotly_visual(polish_plotly_figure(fig), "Box entry % by zone", "throwins_zone_box_png")
             with zc2:
                 section_header("Sequences by zone")
                 fig2 = bar_chart(zone_df.sort_values("Sequences", ascending=False), x="Sequences", y=label_col, orientation="h")
+                fig2.update_traces(marker_color="#60a5fa")
                 fig2.update_layout(height=360, margin=dict(l=8, r=8, t=24, b=8), showlegend=False)
                 render_plotly_visual(polish_plotly_figure(fig2), "Sequence volume by zone", "throwins_zone_vol_png")
 
@@ -341,7 +375,7 @@ def render_throwins() -> None:
         section_header("Height breakdown chart")
         if "Delivery height" in filtered.columns:
             render_plotly_visual(
-                categorical_breakdown_figure(filtered, "Delivery height", "Delivery height", top_n=8, color="#1d4ed8"),
+                categorical_breakdown_figure(filtered, "Delivery height", "Delivery height", top_n=8, color="#60a5fa"),
                 "Delivery height", "throwins_height_png",
             )
 
@@ -354,7 +388,7 @@ def render_throwins() -> None:
             color_cols=["Sequences", "Shots", "Goals", "Total_xG", "Avg_xG", "Box entry %", "Shots / seq"],
         )
         render_plotly_visual(
-            categorical_breakdown_figure(filtered, "Taker", "Top throwers", top_n=15, color="#c1121f"),
+            categorical_breakdown_figure(filtered, "Taker", "Top throwers", top_n=15, color="#fca5a5"),
             "Top throwers", "throwins_top_takers_png",
         )
 
@@ -366,7 +400,7 @@ def render_throwins() -> None:
         )
         if not shooter_df.empty and "Shooter" in shooter_df.columns:
             render_plotly_visual(
-                categorical_breakdown_figure(filtered, "Shooter", "Top shooters", top_n=15, color="#1d4ed8"),
+                categorical_breakdown_figure(filtered, "Shooter", "Top shooters", top_n=15, color="#93c5fd"),
                 "Top shooters from throw-ins", "throwins_top_shooters_png",
             )
 
@@ -374,6 +408,9 @@ def render_throwins() -> None:
     with tab_trends:
         section_header("Minute distribution", "When throw-ins are taken across 90 minutes")
         render_plotly_visual(minute_distribution_figure(filtered, "Throw-in minute distribution"), "Minute distribution", "throwins_minute_png")
+
+        if st.button("⏱ Analyse throw-in delivery delays →", key="ti_jump_delay", help="Jump to Delay Analysis"):
+            set_section("Delay Analysis")
 
         section_header("Match log", "Per-match throw-in output")
         match_log = build_match_log(filtered)
@@ -386,6 +423,7 @@ def render_throwins() -> None:
             top_m = match_log.sort_values("Total xG", ascending=False).head(20)
             match_col = "Match" if "Match" in top_m.columns else top_m.columns[0]
             fig = bar_chart(top_m.sort_values("Total xG"), x="Total xG", y=match_col, orientation="h")
+            fig.update_traces(marker_color="#60a5fa")
             fig.update_layout(height=480, margin=dict(l=8, r=8, t=24, b=8), showlegend=False)
             render_plotly_visual(polish_plotly_figure(fig), "xG per match", "throwins_match_xg_png")
         else:
@@ -447,6 +485,27 @@ def render_throwins() -> None:
             with tc2:
                 st.caption(f"**{team_b}**")
                 render_analyst_table(throwin_taker_summary(df_b).head(12), height=320, color_cols=["Box entry %", "Total_xG"])
+
+    # ── Report ────────────────────────────────────────────────────────────────
+    with tab_report:
+        section_header("Pre-match PDF brief")
+        pdf_teams = ["All"] + _safe_sorted(filtered["Team"]) if "Team" in filtered.columns else ["All"]
+        if st.session_state.get("throwins_pdf_team") not in pdf_teams:
+            st.session_state["throwins_pdf_team"] = "All"
+        pdf_team = st.selectbox("Report team", pdf_teams, key="throwins_pdf_team")
+        opponent = st.text_input("Opponent / label for filename", value="", key="throwins_pdf_label")
+        pdf_filtered = filtered[filtered["Team"].astype(str).eq(pdf_team)].copy() if pdf_team != "All" and "Team" in filtered.columns else filtered.copy()
+        pdf_label = f"Throw-ins – {pdf_team}" if pdf_team != "All" else "Throw-ins"
+        safe_name = (opponent.strip() or pdf_label).lower().replace(" ", "_").replace("/", "-")
+        st.info("PDF generation may take a few seconds on large datasets.")
+        st.download_button(
+            "⬇ Download pre-match PDF",
+            data=_cached_report_pdf(pdf_filtered, pdf_label, opponent.strip()),
+            file_name=f"{safe_name}_throwins_report.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+            key="throwins_pdf_download",
+        )
 
     # ── Rows ──────────────────────────────────────────────────────────────────
     with tab_rows:

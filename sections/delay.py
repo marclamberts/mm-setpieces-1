@@ -69,7 +69,6 @@ def render_delay() -> None:
         full_delay_range = (lo, hi)
         delay_range = st.slider("Delay range (seconds)", min_value=lo, max_value=hi, value=(lo, hi), key="delay_range")
         filtered = filtered[filtered["delay_sec"].between(delay_range[0], delay_range[1])].copy()
-    st.markdown('</div>', unsafe_allow_html=True)
 
     scope_parts = [p for p in [match if match != "All" else None, league if league != "All" else None] if p]
     scope_str = " · ".join(scope_parts) if scope_parts else "All matches"

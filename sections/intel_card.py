@@ -38,7 +38,7 @@ OUTCOME_COLOURS = {
 }
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(show_spinner="Loading data…")
 def _load(_dv: str = DATA_VERSION, _cv: str = _CODE_V):
     corners = _with_match_names(load_prepared_sp_data("Corners", _dv))
     freekicks = _with_match_names(load_prepared_freekick_brief_data(_dv))
@@ -302,28 +302,32 @@ def _generate_pdf(
 # ---------------------------------------------------------------------------
 
 def render_intel_card() -> None:
-    corners, freekicks, throwins, hops = _load()
+    hero_block("🗂", "Opposition Intelligence Card", "Pre-match scouting brief")
+    st.session_state["ctx_row_count"] = "Intel Card"
+
+    try:
+        corners, freekicks, throwins, hops = _load()
+    except Exception as exc:
+        st.error(f"Failed to load data: {exc}")
+        return
+
     all_teams = _all_teams(corners, freekicks, throwins)
 
     if not all_teams:
-        st.warning("No team data found.")
+        st.warning("No team data found. Check that set piece data files are loaded correctly.")
         return
 
-    st.markdown('<div class="mm-filter-panel"><div class="mm-filter-panel-label">Select teams</div>', unsafe_allow_html=True)
-    fc1, fc2 = st.columns(2)
-    with fc1:
-        my_team = st.selectbox("Your team", all_teams, key="intel_my_team")
-    with fc2:
-        opp_options = [t for t in all_teams if t != my_team]
-        opponent = st.selectbox("Opponent", opp_options, key="intel_opponent") if opp_options else None
-    st.markdown('</div>', unsafe_allow_html=True)
+    with st.container():
+        fc1, fc2 = st.columns(2)
+        with fc1:
+            my_team = st.selectbox("Your team", all_teams, key="intel_my_team")
+        with fc2:
+            opp_options = [t for t in all_teams if t != my_team]
+            opponent = st.selectbox("Opponent", opp_options if opp_options else all_teams, key="intel_opponent") if opp_options else None
 
     if not opponent:
-        st.info("Add more teams to generate a card.")
+        st.info("At least two teams are required. Check your data files contain multiple teams.")
         return
-
-    hero_block("Intelligence", "Opposition Intelligence Card",
-               f"Pre-match brief: {my_team} vs {opponent}")
     st.session_state["ctx_row_count"] = f"Intel Card · {opponent}"
 
     # Compute all stats
