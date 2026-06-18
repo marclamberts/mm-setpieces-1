@@ -607,13 +607,14 @@ def minute_distribution_figure(df: pd.DataFrame, title: str) -> go.Figure:
         fig.add_annotation(text="No minute data available", x=0.5, y=0.5, xref="paper", yref="paper", showarrow=False)
         return polish_plotly_figure(fig)
 
-    # Always include all 5-min bands from 0 to at least 95; extend if data has extra time
+    # Always show all 5-min bands from 0 to at least 95; extend if data has extra time.
+    # Avoid pd.cut: map each minute directly to its band start (54→50, 90→90, 95→95).
     max_minute = max(95, int(minutes.max()))
-    n_bins = (max_minute // 5) + 1
-    bin_edges = [i * 5 for i in range(n_bins + 1)]
-    labels = [f"{b}-{b + 4}" for b in bin_edges[:-1]]
-    bucket = pd.cut(minutes, bins=bin_edges, right=False, include_lowest=True, labels=labels)
-    counts = bucket.value_counts().reindex(labels, fill_value=0)
+    max_bin_start = (max_minute // 5) * 5
+    all_labels = [f"{b}-{b + 4}" for b in range(0, max_bin_start + 1, 5)]
+    bin_starts = (minutes.astype(int) // 5) * 5
+    mapped = bin_starts.map(lambda b: f"{b}-{b + 4}")
+    counts = mapped.value_counts().reindex(all_labels, fill_value=0)
     fig.add_trace(
         go.Bar(
             x=counts.index.tolist(),
