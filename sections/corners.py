@@ -58,8 +58,14 @@ from sections._shared import (
 # ── Sidebar filters ─────────────────────────────────────────────────────────
 
 def _filter_data(df: pd.DataFrame, key_prefix: str):
-    teams = _set_piece_team_options(df)
     leagues = _league_filter_options(df, "Corners")
+    _cur_league = st.session_state.get(f"{key_prefix}_league", "All")
+    if _cur_league not in leagues:
+        _cur_league = "All"
+    _df_for_teams = df[df["League"].eq(_cur_league)] if _cur_league != "All" and "League" in df.columns else df
+    teams = _set_piece_team_options(_df_for_teams)
+    if st.session_state.get(f"{key_prefix}_team", "All") not in teams:
+        st.session_state[f"{key_prefix}_team"] = "All"
     sides = ["All"] + _safe_sorted(df["side"]) if "side" in df.columns else ["All"]
     periods = ["All"] + _safe_sorted(df["game_period"]) if "game_period" in df.columns else ["All"]
     techniques = _safe_sorted(df["Technique"]) if "Technique" in df.columns else []

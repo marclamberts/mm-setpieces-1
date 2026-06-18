@@ -136,7 +136,13 @@ def render_throwins() -> None:
         return
 
     leagues = _league_filter_options(df, "SP")
-    teams = _set_piece_team_options(df)
+    _cur_league = st.session_state.get("throwins_league", "All")
+    if _cur_league not in leagues:
+        _cur_league = "All"
+    _df_for_teams = df[df["League"].eq(_cur_league)] if _cur_league != "All" and "League" in df.columns else df
+    teams = _set_piece_team_options(_df_for_teams)
+    if st.session_state.get("throwins_team", "All") not in teams:
+        st.session_state["throwins_team"] = "All"
     periods = ["All"] + _safe_sorted(df["game_period"]) if "game_period" in df.columns else ["All"]
     # Throw-in pitch area zones
     TI_AREAS = ["Defensive Third", "Middle Third", "Attacking Third"]

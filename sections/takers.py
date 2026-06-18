@@ -84,7 +84,13 @@ def render_takers() -> None:
 
     # ── Filters ──────────────────────────────────────────────────────────
     leagues = ["All"] + _safe_sorted(combined["League"]) if "League" in combined.columns else ["All"]
-    teams   = ["All"] + _safe_sorted(combined["Team"])   if "Team"   in combined.columns else ["All"]
+    _cur_league = st.session_state.get("takers_league", "All")
+    if _cur_league not in leagues:
+        _cur_league = "All"
+    _combined_for_teams = combined[combined["League"].eq(_cur_league)] if _cur_league != "All" and "League" in combined.columns else combined
+    teams = ["All"] + _safe_sorted(_combined_for_teams["Team"]) if "Team" in _combined_for_teams.columns else ["All"]
+    if st.session_state.get("takers_team", "All") not in teams:
+        st.session_state["takers_team"] = "All"
     sp_types = ["All", "Corner", "Free Kick", "Throw-in"]
 
     st.markdown('<div class="mm-filter-panel"><div class="mm-filter-panel-label">Filters</div>', unsafe_allow_html=True)

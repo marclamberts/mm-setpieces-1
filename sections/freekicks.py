@@ -137,7 +137,13 @@ def render_freekicks() -> None:
         return
 
     leagues = _league_filter_options(df, "SP")
-    teams = _set_piece_team_options(df)
+    _cur_league = st.session_state.get("freekicks_league", "All")
+    if _cur_league not in leagues:
+        _cur_league = "All"
+    _df_for_teams = df[df["League"].eq(_cur_league)] if _cur_league != "All" and "League" in df.columns else df
+    teams = _set_piece_team_options(_df_for_teams)
+    if st.session_state.get("freekicks_team", "All") not in teams:
+        st.session_state["freekicks_team"] = "All"
     heights = _safe_sorted(df["Delivery height"]) if "Delivery height" in df.columns else []
 
     st.markdown('<div class="mm-filter-panel"><div class="mm-filter-panel-label">Filters</div>', unsafe_allow_html=True)
