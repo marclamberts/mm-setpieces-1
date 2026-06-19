@@ -283,13 +283,14 @@ def render_throwins() -> None:
 
     # ── Sequences ─────────────────────────────────────────────────────────────
     with tab_sequences:
-        seq_sort = st.radio("Order sequences by", ["Sequence (Minute)", "xG"], horizontal=True, key="throwins_seq_sort")
+        seq_sort = st.radio("Order sequences by", ["Chronological", "xG"], horizontal=True, key="throwins_seq_sort")
         section_header("Throw-in sequences")
         base_cols = ["Match", "Team", "Minute", "Zone", "Side", "Initial taker", "Initial height",
                      "Box entry", "Shots", "Goals", "Total xG", "Best shooter", "Best shot xG", "Shot outcome"]
         priority = sequences[[c for c in base_cols if c in sequences.columns]] if not sequences.empty else sequences
-        if seq_sort == "Sequence (Minute)" and "Minute" in priority.columns:
-            priority = priority.sort_values("Minute")
+        sort_cols = [c for c in ["Match", "Minute"] if c in priority.columns]
+        if seq_sort == "Chronological" and sort_cols:
+            priority = priority.sort_values(sort_cols)
         elif "Total xG" in priority.columns:
             priority = priority.sort_values("Total xG", ascending=False)
         render_analyst_table(

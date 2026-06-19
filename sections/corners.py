@@ -26,6 +26,7 @@ from mm_setpieces_1.utils import (
     mplsoccer_delivery_figure,
     mplsoccer_shot_figure,
     mplsoccer_delivery_sp_outcome_figure,
+    corner_delivery_lines_figure,
     render_export_controls,
     render_filter_summary,
     render_empty_filter_state,
@@ -368,6 +369,9 @@ def render_corners() -> None:
 
     # ── Delivery ────────────────────────────────────────────────────────────
     with tab_delivery:
+        section_header("Delivery lines")
+        render_mpl_visual(corner_delivery_lines_figure(filtered, label), "Corner delivery lines", "corners_delivery_lines_png")
+
         section_header("Pitch maps")
         d1, d2 = st.columns(2)
         with d1:

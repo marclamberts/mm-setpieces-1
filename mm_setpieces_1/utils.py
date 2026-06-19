@@ -2677,10 +2677,11 @@ def freekick_origin_map_figure(df: pd.DataFrame, title: str = "Freekick origins"
         (62, 80, "Right\nwide",       "#dbeafe", "#1d4ed8"),
     ]
 
-    fig, ax = plt.subplots(figsize=(6, 9), dpi=130)
+    fig, ax = plt.subplots(figsize=(6, 5.5), dpi=130)
     fig.patch.set_facecolor("#161922")
     pitch_plot = VerticalPitch(
         pitch_type="statsbomb",
+        half=True,
         pitch_color="#1a2438",
         line_color="#4b5563",
         linewidth=1.2,
@@ -2688,14 +2689,14 @@ def freekick_origin_map_figure(df: pd.DataFrame, title: str = "Freekick origins"
     )
     pitch_plot.draw(ax=ax)
 
-    ax.set_ylim([-14, ax.get_ylim()[1]])
+    ax.set_ylim([54, ax.get_ylim()[1]])
 
     # Lane background tints and dashed dividers
     for i, (x0, x1, label, bg, _) in enumerate(LANES):
         ax.axvspan(x0, x1, alpha=0.15, color=bg, zorder=1)
         if i > 0:
             ax.axvline(x=x0, color="#94a3b8", linestyle="--", linewidth=0.9, alpha=0.65, zorder=2)
-        ax.text((x0 + x1) / 2, -7, label, ha="center", va="center",
+        ax.text((x0 + x1) / 2, 57, label, ha="center", va="center",
                 fontsize=6.5, color="#9ca3af", fontweight="bold")
 
     ax.set_title(title, fontsize=12, fontweight="bold", color="#f1f5f9", pad=8)
@@ -3403,6 +3404,82 @@ def mplsoccer_delivery_figure(df: pd.DataFrame, label: str = ""):
         )
 
     ax.legend(loc="lower left", bbox_to_anchor=(0.01, 0.01), fontsize=7, frameon=True)
+    fig.tight_layout()
+    return fig
+
+
+def corner_delivery_lines_figure(df: pd.DataFrame, label: str = ""):
+    """Pitch map showing delivery lines from corner flag to landing spot, coloured by technique."""
+    import matplotlib.pyplot as plt
+    from mplsoccer import VerticalPitch
+
+    pitch = pitch_dimensions(df)
+    fig, ax = plt.subplots(figsize=(5.8, 8), dpi=140)
+    fig.patch.set_facecolor("#161922")
+    pitch_plot = VerticalPitch(
+        pitch_type="statsbomb", half=True,
+        pitch_color="#1a2438", line_color="#4b5563", linewidth=1.2,
+    )
+    pitch_plot.draw(ax=ax)
+    ax.set_title(f"{label} — delivery lines", fontsize=13, fontweight="bold", color="#f1f5f9", pad=10)
+
+    base = unique_start_events(df)
+    if base.empty:
+        ax.text(40, 90, "No data", ha="center", va="center", color=MUTED, fontsize=12)
+        fig.tight_layout()
+        return fig
+
+    has_end = {"delivery_end_x", "delivery_end_y"}.issubset(base.columns)
+    has_start = {"pass_x", "pass_y"}.issubset(base.columns)
+
+    if not has_start:
+        ax.text(40, 90, "No location data", ha="center", va="center", color=MUTED, fontsize=12)
+        fig.tight_layout()
+        return fig
+
+    req = ["pass_x", "pass_y"] + (["delivery_end_x", "delivery_end_y"] if has_end else [])
+    plot_df = base.dropna(subset=req).copy()
+    if plot_df.empty:
+        ax.text(40, 90, "No location data", ha="center", va="center", color=MUTED, fontsize=12)
+        fig.tight_layout()
+        return fig
+
+    if len(plot_df) > 250:
+        plot_df = plot_df.sample(250, random_state=42)
+
+    if "Technique" not in plot_df.columns:
+        plot_df["Technique"] = "Corner"
+    plot_df["Technique"] = plot_df["Technique"].fillna("Unknown").astype(str)
+
+    PALETTE = ["#60a5fa", "#f87171", "#4ade80", "#fbbf24", "#a78bfa", "#34d399", "#94a3b8"]
+    techniques = sorted(plot_df["Technique"].unique())
+    tech_color = {t: PALETTE[i % len(PALETTE)] for i, t in enumerate(techniques)}
+
+    for tech, grp in plot_df.groupby("Technique", sort=False):
+        color = tech_color.get(tech, "#60a5fa")
+        sx, sy = mplsoccer_pitch_xy(grp, "pass_x", "pass_y", pitch)
+
+        if has_end:
+            ex, ey = mplsoccer_pitch_xy(grp, "delivery_end_x", "delivery_end_y", pitch)
+            pitch_plot.lines(
+                sx, sy, ex, ey,
+                lw=1.4, color=color, alpha=0.45, comet=True, ax=ax,
+            )
+            pitch_plot.scatter(
+                ex, ey, s=28, color=color, edgecolors="white",
+                linewidth=0.5, alpha=0.88, zorder=5, label=tech, ax=ax,
+            )
+        else:
+            pitch_plot.scatter(
+                sx, sy, s=28, color=color, edgecolors="white",
+                linewidth=0.5, alpha=0.88, zorder=5, label=tech, ax=ax,
+            )
+
+    ax.legend(
+        loc="lower left", fontsize=7, frameon=True, framealpha=0.85,
+        facecolor="#1a2438", edgecolor="#4b5563", labelcolor="#cbd5e1",
+        title="Technique", title_fontsize=7,
+    )
     fig.tight_layout()
     return fig
 

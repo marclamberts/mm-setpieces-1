@@ -20,7 +20,6 @@ from sections.freekicks import render_freekicks
 from sections.throwins import render_throwins
 from sections.hops import render_hops
 from sections.league_comparison import render_league_comparison
-from sections.delay import render_delay
 from sections.match_prep import render_match_prep
 from sections.data_justification import render_data_justification
 from sections.takers import render_takers
@@ -39,7 +38,6 @@ SECTION_ICONS = {
     "Throw-ins": "↗",
     "HOPS": "🏃",
     "League Comparison": "📊",
-    "Delay Analysis": "⏱",
     "Match Prep": "📋",
     "Data Justification": "📖",
     "Takers": "👤",
@@ -273,8 +271,6 @@ elif section == "HOPS":
     render_hops()
 elif section == "League Comparison":
     render_league_comparison()
-elif section == "Delay Analysis":
-    render_delay()
 elif section == "Match Prep":
     render_match_prep()
 elif section == "Takers":
