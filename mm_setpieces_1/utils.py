@@ -2677,7 +2677,7 @@ def freekick_origin_map_figure(df: pd.DataFrame, title: str = "Freekick origins"
         (62, 80, "Right\nwide",       "#dbeafe", "#1d4ed8"),
     ]
 
-    fig, ax = plt.subplots(figsize=(6, 5.5), dpi=130)
+    fig, ax = plt.subplots(figsize=(5.8, 8), dpi=140)
     fig.patch.set_facecolor("#161922")
     pitch_plot = VerticalPitch(
         pitch_type="statsbomb",
@@ -3323,7 +3323,7 @@ def corner_landing_heatmap_figure(df: pd.DataFrame, colour_by: str = "density"):
     import matplotlib.pyplot as plt
     from mplsoccer import VerticalPitch
 
-    fig, ax = plt.subplots(figsize=(5, 7))
+    fig, ax = plt.subplots(figsize=(5.8, 8), dpi=140)
     fig.patch.set_facecolor("#161922")
     pitch = VerticalPitch(pitch_type="statsbomb", half=True,
                           pitch_color="#1a2438", line_color="#4b5563", linewidth=1.2)
