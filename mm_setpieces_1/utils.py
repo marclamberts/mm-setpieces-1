@@ -1346,11 +1346,11 @@ def prepare_sp_dataframe(df: pd.DataFrame, label: str = "") -> pd.DataFrame:
         if "is_goal" not in df.columns:
             df["is_goal"] = df["Shot outcome"].astype(str).str.lower().eq("goal")
 
-        if "game_period" not in df.columns:
-            minute = pd.to_numeric(df["minute"], errors="coerce").fillna(0)
-            bins = [-1, 15, 30, 45, 60, 75, 200]
-            labels = ["0-15", "16-30", "31-45", "46-60", "61-75", "76+"]
-            df["game_period"] = pd.cut(minute, bins=bins, labels=labels).astype(str)
+        df = _apply_period_minute_offsets(df)
+        minute = pd.to_numeric(df["minute"], errors="coerce").fillna(0)
+        bins = [-1, 15, 30, 45, 60, 75, 200]
+        labels = ["0-15", "16-30", "31-45", "46-60", "61-75", "76+"]
+        df["game_period"] = pd.cut(minute, bins=bins, labels=labels).astype(str)
 
         if "match_rank" not in df.columns:
             if "match_id" in df.columns:
@@ -1480,6 +1480,12 @@ def load_prepared_freekick_brief_data(_data_version: str = DATA_VERSION) -> pd.D
     prepared_source = _read_prepared_sp_data("Freekicks")
     if not prepared_source.empty:
         prepared_source = filter_by_sp_type(prepared_source, "Freekicks")
+        prepared_source = _apply_period_minute_offsets(prepared_source)
+        if "minute" in prepared_source.columns:
+            minute = pd.to_numeric(prepared_source["minute"], errors="coerce").fillna(0)
+            bins = [-1, 15, 30, 45, 60, 75, 200]
+            labels = ["0-15", "16-30", "31-45", "46-60", "61-75", "76+"]
+            prepared_source["game_period"] = pd.cut(minute, bins=bins, labels=labels).astype(str)
         vital_columns = [
             "match_id",
             "possession",
@@ -2003,33 +2009,20 @@ def freekick_start_end_arrow_figure(df: pd.DataFrame, title: str) -> go.Figure:
             ends["end_plot_x"], ends["end_plot_y"] = coords_to_statsbomb(ends, "delivery_end_x", "delivery_end_y")
             ends["end_vx"], ends["end_vy"] = vertical_coords_from_pitch(ends["end_plot_x"], ends["end_plot_y"], pitch)
 
-            # Build line segments with None separators for efficiency
-            xs: list = []
-            ys: list = []
-            for _, row in ends.head(150).iterrows():
-                xs.extend([row["vx"], row["end_vx"], None])
-                ys.extend([row["vy"], row["end_vy"], None])
-
-            fig.add_trace(
-                go.Scatter(
-                    x=xs, y=ys,
-                    mode="lines",
-                    name="Delivery",
-                    line=dict(color="#60a5fa", width=1.5),
+            for _, row in ends.head(120).iterrows():
+                fig.add_annotation(
+                    x=row["end_vx"], y=row["end_vy"],
+                    ax=row["vx"], ay=row["vy"],
+                    xref="x", yref="y",
+                    axref="x", ayref="y",
+                    showarrow=True,
+                    arrowhead=2,
+                    arrowsize=0.9,
+                    arrowwidth=1.5,
+                    arrowcolor="#60a5fa",
                     opacity=0.65,
-                    hoverinfo="skip",
+                    text="",
                 )
-            )
-            # End location markers
-            fig.add_trace(
-                go.Scatter(
-                    x=ends.head(150)["end_vx"], y=ends.head(150)["end_vy"],
-                    mode="markers",
-                    name="End",
-                    marker=dict(size=8, color="#60a5fa", symbol="triangle-right", opacity=0.85),
-                    hoverinfo="skip",
-                )
-            )
 
     return add_half_vertical_pitch_layout(fig, title, source_df=df)
 

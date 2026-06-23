@@ -543,9 +543,6 @@ def render_corners() -> None:
         section_header("Minute distribution", "When corners are taken across 90 minutes")
         render_plotly_visual(minute_distribution_figure(filtered, "Minute distribution"), "Minute distribution", "corners_minute_distribution_png")
 
-        if st.button("⏱ Analyse corner delivery delays →", key="corners_jump_delay", help="Jump to Delay Analysis"):
-            set_section("Delay Analysis")
-
         section_header("Match log", "Per-match corner output")
         match_log = build_match_log(filtered)
         if not match_log.empty:
