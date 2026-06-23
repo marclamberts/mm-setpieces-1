@@ -124,10 +124,6 @@ DATA_VERSION = _compute_data_version()
 
 os.environ.setdefault("MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "mm-setpieces-mpl"))
 
-# Minimal column set kept in memory for all SP DataFrames.
-# Dropping raw source columns (StatsBomb dot-notation fields, etc.) after
-# prepare_sp_dataframe() has already extracted what it needs cuts per-section
-# RAM by ~40–60 %. Categorical dtype further halves repeated string columns.
 _SP_VITAL_COLUMNS: list[str] = [
     "match_id", "possession", "Team", "Match", "League",
     "minute", "second", "game_period", "match_rank",
@@ -137,13 +133,7 @@ _SP_VITAL_COLUMNS: list[str] = [
     "Shot outcome", "is_shot", "is_goal",
     "delivery_end_x", "delivery_end_y",
     "timestamp",
-    # SP-specific
     "SP_Type",
-]
-_SP_CAT_COLUMNS: list[str] = [
-    "Team", "Match", "League", "game_period", "side",
-    "Taker", "Delivery height", "Technique", "Delivery outcome",
-    "Shooter", "Shot outcome", "SP_Type",
 ]
 _SP_FLOAT32_COLUMNS: list[str] = [
     "pass_x", "pass_y", "shot_x", "shot_y",
@@ -152,17 +142,13 @@ _SP_FLOAT32_COLUMNS: list[str] = [
 
 
 def _slim_sp_df(df: pd.DataFrame) -> pd.DataFrame:
-    """Drop unused columns and downcast dtypes to shrink RAM footprint."""
+    """Drop unused columns and downcast numeric dtypes to shrink RAM footprint."""
     keep = [c for c in _SP_VITAL_COLUMNS if c in df.columns]
     df = df[keep].copy()
-    for col in _SP_CAT_COLUMNS:
-        if col in df.columns:
-            df[col] = df[col].astype("category")
     for col in _SP_FLOAT32_COLUMNS:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce").astype("float32")
     return df
-
 
 
 def render_sidebar_menu(active: str = "Home", filters: list[tuple[str, str]] | None = None) -> None:
