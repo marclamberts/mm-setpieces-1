@@ -124,6 +124,45 @@ DATA_VERSION = _compute_data_version()
 
 os.environ.setdefault("MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "mm-setpieces-mpl"))
 
+# Minimal column set kept in memory for all SP DataFrames.
+# Dropping raw source columns (StatsBomb dot-notation fields, etc.) after
+# prepare_sp_dataframe() has already extracted what it needs cuts per-section
+# RAM by ~40–60 %. Categorical dtype further halves repeated string columns.
+_SP_VITAL_COLUMNS: list[str] = [
+    "match_id", "possession", "Team", "Match", "League",
+    "minute", "second", "game_period", "match_rank",
+    "pass_x", "pass_y", "side",
+    "Taker", "Delivery height", "Technique", "Delivery outcome",
+    "Shooter", "shot_x", "shot_y", "xg",
+    "Shot outcome", "is_shot", "is_goal",
+    "delivery_end_x", "delivery_end_y",
+    "timestamp",
+    # SP-specific
+    "SP_Type",
+]
+_SP_CAT_COLUMNS: list[str] = [
+    "Team", "Match", "League", "game_period", "side",
+    "Taker", "Delivery height", "Technique", "Delivery outcome",
+    "Shooter", "Shot outcome", "SP_Type",
+]
+_SP_FLOAT32_COLUMNS: list[str] = [
+    "pass_x", "pass_y", "shot_x", "shot_y",
+    "xg", "delivery_end_x", "delivery_end_y",
+]
+
+
+def _slim_sp_df(df: pd.DataFrame) -> pd.DataFrame:
+    """Drop unused columns and downcast dtypes to shrink RAM footprint."""
+    keep = [c for c in _SP_VITAL_COLUMNS if c in df.columns]
+    df = df[keep].copy()
+    for col in _SP_CAT_COLUMNS:
+        if col in df.columns:
+            df[col] = df[col].astype("category")
+    for col in _SP_FLOAT32_COLUMNS:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce").astype("float32")
+    return df
+
 
 
 def render_sidebar_menu(active: str = "Home", filters: list[tuple[str, str]] | None = None) -> None:
@@ -1469,10 +1508,10 @@ def load_prepared_sp_data(label: str, _data_version: str = DATA_VERSION) -> pd.D
     if label != "Corners":
         prepared = _read_prepared_sp_data(label)
         if not prepared.empty:
-            return filter_by_sp_type(prepared, label)
+            return _slim_sp_df(filter_by_sp_type(prepared, label))
 
     raw = load_sp_data(label, _data_version)
-    return filter_by_sp_type(prepare_sp_dataframe(raw, label=label), label)
+    return _slim_sp_df(filter_by_sp_type(prepare_sp_dataframe(raw, label=label), label))
 
 
 @st.cache_data(show_spinner="Loading data…")
@@ -1486,29 +1525,7 @@ def load_prepared_freekick_brief_data(_data_version: str = DATA_VERSION) -> pd.D
             bins = [-1, 15, 30, 45, 60, 75, 200]
             labels = ["0-15", "16-30", "31-45", "46-60", "61-75", "76+"]
             prepared_source["game_period"] = pd.cut(minute, bins=bins, labels=labels).astype(str)
-        vital_columns = [
-            "match_id",
-            "possession",
-            "Team",
-            "Match",
-            "League",
-            "minute",
-            "second",
-            "game_period",
-            "match_rank",
-            "pass_x",
-            "pass_y",
-            "Taker",
-            "Delivery height",
-            "Shooter",
-            "shot_x",
-            "shot_y",
-            "xg",
-            "Shot outcome",
-            "is_shot",
-            "is_goal",
-        ]
-        return prepared_source[[c for c in vital_columns if c in prepared_source.columns]].copy()
+        return _slim_sp_df(prepared_source)
 
     sources = []
     for path in _sp_files_for_label("Freekicks"):
@@ -1526,29 +1543,7 @@ def load_prepared_freekick_brief_data(_data_version: str = DATA_VERSION) -> pd.D
     raw = pd.concat(sources, ignore_index=True, sort=False)
     raw = filter_by_sp_type(raw, "Freekicks")
     prepared = filter_by_sp_type(prepare_sp_dataframe(raw, label="Freekicks"), "Freekicks")
-    vital_columns = [
-        "match_id",
-        "possession",
-        "Team",
-        "Match",
-        "League",
-        "minute",
-        "second",
-        "game_period",
-        "match_rank",
-        "pass_x",
-        "pass_y",
-        "Taker",
-        "Delivery height",
-        "Shooter",
-        "shot_x",
-        "shot_y",
-        "xg",
-        "Shot outcome",
-        "is_shot",
-        "is_goal",
-    ]
-    return prepared[[c for c in vital_columns if c in prepared.columns]].copy()
+    return _slim_sp_df(prepared)
 
 
 def _is_swe_sp_df(df: pd.DataFrame) -> bool:
