@@ -3369,8 +3369,6 @@ def mplsoccer_delivery_figure(df: pd.DataFrame, label: str = ""):
         st.info(f"Delivery map: showing a random sample of 320 of {len(plot_df):,} deliveries.")
         plot_df = plot_df.sample(320, random_state=11)
 
-    has_start = {"pass_x", "pass_y"}.issubset(plot_df.columns)
-
     colors = {
         "Six-yard corridor": RED,
         "Near/far post lane": "#2563eb",
@@ -3383,26 +3381,16 @@ def mplsoccer_delivery_figure(df: pd.DataFrame, label: str = ""):
 
     for zone, part in plot_df.groupby("Delivery zone", dropna=False):
         color = colors.get(str(zone), "#64748b")
-        ex, ey = mplsoccer_pitch_xy(part, "delivery_end_x", "delivery_end_y", pitch)
-        if has_start:
-            sx, sy = mplsoccer_pitch_xy(part, "pass_x", "pass_y", pitch)
-            pitch_plot.lines(
-                sx, sy, ex, ey,
-                lw=1.3, color=color, alpha=0.40, comet=True, ax=ax,
-            )
-            pitch_plot.scatter(
-                sx, sy, s=16, color="white", edgecolors=color,
-                linewidth=0.8, alpha=0.70, zorder=4, ax=ax,
-            )
+        plot_x, plot_y = mplsoccer_pitch_xy(part, "delivery_end_x", "delivery_end_y", pitch)
         pitch_plot.scatter(
-            ex, ey,
+            plot_x,
+            plot_y,
             s=np.clip(part["xg"].fillna(0).to_numpy() * 550 + 28 if "xg" in part.columns else 36, 28, 120),
             color=color,
             edgecolors="white",
             linewidth=0.7,
-            alpha=0.88,
+            alpha=0.82,
             label=str(zone),
-            zorder=5,
             ax=ax,
         )
 
@@ -3525,8 +3513,6 @@ def mplsoccer_delivery_sp_outcome_figure(df: pd.DataFrame, label: str = ""):
         .replace({"": "Unknown", "nan": "Unknown", "None": "Unknown", "undefined": "Unknown"})
     )
 
-    has_start = {"pass_x", "pass_y"}.issubset(plot_df.columns)
-
     colors = {
         "Goal": "#16a34a",
         "Shot after 3 seconds": "#2563eb",
@@ -3546,26 +3532,16 @@ def mplsoccer_delivery_sp_outcome_figure(df: pd.DataFrame, label: str = ""):
     for idx, (outcome, part) in enumerate(plot_df.groupby(outcome_col, dropna=False)):
         outcome_label = str(outcome) if str(outcome).strip() else "Unknown"
         color = colors.get(outcome_label, fallback_colors[idx % len(fallback_colors)])
-        ex, ey = mplsoccer_pitch_xy(part, "delivery_end_x", "delivery_end_y", pitch)
-        if has_start:
-            sx, sy = mplsoccer_pitch_xy(part, "pass_x", "pass_y", pitch)
-            pitch_plot.lines(
-                sx, sy, ex, ey,
-                lw=1.3, color=color, alpha=0.40, comet=True, ax=ax,
-            )
-            pitch_plot.scatter(
-                sx, sy, s=16, color="white", edgecolors=color,
-                linewidth=0.8, alpha=0.70, zorder=4, ax=ax,
-            )
+        plot_x, plot_y = mplsoccer_pitch_xy(part, "delivery_end_x", "delivery_end_y", pitch)
         pitch_plot.scatter(
-            ex, ey,
+            plot_x,
+            plot_y,
             s=44,
             color=color,
             edgecolors="white",
             linewidth=0.7,
-            alpha=0.88,
+            alpha=0.82,
             label=outcome_label,
-            zorder=5,
             ax=ax,
         )
 
