@@ -128,6 +128,7 @@ _SP_VITAL_COLUMNS: list[str] = [
     "match_id", "possession", "Team", "Match", "League",
     "minute", "second", "game_period", "match_rank",
     "pass_x", "pass_y", "side",
+    "restart_x", "restart_y",
     "Taker", "Delivery height", "Technique", "Delivery outcome",
     "Shooter", "shot_x", "shot_y", "xg",
     "Shot outcome", "is_shot", "is_goal",
@@ -1951,14 +1952,19 @@ def freekick_start_end_arrow_figure(df: pd.DataFrame, title: str) -> go.Figure:
         fig.add_annotation(text="No data available", x=pitch_width / 2, y=(half_start + pitch_length) / 2, showarrow=False, font=dict(size=18, color="#64748b"))
         return add_half_vertical_pitch_layout(fig, title, source_df=df)
 
-    has_start = "pass_x" in df.columns and "pass_y" in df.columns
-    has_end = "delivery_end_x" in df.columns and "delivery_end_y" in df.columns
+    _df = df.copy()
+    if "pass_x" not in _df.columns and "restart_x" in _df.columns:
+        _df["pass_x"] = _df["restart_x"]
+        _df["pass_y"] = _df["restart_y"]
+
+    has_start = "pass_x" in _df.columns and "pass_y" in _df.columns
+    has_end = "delivery_end_x" in _df.columns and "delivery_end_y" in _df.columns
 
     if not has_start:
         fig.add_annotation(text="No start location data available", x=pitch_width / 2, y=(half_start + pitch_length) / 2, showarrow=False, font=dict(size=18, color="#64748b"))
         return add_half_vertical_pitch_layout(fig, title, source_df=df)
 
-    starts = df[df["pass_x"].notna() & df["pass_y"].notna()].copy()
+    starts = _df[_df["pass_x"].notna() & _df["pass_y"].notna()].copy()
     starts = unique_start_events(starts)
 
     if starts.empty:
