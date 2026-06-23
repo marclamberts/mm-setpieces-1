@@ -41,8 +41,6 @@ MODULE_CARDS = [
      "Benchmark set piece output across competitions."),
     ("Match Prep",       "home_open_match_prep",        "📋", "Match Prep",
      "Opponent-specific set piece intelligence for upcoming fixtures."),
-    ("Delay Analysis",   "home_open_delay",             "⏱",  "Delay Analysis",
-     "Corner delivery timing and delay patterns over time."),
     ("Takers",           "home_open_takers",            "👤", "Set Piece Takers",
      "Player-level delivery stats, xG per 100, shot-assist rate and foot preference."),
     ("Routines",         "home_open_routines",          "📖", "Routines Playbook",
@@ -123,8 +121,7 @@ def _render_highlights(corners, freekicks, throwins, hops) -> None:
     # Team with most corner shots
     shot_col = next((c for c in ["is_shot", "Shot", "shot"] if c in corners.columns), None)
     if not corners.empty and "Team" in corners.columns and shot_col:
-        shot_col = shot_col
-        shot_df = corners[corners[shot_col].astype(str).str.lower().isin(["true", "1", "yes", "shot"])]
+        shot_df = corners[corners[shot_col].astype(bool).eq(True)]
         if shot_df.empty:
             shot_df = corners
         team_shots = shot_df.groupby("Team").size().sort_values(ascending=False)
@@ -210,8 +207,8 @@ def render_home() -> None:
 
     # ── Module cards ─────────────────────────────────────────────────
     section_header("Analysis Modules")
-    # Three rows: 4 + 5 + 4
-    rows = [MODULE_CARDS[:4], MODULE_CARDS[4:9], MODULE_CARDS[9:]]
+    # Three rows: 4 + 4 + 4
+    rows = [MODULE_CARDS[:4], MODULE_CARDS[4:8], MODULE_CARDS[8:]]
     for row in rows:
         if not row:
             continue

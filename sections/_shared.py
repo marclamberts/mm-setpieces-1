@@ -227,45 +227,6 @@ def load_hops_data(_data_version: str = DATA_VERSION, _code_v: str = "league_fix
     return df.sort_values("Rating", ascending=False)
 
 
-@st.cache_data(show_spinner=False)
-def _load_delay_workbook() -> dict[str, pd.DataFrame]:
-    # Accept any file named corner_delays*.xlsx so a re-download doesn't break things
-    data_dir = Path(__file__).resolve().parent.parent / "Data"
-    candidates = sorted(data_dir.glob("corner_delays*.xlsx"))
-    if not candidates:
-        return {}
-    path = candidates[0]
-    try:
-        import openpyxl  # noqa: F401
-        engine = "openpyxl"
-    except ImportError:
-        engine = None
-    try:
-        return pd.read_excel(path, sheet_name=None, engine=engine) if engine else pd.read_excel(path, sheet_name=None)
-    except Exception:
-        return {}
-
-
-@st.cache_data(show_spinner=False)
-def _clean_delay_events(df: pd.DataFrame) -> pd.DataFrame:
-    clean = df.copy()
-    if "League" not in clean.columns:
-        clean["League"] = "Unknown"
-    else:
-        clean["League"] = clean["League"].fillna("Unknown")
-    for col in ["delay_sec", "out_time_sec", "corner_time_sec", "period", "out_value"]:
-        if col in clean.columns:
-            clean[col] = pd.to_numeric(clean[col], errors="coerce")
-    if "delay_sec" in clean.columns:
-        clean = clean[clean["delay_sec"].notna()].copy()
-        clean["Delay band"] = pd.cut(
-            clean["delay_sec"],
-            bins=[-0.001, 10, 20, 30, 45, 10_000],
-            labels=["0-10s", "10-20s", "20-30s", "30-45s", "45s+"],
-        )
-    return clean
-
-
 # ---------------------------------------------------------------------------
 # Home-page team snapshot
 # ---------------------------------------------------------------------------
