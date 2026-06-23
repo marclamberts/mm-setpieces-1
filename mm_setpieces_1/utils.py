@@ -559,6 +559,7 @@ def render_export_controls(df: pd.DataFrame, slug: str, sheet_name: str = "Data"
         )
 
 
+@st.cache_data(show_spinner=False)
 def categorical_breakdown_figure(
     df: pd.DataFrame,
     column: str,
@@ -596,6 +597,7 @@ def categorical_breakdown_figure(
     return polish_plotly_figure(fig)
 
 
+@st.cache_data(show_spinner=False)
 def minute_distribution_figure(df: pd.DataFrame, title: str) -> go.Figure:
     fig = go.Figure()
     if df.empty or "minute" not in df.columns:
@@ -1546,6 +1548,7 @@ def load_prepared_freekick_brief_data(_data_version: str = DATA_VERSION) -> pd.D
 def _is_swe_sp_df(df: pd.DataFrame) -> bool:
     return "SP_Type" in df.columns
 
+@st.cache_data(show_spinner=False)
 def unique_shot_events(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty or "shot_x" not in df.columns or "shot_y" not in df.columns:
         return df.iloc[0:0].copy()
@@ -1558,6 +1561,7 @@ def unique_shot_events(df: pd.DataFrame) -> pd.DataFrame:
             shots = shots.drop_duplicates(subset=keys)
     return shots
 
+@st.cache_data(show_spinner=False)
 def unique_start_events(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return df
@@ -2107,6 +2111,7 @@ def _rate(numerator: float, denominator: float) -> float:
     return round((numerator / denominator * 100), 1) if denominator else 0.0
 
 
+@st.cache_data(show_spinner=False)
 def set_piece_kpi_values(df: pd.DataFrame) -> dict[str, object]:
     if df.empty:
         return {
@@ -2232,6 +2237,7 @@ def build_team_leaderboard(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows).sort_values(["xG / 100", "Shot rate %", "Events"], ascending=False)
 
 
+@st.cache_data(show_spinner=False)
 def build_taker_leaderboard(df: pd.DataFrame) -> pd.DataFrame:
     roles = build_role_archetypes(df)
     if roles.empty:
@@ -2243,6 +2249,7 @@ def build_taker_leaderboard(df: pd.DataFrame) -> pd.DataFrame:
     return roles[[c for c in cols if c in roles.columns]]
 
 
+@st.cache_data(show_spinner=False)
 def build_shooter_leaderboard(df: pd.DataFrame) -> pd.DataFrame:
     shots = unique_shot_events(df)
     if shots.empty or "Shooter" not in shots.columns:
@@ -2268,6 +2275,7 @@ def build_shooter_leaderboard(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows).sort_values(["Total xG", "Shots", "Goals"], ascending=False)
 
 
+@st.cache_data(show_spinner=False)
 def build_pattern_library(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return pd.DataFrame()
@@ -2537,6 +2545,7 @@ def freekick_channel(y: object, pitch_name: str = "statsbomb") -> str:
     return "Right wide"
 
 
+@st.cache_data(show_spinner=False)
 def freekick_sequence_summary(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return pd.DataFrame()
@@ -2587,6 +2596,7 @@ def freekick_sequence_summary(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows).sort_values(["Total xG", "Shots", "Minute"], ascending=[False, False, True])
 
 
+@st.cache_data(show_spinner=False)
 def freekick_zone_summary(df: pd.DataFrame) -> pd.DataFrame:
     seq = freekick_sequence_summary(df)
     if seq.empty:
@@ -2613,6 +2623,7 @@ def freekick_zone_summary(df: pd.DataFrame) -> pd.DataFrame:
     return summary.drop(columns=[c for c in ["Shot_Sequences", "Shot sequence %"] if c in summary.columns])
 
 
+@st.cache_data(show_spinner=False)
 def freekick_taker_summary(df: pd.DataFrame) -> pd.DataFrame:
     seq = freekick_sequence_summary(df)
     if seq.empty:
@@ -2642,6 +2653,7 @@ def freekick_taker_summary(df: pd.DataFrame) -> pd.DataFrame:
     return summary.drop(columns=[c for c in ["Shot_Sequences", "Shot sequence %"] if c in summary.columns])
 
 
+@st.cache_data(show_spinner=False)
 def freekick_shooter_summary(df: pd.DataFrame) -> pd.DataFrame:
     shots = unique_shot_events(df)
     if shots.empty or "Shooter" not in shots.columns:
@@ -2775,6 +2787,7 @@ def throwin_side(y: object, pitch_name: str = "statsbomb") -> str:
     return "Left touchline" if py <= 40 else "Right touchline"
 
 
+@st.cache_data(show_spinner=False)
 def throwin_sequence_summary(df: pd.DataFrame) -> pd.DataFrame:
     """Vectorised: one row in the prepared data == one sequence."""
     if df.empty:
@@ -2839,6 +2852,7 @@ def throwin_sequence_summary(df: pd.DataFrame) -> pd.DataFrame:
     return seq.sort_values(["Box entry", "Total xG", "Shots", "Minute"], ascending=[False, False, False, True])
 
 
+@st.cache_data(show_spinner=False)
 def throwin_zone_summary(df: pd.DataFrame) -> pd.DataFrame:
     seq = throwin_sequence_summary(df)
     if seq.empty:
@@ -2863,6 +2877,7 @@ def throwin_zone_summary(df: pd.DataFrame) -> pd.DataFrame:
     return summary.sort_values(["Box entry %", "Shots / seq", "Sequences"], ascending=False)
 
 
+@st.cache_data(show_spinner=False)
 def throwin_taker_summary(df: pd.DataFrame) -> pd.DataFrame:
     seq = throwin_sequence_summary(df)
     if seq.empty:
@@ -2894,6 +2909,7 @@ def throwin_taker_summary(df: pd.DataFrame) -> pd.DataFrame:
     return summary.sort_values(["Box entry %", "Sequences", "Shots / seq"], ascending=False)
 
 
+@st.cache_data(show_spinner=False)
 def throwin_shooter_summary(df: pd.DataFrame) -> pd.DataFrame:
     shots = unique_shot_events(df)
     if shots.empty or "Shooter" not in shots.columns:
@@ -3144,6 +3160,7 @@ def delivery_zone_label(x: object, y: object, pitch_name: str = "statsbomb") -> 
     return "Second ball zone"
 
 
+@st.cache_data(show_spinner=False)
 def add_delivery_zones(df: pd.DataFrame) -> pd.DataFrame:
     enriched = df.copy()
     if {"delivery_end_x", "delivery_end_y"}.issubset(enriched.columns):
